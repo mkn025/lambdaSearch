@@ -1,0 +1,133 @@
+{- HLINT ignore "Use if" -}
+module TreveseFunctions where
+
+import System.Posix.Directory.Foreign
+
+import System.Posix.Directory.ByteString
+
+import qualified Data.ByteString.Char8 as BS
+import System.Posix.ByteString.FilePath
+import Unsafe.Coerce (unsafeCoerce)
+import Foreign.C.Error
+import Foreign.C.String
+import Foreign.C.Types
+import Foreign.Marshal.Alloc (alloca,allocaBytes) 
+import UnliftIO (MonadUnliftIO, withRunInIO)
+
+import System.Posix.Files.ByteString (isDirectory)
+
+
+
+import qualified Data.ByteString.Char8 as BC
+
+import Foreign.Ptr as PTR
+import Foreign.Storable
+import System.Posix (isDirectory)
+
+
+
+
+
+foreign import ccall safe "__hscore_readdir"
+  c_readdir  :: Ptr CDir -> Ptr (Ptr CDirent) -> IO CInt
+
+foreign import ccall unsafe "__hscore_free_dirent"
+  c_freeDirEnt  :: Ptr CDirent -> IO ()
+
+foreign import ccall unsafe "__hscore_d_name"
+  c_name :: Ptr CDirent -> IO CString
+
+foreign import ccall unsafe "__posixdir_d_type"
+  c_type :: Ptr CDirent -> IO DirType
+
+foreign import ccall "realpath"
+  c_realpath :: CString -> CString -> IO CString
+
+
+--- unsafe forløping
+
+-- men 
+
+type CDir = ()
+type CDirent = ()
+
+unpackDirStream :: DirStream -> Ptr CDir
+unpackDirStream = unsafeCoerce
+
+packDirStream :: Ptr CDir -> DirStream
+packDirStream = unsafeCoerce
+
+
+readDirEnt :: DirStream -> IO (Maybe (DirType, RawFilePath) )
+readDirEnt dir = do
+  alloca $ \ptr_dEnt  -> loop ptr_dEnt
+    where
+    loop ptr_dEnt = do
+        let dirp = unpackDirStream  dir
+        _ <- resetErrno
+        r <- c_readdir dirp ptr_dEnt  --
+        case r == 0 of
+            True -> do
+                dEnt <- peek ptr_dEnt   -- leser innholder på på despom er på peker
+                if dEnt == PTR.nullPtr  -- s
+                    then pure Nothing --  pure (dtUnknown, BS.empty) 
+                    else do
+                        dName <- c_name dEnt >>= (\l -> peekFilePath l)
+                        dType <- c_type dEnt
+                        c_freeDirEnt dEnt
+                        pure $ Just (dType, dName)
+            False -> do
+                errno <- getErrno
+                if errno == eINTR   --kjører loopen på dersom error er en intetuped systcall 
+                    then loop ptr_dEnt 
+                    else do
+                        let (Errno errorCode) = errno -- patter matcher og henter errorCode 
+                        if errorCode == 0 
+                            then pure  Nothing --(dtUnknown, BS.empty)
+                            else throwErrno "readDirEnt"
+
+
+readAnEntireDir :: BC.ByteString -> IO [(DirType,RawFilePath)]
+readAnEntireDir p = do
+    stream <- openDirStream  p
+    restOfTheDir <- rest stream []
+    closeDirStream  stream 
+    pure restOfTheDir 
+    where 
+        rest :: DirStream -> [(DirType,RawFilePath)] -> IO [(DirType,RawFilePath)]
+        rest s lst = do 
+            readContent <- readDirEnt s 
+            case readContent of
+                Nothing    -> pure lst 
+                (Just elm) -> rest s (elm : lst)
+path :: BC.ByteString
+path =  BC.pack  "/Users/martineldeknutsen/Dev/UiB/inf221/"
+
+testA :: IO [DirType]
+testA = map fst <$> readAnEntireDir path
+
+testB = head <$> testA
+
+k = do
+    x <- testB
+    pure (x == dtDir)
+
+
+
+
+
+
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
