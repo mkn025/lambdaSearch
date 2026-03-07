@@ -1,4 +1,5 @@
 {- HLINT ignore "Use if" -}
+{-# LANGUAGE OverloadedStrings #-}
 module TreveseFunctions where
 
 import System.Posix.Directory.Foreign
@@ -13,16 +14,22 @@ import Foreign.C.String
 import Foreign.C.Types
 import Foreign.Marshal.Alloc (alloca,allocaBytes) 
 import UnliftIO (MonadUnliftIO, withRunInIO)
-
-import System.Posix.Files.ByteString (isDirectory)
-
-
+import System.Posix.Files.ByteString (isDirectory, getFileStatus)
+import Control.Monad.IO.Class
 
 import qualified Data.ByteString.Char8 as BC
+import System.Posix.Directory.ByteString as PosixBS
+
+import System.IO.Error
+
+ 
+import UnliftIO.Exception
+
 
 import Foreign.Ptr as PTR
 import Foreign.Storable
-import System.Posix (isDirectory)
+import System.Posix (isDirectory, terminalMode)
+import System.Posix.Directory.Internals (DirStream(DirStream))
 
 
 
@@ -68,7 +75,7 @@ readDirEnt dir = do
         r <- c_readdir dirp ptr_dEnt  --
         case r == 0 of
             True -> do
-                dEnt <- peek ptr_dEnt   -- leser innholder på på despom er på peker
+                dEnt <- peek ptr_dEnt   -- leser innholder på det  somer på peker
                 if dEnt == PTR.nullPtr  -- s
                     then pure Nothing --  pure (dtUnknown, BS.empty) 
                     else do
@@ -100,17 +107,64 @@ readAnEntireDir p = do
             case readContent of
                 Nothing    -> pure lst 
                 (Just elm) -> rest s (elm : lst)
+
+
+
+
+treverseDir :: [RawFilePath] -> RawFilePath ->  IO [RawFilePath]
+treverseDir acc filePath = topLoop
+    where 
+    topLoop = do
+        isDir <- liftIO $ isDirectory <$> getFileStatus filePath 
+        case isDir of
+        pure []
+
+
+
+modifyIOErrorUnliftIO :: (MonadUnliftIO m) => (IOError -> IOError) -> m a -> m a
+modifyIOErrorUnliftIO f action =
+  withRunInIO $ \runInIO -> do
+    modifyIOError f (runInIO action)
+
+
+traverseDirectoryContents ::   RawFilePath -> IO [(DirType,RawFilePath)]
+traverseDirectoryContents p =
+  modifyIOErrorUnliftIO
+    ((`ioeSetFileName` (BS.unpack p)) . -- feilmleidng de en den skal kasete
+     (`ioeSetLocation` "System.Posix.Directory.Traversals.traverseDirectoryContents")) $ do -- feilmeldinge 2 den skal kaste
+    bracket
+      (liftIO $ PosixBS.openDirStream path)
+      (liftIO . PosixBS.closeDirStream)
+      (\dirp -> loop [] dirp)
+  where
+    loop :: [(DirType, RawFilePath)] -> DirStream -> IO [(DirType,RawFilePath)]
+    loop arr dirp = do
+        dirAnd <-  liftIO $ readDirEnt dirp
+        case dirAnd of
+            Nothing  -> pure arr
+            Just t@(_typ,e) -> do
+                if e == "." || e  == ".." then loop arr dirp
+                else loop (t : arr) dirp
+
+
+
+
 path :: BC.ByteString
 path =  BC.pack  "/Users/martineldeknutsen/Dev/UiB/inf221/"
 
-testA :: IO [DirType]
-testA = map fst <$> readAnEntireDir path
 
-testB = head <$> testA
 
-k = do
-    x <- testB
-    pure (x == dtDir)
+testA :: IO [Bool]
+testA = map ((==dtDir) . fst) <$> readAnEntireDir path
+
+testB = traverseDirectoryContents path
+
+
+
+
+
+ 
+
 
 
 
