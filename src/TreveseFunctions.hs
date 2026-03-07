@@ -1,6 +1,6 @@
 {- HLINT ignore "Use if" -}
 {-# LANGUAGE OverloadedStrings #-}
-module TreveseFunctions where
+module TreveseFunctions (traverseDirectoryContents)  where
 
 import System.Posix.Directory.Foreign
 
@@ -28,6 +28,7 @@ import UnliftIO.Exception
 
 import Foreign.Ptr as PTR
 import Foreign.Storable
+import Data.ByteString (ByteString)
 
 
 
@@ -144,9 +145,17 @@ treversAll arr p =  topLoop
             innerLoop acc t@(typ,file) = do
                 let fullpath = p </> file --legg sammen slik at vi er inne på riktig sti
                 isDir <- liftIO . pure $ typ == dtDir  
-                if not isDir
+                if not isDir 
                     then pure (t : acc) -- gi filen tilabke
                     else treversAll (t : acc) fullpath 
+
+                where fileFilter  s = BS.head s == '.'
+
+
+
+-- RawFilePath == ByteString
+
+                
 
 
 testC :: IO [DirContent]
