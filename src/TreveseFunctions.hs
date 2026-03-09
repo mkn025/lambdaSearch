@@ -1,13 +1,13 @@
 {- HLINT ignore "Use if" -}
 {-# LANGUAGE OverloadedStrings #-}
-module TreveseFunctions (traverseDirectoryContents)  where
+
+module TreveseFunctions (traverseDirectoryContents)   where
 
 import System.Posix.Directory.Foreign
 
 
 import qualified Data.ByteString.Char8 as BS
 import System.Posix.ByteString.FilePath
-import Unsafe.Coerce (unsafeCoerce)
 import Foreign.C.Error
 import Foreign.C.String
 import Foreign.C.Types
@@ -21,18 +21,18 @@ import System.Posix.Directory.ByteString as PosixBS
 
 import System.IO.Error
 import System.Posix.FilePath ((</>))
-
  
 import UnliftIO.Exception
 
-
 import Foreign.Ptr as PTR
 import Foreign.Storable
-import Data.ByteString (ByteString)
+import System.Posix.Directory.Internals (DirStream(DirStream),CDir , CDirent )
 
 
 
 
+
+-- Lager Haskll funksjoner igjennom FFI
 foreign import ccall safe "__hscore_readdir"
   c_readdir  :: Ptr CDir -> Ptr (Ptr CDirent) -> IO CInt
 
@@ -46,20 +46,8 @@ foreign import ccall unsafe "__posixdir_d_type"
   c_type :: Ptr CDirent -> IO DirType
 
 
-
---- unsafe forløping
-
--- men 
-
-type CDir = ()
-type CDirent = ()
-
--- stygt triks skal se på å gjøre det safe. på sikt
 unpackDirStream :: DirStream -> Ptr CDir
-unpackDirStream = unsafeCoerce
-
-packDirStream :: Ptr CDir -> DirStream
-packDirStream = unsafeCoerce
+unpackDirStream (DirStream a) = a
 
 type DirContent = (DirType,RawFilePath)
 
@@ -139,7 +127,7 @@ treversAll arr p =  topLoop
         isDir <- liftIO $ isDirectory <$> getFileStatus p
         if not isDir  -- bruker negasjonen slik at koden skal se bedre ut
             then pure arr
-            else traverseDirectoryContents innerLoop arr p
+            else  traverseDirectoryContents innerLoop arr p
         where
             innerLoop :: [DirContent] -> DirContent -> IO [DirContent]
             innerLoop acc t@(typ,file) = do
@@ -149,26 +137,18 @@ treversAll arr p =  topLoop
                     then pure (t : acc) -- gi filen tilabke
                     else treversAll (t : acc) fullpath 
 
-                where fileFilter  s = BS.head s == '.'
-
 
 
 -- RawFilePath == ByteString
 
-                
-
-
-testC :: IO [DirContent]
-testC = treversAll  [] path 
-
 path :: BC.ByteString
 path =  BC.pack  "/Users/martineldeknutsen/Dev/UiB/inf221/"
 
-foldFunc :: [DirContent] -> DirContent -> IO [DirContent]
-foldFunc dc c = pure (c : dc)
+testA :: IO [DirContent]
+testA = treversAll  [] path 
 
-testB :: IO [DirContent]
-testB = traverseDirectoryContents foldFunc [] path 
+
+
 
 
 

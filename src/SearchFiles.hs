@@ -59,13 +59,10 @@ update :: [RawFilePath] -> RawFilePath -> IO [RawFilePath]
 update paths p = pure (p : paths)
 
 testC :: IO [RawFilePath]
-testC = traverseDirectory  update []  $ BC.pack  "w"
+testC = traverseDirectory  update [] path 
 
+path ::  BC.ByteString
+path = BC.pack  "/Users/martineldeknutsen/Dev"
 
-path :: Maybe BC.ByteString
-path = Just $ BC.pack  "/Users/martineldeknutsen/Dev/UiB/inf221/"
-
-testA :: IO [Maybe BC.ByteString]
-testA = traverseDir path
 
 
