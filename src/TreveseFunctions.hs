@@ -1,7 +1,7 @@
 {- HLINT ignore "Use if" -}
 {-# LANGUAGE OverloadedStrings #-}
 
-module TreveseFunctions (traverseDirectoryContents)   where
+module TreveseFunctions (traverseDirectoryContents,testA)   where
 
 import System.Posix.Directory.Foreign
 
@@ -29,7 +29,10 @@ import Foreign.Storable
 import System.Posix.Directory.Internals (DirStream(DirStream),CDir , CDirent )
 
 
-
+import Control.Concurrent
+import Control.Concurrent.STM
+import Control.Applicative
+import Control.Monad
 
 
 -- Lager Haskll funksjoner igjennom FFI
@@ -46,11 +49,13 @@ foreign import ccall unsafe "__posixdir_d_type"
   c_type :: Ptr CDirent -> IO DirType
 
 
+-- om du peeker CDir så får du CDirent
+
+
 unpackDirStream :: DirStream -> Ptr CDir
 unpackDirStream (DirStream a) = a
 
 type DirContent = (DirType,RawFilePath)
-
 
 readDirEnt :: DirStream -> IO (Maybe DirContent)
 readDirEnt dir = do
@@ -87,7 +92,6 @@ modifyIOErrorUnliftIO f action =
     modifyIOError f (runInIO action)
 
 
-
 traverseDirectoryContents :: (MonadUnliftIO m)
                           => (a -> DirContent -> m a)  -- fold funksjon
                           -> a                          -- accumulator
@@ -117,8 +121,6 @@ traverseDirectoryContents f s0 p =
                         loop acc' dirp
 
 
-
-
 treversAll :: [DirContent] -> RawFilePath -> IO [DirContent]
 treversAll arr p =  topLoop 
     where
@@ -144,8 +146,8 @@ treversAll arr p =  topLoop
 path :: BC.ByteString
 path =  BC.pack  "/Users/martineldeknutsen/Dev/UiB/inf221/"
 
-testA :: IO [DirContent]
-testA = treversAll  [] path 
+testA :: String -> IO [DirContent]
+testA s = treversAll  [] $ BC.pack s
 
 
 
