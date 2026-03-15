@@ -50,6 +50,16 @@
   (major1) == 1 && (major2) <  4 || \
   (major1) == 1 && (major2) == 4 && (minor) <= 301)
 #endif /* MIN_VERSION_filepath */
+/* package filepath-bytestring-1.5.2.0.3 */
+#ifndef VERSION_filepath_bytestring
+#define VERSION_filepath_bytestring "1.5.2.0.3"
+#endif /* VERSION_filepath_bytestring */
+#ifndef MIN_VERSION_filepath_bytestring
+#define MIN_VERSION_filepath_bytestring(major1,major2,minor) (\
+  (major1) <  1 || \
+  (major1) == 1 && (major2) <  5 || \
+  (major1) == 1 && (major2) == 5 && (minor) <= 2)
+#endif /* MIN_VERSION_filepath_bytestring */
 /* package mtl-2.3.1 */
 #ifndef VERSION_mtl
 #define VERSION_mtl "2.3.1"

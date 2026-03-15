@@ -2,7 +2,7 @@
 {- HLINT ignore "Avoid lambda" -}
 {- HLINT ignore "Use if" -}
 
-module TreveseFunctions (treverFilePath) where
+module TreveseFunctions (treverFilePath,eqReg ) where
 
 import System.Posix.Directory.Foreign
 
@@ -29,8 +29,10 @@ import UnliftIO.Exception ( bracket )
 import Foreign.Ptr as PTR ( Ptr, nullPtr )
 import Foreign.Storable   ( Storable(peek) )
 import System.Posix.Directory.Internals (DirStream(DirStream), CDir, CDirent )
-import FileTreversal (FilterFlags, getAllowFilter, getDisallowFilter, getHiddenFilter, getFileOnlyFilter,getExtentionFilter)
+import FileTreversal (FilterFlags, getAllowFilter, getDisallowFilter, getHiddenFilter,getExtentionFilter)
 
+
+eqReg a = a == dtReg 
 
 
 type DirContent = (DirType,RawFilePath)
@@ -138,15 +140,12 @@ treversRecursively sf arr p =  topLoop
                 isDir <- liftIO . pure $ typ == dtDir
                 if not isDir
                     then do
-
                         af  <- getAllowFilter     sf file 
                         df  <- getDisallowFilter  sf file 
                         hf  <- getHiddenFilter    sf file 
                         ef  <- getExtentionFilter sf file 
 
-                        fof <- getFileOnlyFilter sf fullpath -- tregner fullpath siden den bruker getFileStatus 
-
-                        let allFilters = [ef]
+                        let allFilters = [af,df,ef,hf]
                         if and allFilters -- and allFilters 
                             then pure (t:acc)
                             else pure acc

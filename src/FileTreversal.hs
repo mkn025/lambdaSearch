@@ -3,14 +3,17 @@ module FileTreversal where
 
 import System.Posix.ByteString (RawFilePath)
 import System.Posix.Files.ByteString (isRegularFile, getFileStatus)
-import qualified Data.ByteString.Char8 as BC (head,pack, null, dropWhile, tail, takeWhile, reverse )
-import GHC.Conc (BlockReason(BlockedOnMVar))
+import qualified Data.ByteString.Char8 as BC (head,pack,tail)
+import qualified Data.ByteString as BS (null)
+import System.FilePath.ByteString (takeExtension)
+
 
 -- Datastruktur som holder filnavnet
 
 --type FolderState a = StateT FolderAndContent IO a
 
 type SearchFilters = [RawFilePath]
+
 type Extention = RawFilePath
 
 convertString :: String -> RawFilePath
@@ -28,8 +31,7 @@ data FilterFlags = FilterFlags {
       include       :: Maybe SearchFilters       -- allowlist globs
     , exclude       :: Maybe SearchFilters       -- denylist globs
     , extention     :: Maybe Extention       -- denylist globs
-    , hidden        :: Bool                -- skal søke igjennom dotFiles
-    , fileOnly      :: Bool                -- only regular files
+    , hideHidden    :: Bool                -- skal søke igjennom dotFiles
 
   }  deriving (Eq, Show)
 
@@ -41,23 +43,15 @@ getAllowFilter sf fp = case include sf of
                        (Just a) -> pure $  fp `elem` a -- 
 
 
-
 getDisallowFilter :: FilterFlags -> RawFilePath -> IO Bool 
 getDisallowFilter sf fp = case exclude sf of
                           Nothing  -> pure True              -- da går alt med
                           (Just a) -> pure $  fp `notElem` a -- da går den bare med om den ikke er element
 
-
 getHiddenFilter :: FilterFlags -> RawFilePath -> IO Bool
-getHiddenFilter sf fp = if hidden sf
-                        then pure $ not $ BC.head fp == '.' -- vår en parser error når eg bruker !=
+getHiddenFilter sf fp = if hideHidden sf
+                        then pure $ not $ BC.head fp == '.' -- får en parser error når eg bruker !=
                         else pure True
-
-
-getFileOnlyFilter :: FilterFlags -> RawFilePath -> IO Bool
-getFileOnlyFilter sf fp = if fileOnly sf 
-                          then isRegularFile <$> getFileStatus  fp -- om ikke kan den gjøre filter -- om ikke kan den gjøre filter
-                          else pure True -- om den ikke skal sjekke etter bare filer, da skal alt med
 
 getExtentionFilter :: FilterFlags -> RawFilePath -> IO Bool
 getExtentionFilter sf fp = case extention sf of
@@ -65,19 +59,15 @@ getExtentionFilter sf fp = case extention sf of
                         (Just ext) -> case getFileExtention fp of
                                         Nothing     -> pure False 
                                         (Just curr) -> do 
-                                            pure $ BC.tail curr == ext
+                                            pure $ BC.tail curr == ext 
 
 
 getFileExtention :: RawFilePath -> Maybe RawFilePath
-getFileExtention fp = if BC.null lst 
+getFileExtention fp = if BS.null ext 
                       then Nothing
-                      else Just lst
+                      else Just ext
                         where
-                        lst = BC.dropWhile  (not . (== '.')) fp
-
-
-
-
+                        ext = takeExtension fp
 
 
 

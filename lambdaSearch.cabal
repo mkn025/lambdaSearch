@@ -68,7 +68,7 @@ library
                     , stm
                     , async
                     , regex-posix
-
+                    , filepath-bytestring
     hs-source-dirs:   src
 
     default-language: GHC2021
