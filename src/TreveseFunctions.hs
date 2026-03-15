@@ -1,27 +1,29 @@
 {- HLINT ignore "Use if" -}
 {-# LANGUAGE OverloadedStrings #-}
 
-module TreveseFunctions (traverseDirectoryContents,testA)   where
+module TreveseFunctions (traverseDirectoryContents,testA) where
 
 import System.Posix.Directory.Foreign
-
 
 import qualified Data.ByteString.Char8 as BS
 import System.Posix.ByteString.FilePath
 import Foreign.C.Error
 import Foreign.C.String
 import Foreign.C.Types
-import Foreign.Marshal.Alloc (alloca) 
+
+import Foreign.Marshal.Alloc (alloca)
 import UnliftIO (MonadUnliftIO, withRunInIO)
-import System.Posix.Files.ByteString (isDirectory, getFileStatus)
+import System.Posix.Files.ByteString (isDirectory, getFileStatus, fileSize)
+import System.Posix.Types(FileOffset)
+
 import Control.Monad.IO.Class
 
-import qualified Data.ByteString.Char8 as BC
+import qualified Data.ByteString.Char8 as BC  (ByteString,pack,head,)
 import System.Posix.Directory.ByteString as PosixBS
 
 import System.IO.Error
 import System.Posix.FilePath ((</>))
- 
+
 import UnliftIO.Exception
 
 import Foreign.Ptr as PTR
@@ -29,10 +31,6 @@ import Foreign.Storable
 import System.Posix.Directory.Internals (DirStream(DirStream),CDir , CDirent )
 
 
-import Control.Concurrent
-import Control.Concurrent.STM
-import Control.Applicative
-import Control.Monad
 
 
 -- Lager Haskll funksjoner igjennom FFI
@@ -50,7 +48,6 @@ foreign import ccall unsafe "__posixdir_d_type"
 
 
 -- om du peeker CDir så får du CDirent
-
 
 unpackDirStream :: DirStream -> Ptr CDir
 unpackDirStream (DirStream a) = a
@@ -78,12 +75,13 @@ readDirEnt dir = do
             False -> do
                 errno <- getErrno
                 if errno == eINTR   --kjører loopen på dersom error er en intetuped systcall 
-                    then loop ptr_dEnt 
+                    then loop ptr_dEnt
                     else do
                         let (Errno errorCode) = errno -- patter matcher og henter errorCode 
-                        if errorCode == 0 
+                        if errorCode == 0
                             then pure  Nothing --(dtUnknown, BS.empty)
                             else throwErrno "readDirEnt"
+
 
 
 modifyIOErrorUnliftIO :: (MonadUnliftIO m) => (IOError -> IOError) -> m a -> m a
@@ -111,71 +109,64 @@ traverseDirectoryContents f s0 p =
         case dirAnd of
             Nothing          -> pure acc -- stoper dersom dir ikke klarer å lese. 
             Just t@(_typ, e) ->
-                if e == "." || e == ".."
+                if e == "." || e == ".." 
                     then loop acc dirp -- gi 
                     else do
                         -- altså bruk funkjsonen acc og t og gi oss den nyye acc.
                         -- løft med do notasjon
                         -- og kast tilbake i loopen
-                        acc' <- f acc t  
+                        acc' <- f acc t
                         loop acc' dirp
 
 
-treversAll :: [DirContent] -> RawFilePath -> IO [DirContent]
-treversAll arr p =  topLoop 
+
+type FileFilter = RawFilePath -> IO Bool
+
+treversRecursively :: FileFilter -> [DirContent] -> RawFilePath -> IO [DirContent]
+treversRecursively filefilter arr p =  topLoop
     where
     topLoop :: IO [DirContent]
     topLoop = do
         isDir <- liftIO $ isDirectory <$> getFileStatus p
         if not isDir  -- bruker negasjonen slik at koden skal se bedre ut
             then pure arr
-            else  traverseDirectoryContents innerLoop arr p
+            else traverseDirectoryContents innerLoop arr p
         where
             innerLoop :: [DirContent] -> DirContent -> IO [DirContent]
             innerLoop acc t@(typ,file) = do
                 let fullpath = p </> file --legg sammen slik at vi er inne på riktig sti
-                isDir <- liftIO . pure $ typ == dtDir  
-                if not isDir 
-                    then pure (t : acc) -- gi filen tilabke
-                    else treversAll (t : acc) fullpath 
+                isDir <- liftIO . pure $ typ == dtDir
+                if not isDir
+                    then do
+                        appliedfilter <- filefilter fullpath
+                        if not appliedfilter
+                            then pure acc
+                            else pure (t:acc)
+                    else treversRecursively filefilter (t : acc) fullpath
+
+
+byteStringFilter :: RawFilePath -> IO Bool
+byteStringFilter s =  do
+        fs <-  getFileStatus s
+        let size = fileSize fs
+        pure (size > 10000)
+
+treverFilePath :: FilePath -> FileFilter -> IO [DirContent]
+treverFilePath fp ff = treversRecursively ff [] $ BC.pack fp
+
 
 
 
 -- RawFilePath == ByteString
-
 path :: BC.ByteString
 path =  BC.pack  "/Users/martineldeknutsen/Dev/UiB/inf221/"
 
+path2 = "/Users/martineldeknutsen/Dev/UiB/inf221/FFI/"
+
 testA :: String -> IO [DirContent]
-testA s = treversAll  [] $ BC.pack s
+testA s = treversRecursively byteStringFilter [] $ BC.pack s
 
-
-
-
-
-
-
-
-
-
- 
-
-
-
-
-
-
-
- 
-
-
-
-
-
-
-
-
-
+applied = testA path2
 
 
 
