@@ -1,18 +1,28 @@
 module Main where
 
-import TreveseFunctions (testA) 
+import TreveseFunctions (treverFilePath) 
+import FileTreversal 
 
 
-path = "/Users/martineldeknutsen/Dev"
 
 main :: IO ()
-main = do
-    a <- printLast <$> testA path 
-    print a
+main = pure ()
 
-printLast :: [a] -> a
-printLast [x] = x
-printLast (_:xs) = printLast xs
+
+defaultFlags2 :: FilterFlags
+defaultFlags2 = FilterFlags {
+    include     = Nothing
+  , exclude     = Nothing
+  , extention   = Just $ convertString  "pdf"
+  , hidden      = True
+  , fileOnly    = False
+  }
+
+
+testA = treverFilePath "/Users/martineldeknutsen/Dev/UiB/inf221/semesterProjekt/testMappe" defaultFlags2 
+
+
+
 
 
 

@@ -70,6 +70,16 @@
   (major1) == 0 && (major2) <  3 || \
   (major1) == 0 && (major2) == 3 && (minor) <= 0)
 #endif /* MIN_VERSION_posix_paths */
+/* package regex-posix-0.96.0.2 */
+#ifndef VERSION_regex_posix
+#define VERSION_regex_posix "0.96.0.2"
+#endif /* VERSION_regex_posix */
+#ifndef MIN_VERSION_regex_posix
+#define MIN_VERSION_regex_posix(major1,major2,minor) (\
+  (major1) <  0 || \
+  (major1) == 0 && (major2) <  96 || \
+  (major1) == 0 && (major2) == 96 && (minor) <= 0)
+#endif /* MIN_VERSION_regex_posix */
 /* package stm-2.5.1.0 */
 #ifndef VERSION_stm
 #define VERSION_stm "2.5.1.0"

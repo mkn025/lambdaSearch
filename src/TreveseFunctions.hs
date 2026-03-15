@@ -1,7 +1,8 @@
-{- HLINT ignore "Use if" -}
 {-# LANGUAGE OverloadedStrings #-}
+{- HLINT ignore "Avoid lambda" -}
+{- HLINT ignore "Use if" -}
 
-module TreveseFunctions (traverseDirectoryContents,testA) where
+module TreveseFunctions (treverFilePath) where
 
 import System.Posix.Directory.Foreign
 
@@ -13,25 +14,26 @@ import Foreign.C.Types
 
 import Foreign.Marshal.Alloc (alloca)
 import UnliftIO (MonadUnliftIO, withRunInIO)
-import System.Posix.Files.ByteString (isDirectory, getFileStatus, fileSize)
-import System.Posix.Types(FileOffset)
+import System.Posix.Files.ByteString (isDirectory, getFileStatus)
 
-import Control.Monad.IO.Class
+import Control.Monad.IO.Class ( MonadIO(liftIO) )
 
-import qualified Data.ByteString.Char8 as BC  (ByteString,pack,head,)
+import qualified Data.ByteString.Char8 as BC  (pack)
 import System.Posix.Directory.ByteString as PosixBS
 
 import System.IO.Error
 import System.Posix.FilePath ((</>))
 
-import UnliftIO.Exception
+import UnliftIO.Exception ( bracket )
 
-import Foreign.Ptr as PTR
-import Foreign.Storable
-import System.Posix.Directory.Internals (DirStream(DirStream),CDir , CDirent )
+import Foreign.Ptr as PTR ( Ptr, nullPtr )
+import Foreign.Storable   ( Storable(peek) )
+import System.Posix.Directory.Internals (DirStream(DirStream), CDir, CDirent )
+import FileTreversal (FilterFlags, getAllowFilter, getDisallowFilter, getHiddenFilter, getFileOnlyFilter,getExtentionFilter)
 
 
 
+type DirContent = (DirType,RawFilePath)
 
 -- Lager Haskll funksjoner igjennom FFI
 foreign import ccall safe "__hscore_readdir"
@@ -52,7 +54,6 @@ foreign import ccall unsafe "__posixdir_d_type"
 unpackDirStream :: DirStream -> Ptr CDir
 unpackDirStream (DirStream a) = a
 
-type DirContent = (DirType,RawFilePath)
 
 readDirEnt :: DirStream -> IO (Maybe DirContent)
 readDirEnt dir = do
@@ -109,7 +110,7 @@ traverseDirectoryContents f s0 p =
         case dirAnd of
             Nothing          -> pure acc -- stoper dersom dir ikke klarer å lese. 
             Just t@(_typ, e) ->
-                if e == "." || e == ".." 
+                if e == "." || e == ".."
                     then loop acc dirp -- gi 
                     else do
                         -- altså bruk funkjsonen acc og t og gi oss den nyye acc.
@@ -120,10 +121,9 @@ traverseDirectoryContents f s0 p =
 
 
 
-type FileFilter = RawFilePath -> IO Bool
 
-treversRecursively :: FileFilter -> [DirContent] -> RawFilePath -> IO [DirContent]
-treversRecursively filefilter arr p =  topLoop
+treversRecursively :: FilterFlags -> [DirContent] -> RawFilePath -> IO [DirContent]
+treversRecursively sf arr p =  topLoop
     where
     topLoop :: IO [DirContent]
     topLoop = do
@@ -138,36 +138,23 @@ treversRecursively filefilter arr p =  topLoop
                 isDir <- liftIO . pure $ typ == dtDir
                 if not isDir
                     then do
-                        appliedfilter <- filefilter fullpath
-                        if not appliedfilter
-                            then pure acc
-                            else pure (t:acc)
-                    else treversRecursively filefilter (t : acc) fullpath
+
+                        af  <- getAllowFilter     sf file 
+                        df  <- getDisallowFilter  sf file 
+                        hf  <- getHiddenFilter    sf file 
+                        ef  <- getExtentionFilter sf file 
+
+                        fof <- getFileOnlyFilter sf fullpath -- tregner fullpath siden den bruker getFileStatus 
+
+                        let allFilters = [ef]
+                        if and allFilters -- and allFilters 
+                            then pure (t:acc)
+                            else pure acc
+                    else treversRecursively sf (t : acc) fullpath
 
 
-byteStringFilter :: RawFilePath -> IO Bool
-byteStringFilter s =  do
-        fs <-  getFileStatus s
-        let size = fileSize fs
-        pure (size > 10000)
-
-treverFilePath :: FilePath -> FileFilter -> IO [DirContent]
-treverFilePath fp ff = treversRecursively ff [] $ BC.pack fp
-
-
-
-
--- RawFilePath == ByteString
-path :: BC.ByteString
-path =  BC.pack  "/Users/martineldeknutsen/Dev/UiB/inf221/"
-
-path2 = "/Users/martineldeknutsen/Dev/UiB/inf221/FFI/"
-
-testA :: String -> IO [DirContent]
-testA s = treversRecursively byteStringFilter [] $ BC.pack s
-
-applied = testA path2
-
+treverFilePath :: FilePath -> FilterFlags -> IO [DirContent]
+treverFilePath fp sf = treversRecursively sf [] $ BC.pack fp
 
 
 
