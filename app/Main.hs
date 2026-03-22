@@ -1,8 +1,8 @@
 module Main where
 
-import TreveseFunctions (treverFilePath, eqReg)
-import FileTreversal
-
+import TraverselsFunctions (treverFilePath)
+import FileTraversal
+import PrintFunctions
 
 newtype PrettyList a = PrettyList [a]
 
@@ -10,21 +10,28 @@ instance Show a => Show (PrettyList a) where
   show (PrettyList xs) =
     "[\n" ++ unlines (map (\x -> "  " ++ show x) xs) ++ "]"
 
+
+
+path = "/Users/martineldeknutsen/Dev/UiB/inf221/semesterProjekt/testMappe"
+
 main :: IO ()
 main = do
-    pa <- getLine
-    lst <- treverFilePath pa defaultFlags2
-    let lst2 = map snd . filter (eqReg  . fst)
-    newLst <- pure $ lst2 lst
-    print $ PrettyList newLst 
+    lst <- treverFilePath path defaultFlags2
+    printResults lst
+
+    
+    
+
+
+
+
 
 
 defaultFlags2 :: FilterFlags
 defaultFlags2 = FilterFlags {
     include     = Nothing
   , exclude     = Nothing
-  , extention   = Just  $ convertString "java"
-  , hideHidden  = False
+  , extention   = Just  $ convertString "java" , hideHidden  = False
   }
 
 -- testA =  treverFilePath "/Users/martineldeknutsen/" defaultFlags2
