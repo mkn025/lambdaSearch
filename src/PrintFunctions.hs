@@ -4,7 +4,7 @@ import TraverselsFunctions ( DirContent )
 import System.IO ( stdout, BufferMode(LineBuffering), hSetBuffering ) 
 import qualified Data.ByteString.Char8 as BS(unpack )
 import System.Posix.Directory.Foreign (dtLnk,dtDir )
-
+import System.Console.ANSI
 
 
 -- | Printer resultatet, bruker linebuffer slik at søkeresultaene skal bli synlig forløpende
@@ -12,8 +12,8 @@ import System.Posix.Directory.Foreign (dtLnk,dtDir )
 printResults :: [DirContent] -> IO ()
 printResults contents = do
     hSetBuffering stdout LineBuffering 
+    setSGR [SetColor Foreground Vivid Red]
     mapM_ printDirContent $ filter ((/= dtDir ) . fst) contents 
-
 
 
 -- | printer et Enkelt DirContent element

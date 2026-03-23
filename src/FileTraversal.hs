@@ -9,20 +9,24 @@ import qualified Data.ByteString as BS (null)
 import System.FilePath.ByteString (takeExtension)
 
 import Text.Regex.TDFA
-  ( Regex, CompOption(..), ExecOption(..)
-  , defaultCompOpt, defaultExecOpt, makeRegexOpts
+  ( Regex
+  , ExecOption(..)
+  , defaultCompOpt
+  , defaultExecOpt
+  , makeRegexOpts
   , matchTest
   )
 
--- Datastruktur som holder filnavnet
 
+-- Datastruktur som holder filnavnet
 --type FolderState a = StateT FolderAndContent IO a
 
-type SearchFilters = [RawFilePath]
 
 type Extention     = RawFilePath
+type SearchPattern = RawFilePath
 
-type SearchPattern = String
+
+type SearchFilters = [RawFilePath]
 
 
 convertString :: String -> RawFilePath
@@ -32,10 +36,15 @@ data SearchSetting = SearchSetting {
       searchPaths   :: [RawFilePath]
     , maxDepth      :: Maybe Int
     , filtes        :: FilterFlags
-
     }
 
 
+
+-- | regxPattern. regexFilter 
+-- | include liste med mapper du vil inkudere
+-- | exclude liste med mapper du vil eksludere
+-- | et falgg som lar deg spesifisere extention 
+-- | om vil den skal søk igjennom hidden filter
 data FilterFlags = FilterFlags {
       regxPattern   :: Maybe SearchPattern
     , include       :: Maybe SearchFilters       -- allowlist globs
@@ -44,9 +53,6 @@ data FilterFlags = FilterFlags {
     , hideHidden    :: Bool                -- skal søke igjennom dotFiles
 
   }  deriving (Eq, Show)
-
-
-
 
 
 -- Fast per-file check
@@ -61,15 +67,18 @@ getAllowFilter sf fp = case include sf of
                        Nothing  -> True           -- da går alt med
                        (Just a) -> fp `elem` a
 
+
 getDisallowFilter :: FilterFlags -> RawFilePath -> Bool
 getDisallowFilter sf fp = case exclude sf of
                           Nothing  -> True              -- da går alt med
                           (Just a) -> fp `notElem` a -- da går den bare med om den ikke er element
 
+
 getHiddenFilter :: FilterFlags -> RawFilePath -> Bool
 getHiddenFilter sf fp = case hideHidden sf of 
                         True  -> BC.head fp /= '.' -- får en parser error når eg bruker 
                         False -> True
+
 
 getExtentionFilter :: FilterFlags -> RawFilePath ->  Bool
 getExtentionFilter sf fp = case extention sf of
@@ -79,6 +88,7 @@ getExtentionFilter sf fp = case extention sf of
                                         (Just curr) -> BC.tail curr == ext
 
 
+-- helpers
 
 
 getFileExtention :: Extention -> Maybe Extention
@@ -88,16 +98,15 @@ getFileExtention fp = if BS.null ext
                         where
                         ext = takeExtension fp
 
-
--- | compiles the regex pattrerne
+-- | compiles the regex pattern
 
 compileRegexFilter :: FilterFlags -> Maybe Regex 
 compileRegexFilter sf =
   case regxPattern sf of
     Nothing  ->  Nothing
-    Just pat ->  Just $ makeRegexOpts comp exec (BC.pack pat)
+    Just pat ->  Just $ makeRegexOpts comp exec pat
   where
     comp = defaultCompOpt
-    exec = defaultExecOpt { captureGroups = False } -- faster if you only need Bool
+    exec = defaultExecOpt { captureGroups = False } 
 
 

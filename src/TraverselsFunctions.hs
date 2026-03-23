@@ -134,16 +134,18 @@ traverseDirectoryContents f s0 p =
 
 treversRecursively :: FilterFlags -> [DirContent] -> RawFilePath -> IO [DirContent]
 treversRecursively sf arr p =  topLoop
-
     where
 
     reg = seq const $ compileRegexFilter sf
     topLoop :: IO [DirContent]
     topLoop = do
         isDir <- liftIO $ isDirectory <$> getFileStatus p
+
         if not isDir  -- bruker negasjonen slik at koden skal se bedre ut
+
             then pure arr
             else traverseDirectoryContents innerLoop arr p
+
         where
             innerLoop :: [DirContent] -> DirContent -> IO [DirContent]
             innerLoop acc t@(typ,file) = do
@@ -159,7 +161,7 @@ treversRecursively sf arr p =  topLoop
                         hf  <- pure $ getHiddenFilter    sf file 
                         ef  <- pure $ getExtentionFilter sf file 
                         
-                        if and [rg, af , df ,ef ,hf]  
+                        if and [rg, af, df ,ef ,hf]  
                             then pure ((typ,fullpath):acc)
                             else pure acc
                     else treversRecursively sf (t : acc) fullpath

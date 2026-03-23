@@ -24,6 +24,7 @@ library
     exposed-modules: FileTraversal, TraverselsFunctions, PrintFunctions
     build-depends:    base ^>=4.18.3.0
                     , mtl
+                    , ansi-terminal
                     , unix
                     , bytestring
                     , filepath
