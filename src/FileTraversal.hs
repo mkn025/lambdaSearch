@@ -8,6 +8,11 @@ import qualified Data.ByteString.Char8 as BC (head,pack,tail)
 import qualified Data.ByteString as BS (null)
 import System.FilePath.ByteString (takeExtension)
 
+import Text.Regex.TDFA
+  ( Regex, CompOption(..), ExecOption(..)
+  , defaultCompOpt, defaultExecOpt, makeRegexOpts
+  , matchTest
+  )
 
 -- Datastruktur som holder filnavnet
 
@@ -17,26 +22,37 @@ type SearchFilters = [RawFilePath]
 
 type Extention     = RawFilePath
 
+type SearchPattern = String
+
 
 convertString :: String -> RawFilePath
 convertString = BC.pack
 
 data SearchSetting = SearchSetting {
-      query         :: Maybe String        -- name/pattern to match
-    , searchPaths   :: [RawFilePath]       -- [] = current directory
-    , maxDepth      :: Maybe Int           -- Nothing = unlimited
+      searchPaths   :: [RawFilePath]
+    , maxDepth      :: Maybe Int
     , filtes        :: FilterFlags
+
     }
 
 
 data FilterFlags = FilterFlags {
-      include       :: Maybe SearchFilters       -- allowlist globs
+      regxPattern   :: Maybe SearchPattern
+    , include       :: Maybe SearchFilters       -- allowlist globs
     , exclude       :: Maybe SearchFilters       -- denylist globs
-    , extention     :: Maybe Extention       -- denylist globs
+    , extention     :: Maybe Extention       -- searchFor Spe 
     , hideHidden    :: Bool                -- skal søke igjennom dotFiles
 
   }  deriving (Eq, Show)
 
+
+
+
+
+-- Fast per-file check
+getRexPattern :: Maybe Regex -> RawFilePath -> Bool
+getRexPattern Nothing      _  = True
+getRexPattern (Just regex) fp = matchTest regex fp
 
 
 -- Allow searchFilter
@@ -50,12 +66,10 @@ getDisallowFilter sf fp = case exclude sf of
                           Nothing  -> True              -- da går alt med
                           (Just a) -> fp `notElem` a -- da går den bare med om den ikke er element
 
-
 getHiddenFilter :: FilterFlags -> RawFilePath -> Bool
 getHiddenFilter sf fp = case hideHidden sf of 
                         True  -> BC.head fp /= '.' -- får en parser error når eg bruker 
                         False -> True
-
 
 getExtentionFilter :: FilterFlags -> RawFilePath ->  Bool
 getExtentionFilter sf fp = case extention sf of
@@ -64,7 +78,10 @@ getExtentionFilter sf fp = case extention sf of
                                         Nothing     -> False
                                         (Just curr) -> BC.tail curr == ext
 
-getFileExtention :: RawFilePath -> Maybe RawFilePath
+
+
+
+getFileExtention :: Extention -> Maybe Extention
 getFileExtention fp = if BS.null ext
                       then Nothing
                       else Just ext
@@ -72,5 +89,15 @@ getFileExtention fp = if BS.null ext
                         ext = takeExtension fp
 
 
+-- | compiles the regex pattrerne
+
+compileRegexFilter :: FilterFlags -> Maybe Regex 
+compileRegexFilter sf =
+  case regxPattern sf of
+    Nothing  ->  Nothing
+    Just pat ->  Just $ makeRegexOpts comp exec (BC.pack pat)
+  where
+    comp = defaultCompOpt
+    exec = defaultExecOpt { captureGroups = False } -- faster if you only need Bool
 
 

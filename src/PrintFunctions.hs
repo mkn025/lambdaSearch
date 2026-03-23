@@ -1,24 +1,31 @@
 
 module PrintFunctions (printResults ) where
-import TraverselsFunctions 
-import System.IO 
-import qualified Data.ByteString.Char8 as BS  (unpack )
-
+import TraverselsFunctions ( DirContent ) 
+import System.IO ( stdout, BufferMode(LineBuffering), hSetBuffering ) 
+import qualified Data.ByteString.Char8 as BS(unpack )
 import System.Posix.Directory.Foreign (dtLnk,dtDir )
 
 
 
+-- | Printer resultatet, bruker linebuffer slik at søkeresultaene skal bli synlig forløpende
 
 printResults :: [DirContent] -> IO ()
 printResults contents = do
-    hSetBuffering stdout LineBuffering
-    mapM_ printDirContentWithType contents
+    hSetBuffering stdout LineBuffering 
+    mapM_ printDirContent $ filter ((/= dtDir ) . fst) contents 
 
+
+
+-- | printer et Enkelt DirContent element
 printDirContent :: DirContent -> IO ()
-printDirContent (dirType, rawFilePath) = do
+printDirContent (_ , rawFilePath) = do
   let path = BS.unpack rawFilePath
-  putStrLn path  -- Simple: just print the path
+  putStrLn path  
 
+
+
+-- | printer et Enkelt DirContent element
+-- | Printer men legger til / for mappe
 printDirContentWithType :: DirContent -> IO ()
 printDirContentWithType (dirType, rawFilePath) = do
   let path = BS.unpack rawFilePath

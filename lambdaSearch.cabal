@@ -21,7 +21,7 @@ common warnings
 library
     -- Import common warning flags.
     import:           warnings
-    exposed-modules: FileTraversal, TraverselsFunctions,PrintFunctions
+    exposed-modules: FileTraversal, TraverselsFunctions, PrintFunctions
     build-depends:    base ^>=4.18.3.0
                     , mtl
                     , unix
@@ -31,7 +31,7 @@ library
                     , unliftio
                     , stm
                     , async
-                    , regex-posix
+                    , regex-tdfa ^>= 1.3.2
                     , filepath-bytestring
 
     hs-source-dirs:   src

@@ -19,7 +19,8 @@ import System.Posix.Files.ByteString (isDirectory, getFileStatus)
 import Control.Monad.IO.Class ( MonadIO(liftIO) )
 
 import qualified Data.ByteString.Char8 as BS  (unpack,pack )
-import System.Posix.Directory.ByteString as PosixBS
+import System.Posix.Directory.ByteString as PosixBS 
+
 
 import System.IO.Error
 import System.Posix.FilePath ((</>))
@@ -29,12 +30,17 @@ import UnliftIO.Exception ( bracket )
 import Foreign.Ptr as PTR ( Ptr, nullPtr )
 import Foreign.Storable   ( Storable(peek) )
 import System.Posix.Directory.Internals (DirStream(DirStream), CDir, CDirent )
-import FileTraversal (FilterFlags, getAllowFilter, getDisallowFilter, getHiddenFilter,getExtentionFilter)
 
+import FileTraversal (
 
-eqReg :: DirType -> Bool
-eqReg a = a == dtReg 
-
+      FilterFlags
+    , getAllowFilter
+    , getDisallowFilter
+    , getHiddenFilter
+    , getExtentionFilter
+    , compileRegexFilter
+    , getRexPattern
+    )
 
 
 type DirContent = (DirType,RawFilePath)
@@ -102,7 +108,7 @@ traverseDirectoryContents :: (MonadUnliftIO m)
                           -> m a
 traverseDirectoryContents f s0 p =
   modifyIOErrorUnliftIO
-    ((`ioeSetFileName` (BS.unpack p)) .
+    ((`ioeSetFileName` BS.unpack p)  .
      (`ioeSetLocation` "System.Posix.Directory.Traversals.traverseDirectoryContents")) $ do
     bracket
       (liftIO $ PosixBS.openDirStream p)
@@ -128,7 +134,10 @@ traverseDirectoryContents f s0 p =
 
 treversRecursively :: FilterFlags -> [DirContent] -> RawFilePath -> IO [DirContent]
 treversRecursively sf arr p =  topLoop
+
     where
+
+    reg = seq const $ compileRegexFilter sf
     topLoop :: IO [DirContent]
     topLoop = do
         isDir <- liftIO $ isDirectory <$> getFileStatus p
@@ -143,14 +152,15 @@ treversRecursively sf arr p =  topLoop
                 if not isDir
                     then do
 
+                        rg  <- pure $ getRexPattern      reg file
+
                         af  <- pure $ getAllowFilter     sf file 
                         df  <- pure $ getDisallowFilter  sf file 
                         hf  <- pure $ getHiddenFilter    sf file 
                         ef  <- pure $ getExtentionFilter sf file 
-
-                        let allFilters = [af,df,ef,hf]
-                        if and allFilters  
-                            then pure (t:acc)
+                        
+                        if and [rg, af , df ,ef ,hf]  
+                            then pure ((typ,fullpath):acc)
                             else pure acc
                     else treversRecursively sf (t : acc) fullpath
 
