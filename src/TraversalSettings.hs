@@ -17,28 +17,30 @@ import Text.Regex.TDFA
 
 -- Datastruktur som holder filnavnet
 -- type FolderState a = StateT FolderAndContent IO a
-
 type Extention     = RawFilePath
-type Command       = String
 type SearchPattern = RawFilePath
 type SearchFilters = [RawFilePath]
 
+data Command =  Command{ 
+      command :: String
+    , path    :: FilePath
+    , flags   :: [String]
+    }
 
-convertString :: String -> RawFilePath
-convertString = BC.pack
+    deriving (Eq,Show)
+
 
 data SearchSetting = SearchSetting {
       searchPaths    :: [FilePath]
-    , maxDepth       :: Maybe Int
     , applyedCommand :: Maybe Command
     , filters        :: FilterFlags
 } deriving (Eq,Show)
+
 
 -- | regxPattern. regexFilter 
 -- | exclude liste med mapper du vil eksludere
 -- | et falgg som lar deg spesifisere extention 
 -- | om vil den skal søk igjennom hidden files
-
 data FilterFlags = FilterFlags {
       regxPattern   :: Maybe SearchPattern
     , exclude       :: Maybe SearchFilters
@@ -76,7 +78,6 @@ getFileExtention fp = if BS.null ext
                         where
                         ext = takeExtension fp
 
-
 -- | compiles the regex pattern
 compileRegexFilter :: FilterFlags -> Maybe Regex
 compileRegexFilter sf =
@@ -87,4 +88,9 @@ compileRegexFilter sf =
     comp = defaultCompOpt
     exec = defaultExecOpt { captureGroups = False }
 
+generateCommand :: Command -> String
+generateCommand = undefined 
+
+convertString :: String -> RawFilePath
+convertString = BC.pack
 
