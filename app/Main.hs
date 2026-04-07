@@ -13,12 +13,13 @@ import PrintFunctions (
 import System.IO (
      stdout, BufferMode(LineBuffering), hSetBuffering )
 
+
+
 main :: IO ()
 main = do
-        hSetBuffering stdout LineBuffering
-        out <- treverseDirWithSettings  ss
-        printResults out
-
+        hSetBuffering stdout LineBuffering 
+        output <- treverseDirWithSettings  searchSettings
+        printResults output
 
 
 path :: FilePath
@@ -43,10 +44,10 @@ defaultFlags2 = FilterFlags {
   , hideHidden  = True
 }
 
-ss :: SearchSetting
-ss = SearchSetting {
+
+searchSettings :: SearchSetting
+searchSettings = SearchSetting {
       searchPaths    =  allPath
-    , maxDepth       =  Nothing
     , applyedCommand =  Nothing
     , filters        =  defaultFlags2
 }
