@@ -1,7 +1,6 @@
 module Main where
 
-import TraverselsFunctions (
-    treverFilePath, treverseDirWithSettings, applyFunctionToPath )
+import TraverselsFunctions (treverseDirWithSettings)
 
 import TraversalSettings (
       FilterFlags(..), SearchSetting(..), convertString,  )
@@ -17,7 +16,7 @@ main :: IO ()
 main = do
      
      hSetBuffering stdout LineBuffering 
-     output <- treverseDirWithSettings  searchSettings
+     output <- TraverselsFunctions.treverseDirWithSettings  searchSettings
      printResults output
 
 path :: FilePath
@@ -48,5 +47,4 @@ searchSettings = SearchSetting {
     , applyedCommand =  Nothing
     , filters        =  defaultFlags2
 }
-
 
