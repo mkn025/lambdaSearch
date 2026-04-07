@@ -45,6 +45,6 @@ searchSettings :: SearchSetting
 searchSettings = SearchSetting {
       searchPaths    =  allPath
     , applyedCommand =  Nothing
-    , filters        =  defaultFlags2
+    , filters        =  Just  defaultFlags2
 }
 
