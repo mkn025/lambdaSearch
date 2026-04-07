@@ -75,10 +75,7 @@ type DirContentT = ExceptT DirError IO (Maybe DirContent)
 -- | Funksjonen leser en Enten en Dirstram ved å bruke readDir syscall. Eller så gir den  en feil
 -- | Fungere ved å allocere minne til pekeren. så så leser vi hva som er på pekeren
 -- |  Men skriver også det blir lest til etr_dEnt. Derfor vi kan hente ut fra pekeren
-
--- bruker transformatoren siden vi øsnker bare å kaste å gi feil dersom syscallet feiler
-
-
+-- | bruker transformatoren siden vi øsnker bare å kaste å gi feil dersom syscallet feiler. ikke ellers
 readDirEnt :: DirStream ->  DirContentT
 readDirEnt dir = ExceptT $ alloca $ \ptr_dEnt  -> readContent ptr_dEnt
     where
@@ -105,7 +102,6 @@ readDirEnt dir = ExceptT $ alloca $ \ptr_dEnt  -> readContent ptr_dEnt
                         if errorCode == 0
                             then pure . Left $ UnexpectedErrnoZero 
                             else pure . Left $ ReadDirErr errno    
-
 
 
 traverseDirectoryContents :: (MonadUnliftIO m)
@@ -150,12 +146,10 @@ treversRecursively flt arr rfp =  topLoop
                         df  <- pure $ getDisallowFilter  flt rfp
                         hf  <- pure $ getHiddenFilter    flt file
                         ef  <- pure $ getExtentionFilter flt file
-                        if and [rg, df ,ef ,hf]
+                        if and [rg, df, ef, hf]
                             then pure  $ (typ, fullpath) :acc
                             else pure acc
                     else treversRecursively flt (t : acc) fullpath
-
-
 
 
 -- Sånn sett dårlig, men det holder forløpig det
@@ -164,7 +158,6 @@ applyFunctionToPath  dc cmd | fst dc    /= dtDir = callCommand s
                             | otherwise          =  putStrLn "can only to command on file"
     where
         s = cmd <> " " <> (BS.unpack  . snd ) dc
-
 
 treverseDirWithSettings  :: SearchSetting -> IO [DirContent]
 treverseDirWithSettings  ss = concat <$> traverse f (searchPaths  ss)

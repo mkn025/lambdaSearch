@@ -1,11 +1,10 @@
 module Main where
 
 import TraverselsFunctions (
-    treverFilePath , treverseDirWithSettings , applyFunctionToPath )
+    treverFilePath, treverseDirWithSettings, applyFunctionToPath )
 
-
-import TraversalSettings(
-      FilterFlags(..), SearchSetting(..), convertString )
+import TraversalSettings (
+      FilterFlags(..), SearchSetting(..), convertString,  )
 
 import PrintFunctions (
       printResults)
@@ -14,13 +13,12 @@ import System.IO (
      stdout, BufferMode(LineBuffering), hSetBuffering )
 
 
-
 main :: IO ()
 main = do
-        hSetBuffering stdout LineBuffering 
-        output <- treverseDirWithSettings  searchSettings
-        printResults output
-
+     
+     hSetBuffering stdout LineBuffering 
+     output <- treverseDirWithSettings  searchSettings
+     printResults output
 
 path :: FilePath
 path  = "/Users/martineldeknutsen/Dev/UiB/inf221/semesterProjekt/testMappe/"
@@ -43,7 +41,6 @@ defaultFlags2 = FilterFlags {
   , extention   = Nothing
   , hideHidden  = True
 }
-
 
 searchSettings :: SearchSetting
 searchSettings = SearchSetting {
