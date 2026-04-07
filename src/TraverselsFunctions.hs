@@ -74,9 +74,8 @@ unpackDirStream :: DirStream -> Ptr CDir
 unpackDirStream (DirStream a) = a
 
 
-data ReadDirError = Interrupted | SysErr Errno
 
-readDirEnt :: DirStream -> IO (Either ReadDirError DirContent)
+readDirEnt :: DirStream -> IO (Maybe DirContent)
 readDirEnt dir = do
   alloca $ \ptr_dEnt  -> loop ptr_dEnt
     where
@@ -89,12 +88,12 @@ readDirEnt dir = do
             True -> do
                 dEnt <- peek ptr_dEnt   -- leser innholder på det  somer på peker, dererferer
                 if dEnt == PTR.nullPtr  -- s
-                    then pure Interrupted   --  pure (dtUnknown, BS.empty) 
+                    then pure Nothing   --  pure (dtUnknown, BS.empty) 
                     else do
                         dName <- c_name dEnt >>= (\l -> peekFilePath l) -- bare lamdda siden det er letter å lese
                         dType <- c_type dEnt
                         c_freeDirEnt dEnt
-                        pure $   (dType, dName)
+                        pure $   Just (dType, dName)
             False -> do
                 errno <- getErrno
                 if errno == eINTR   --kjører loopen på dersom error er en intetuped systcall 
