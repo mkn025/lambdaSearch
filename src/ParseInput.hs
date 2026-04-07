@@ -14,13 +14,12 @@ tester = parseTest parseChar  "a"
 parseChar :: Parser Char
 parseChar = char 'a'
 
-parseString :: Parser String
-parseString = string ""
+parseStart :: Parser String
+parseStart = string "lms"
 
 parseLamdaSearch :: Parser String
 parseLamdaSearch = do 
     a <- string "lms"
-    b <- string "lms"
-    pure $ a <> b
+
 
 
