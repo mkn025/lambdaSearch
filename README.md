@@ -9,6 +9,8 @@
 ### Eksempel på tenkt bruk
 ```bash
 lms /Users/lorem/testMappe/ lorem122 -a -e md --exclude ["/Users/lorem/ikkeTaMeddette"] -x pandoc -o {}.pdf {}
+```
+
 
 
 ### Hvordan man kjører appen
