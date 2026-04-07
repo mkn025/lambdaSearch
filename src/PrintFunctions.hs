@@ -1,7 +1,6 @@
 
 module PrintFunctions (printResults ) where
 import TraverselsFunctions ( DirContent ) 
-import System.IO ( stdout, BufferMode(LineBuffering), hSetBuffering ) 
 import qualified Data.ByteString.Char8 as BS(unpack )
 import System.Posix.Directory.Foreign (dtLnk,dtDir )
 import System.Console.ANSI
@@ -11,17 +10,14 @@ import System.Console.ANSI
 
 printResults :: [DirContent] -> IO ()
 printResults contents = do
-    hSetBuffering stdout LineBuffering 
     setSGR [SetColor Foreground Vivid Red]
     mapM_ printDirContent $ filter ((/= dtDir ) . fst) contents 
+    setSGR [Reset]
 
 
 -- | printer et Enkelt DirContent element
 printDirContent :: DirContent -> IO ()
-printDirContent (_ , rawFilePath) = do
-  let path = BS.unpack rawFilePath
-  putStrLn path  
-
+printDirContent = putStrLn . BS.unpack . snd   
 
 
 -- | printer et Enkelt DirContent element
@@ -30,9 +26,9 @@ printDirContentWithType :: DirContent -> IO ()
 printDirContentWithType (dirType, rawFilePath) = do
   let path = BS.unpack rawFilePath
   let marker = case dirType of
-                 dt | dt == dtDir -> "/"  -- directories end with /
-                 dt | dt == dtLnk -> "@"  -- symlinks end with @
-                 _               -> ""     -- files have no markerkkkk
+                 l | l == dtDir -> "/"  
+                 l | l == dtLnk -> "@"  
+                 _              -> ""   
   putStrLn $ path ++ marker
 
 

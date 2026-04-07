@@ -1,7 +1,5 @@
-{- HLINT ignore "Redundant if" -}
-{- HLINT ignore "Use if" -}
+module TraversalSettings where
 
-module FileTraversal where
 
 import System.Posix.ByteString (RawFilePath)
 import qualified Data.ByteString.Char8 as BC (head,pack,tail)
@@ -17,15 +15,12 @@ import Text.Regex.TDFA
   , matchTest
   )
 
-
 -- Datastruktur som holder filnavnet
---type FolderState a = StateT FolderAndContent IO a
-
+-- type FolderState a = StateT FolderAndContent IO a
 
 type Extention     = RawFilePath
+type Command       = String
 type SearchPattern = RawFilePath
-
-
 type SearchFilters = [RawFilePath]
 
 
@@ -33,52 +28,39 @@ convertString :: String -> RawFilePath
 convertString = BC.pack
 
 data SearchSetting = SearchSetting {
-      searchPaths   :: [RawFilePath]
-    , maxDepth      :: Maybe Int
-    , filtes        :: FilterFlags
-    }
-
-
+      searchPaths    :: [FilePath]
+    , maxDepth       :: Maybe Int
+    , applyedCommand :: Maybe Command
+    , filters        :: FilterFlags
+} deriving (Eq,Show)
 
 -- | regxPattern. regexFilter 
--- | include liste med mapper du vil inkudere
 -- | exclude liste med mapper du vil eksludere
 -- | et falgg som lar deg spesifisere extention 
--- | om vil den skal søk igjennom hidden filter
+-- | om vil den skal søk igjennom hidden files
+
 data FilterFlags = FilterFlags {
       regxPattern   :: Maybe SearchPattern
-    , include       :: Maybe SearchFilters       -- allowlist globs
-    , exclude       :: Maybe SearchFilters       -- denylist globs
-    , extention     :: Maybe Extention       -- searchFor Spe 
-    , hideHidden    :: Bool                -- skal søke igjennom dotFiles
+    , exclude       :: Maybe SearchFilters
+    , extention     :: Maybe Extention
+    , hideHidden    :: Bool
 
-  }  deriving (Eq, Show)
+}  deriving (Eq, Show)
 
 
--- Fast per-file check
 getRexPattern :: Maybe Regex -> RawFilePath -> Bool
 getRexPattern Nothing      _  = True
 getRexPattern (Just regex) fp = matchTest regex fp
 
-
 -- Allow searchFilter
-getAllowFilter :: FilterFlags -> RawFilePath -> Bool
-getAllowFilter sf fp = case include sf of
-                       Nothing  -> True           -- da går alt med
-                       (Just a) -> fp `elem` a
-
-
 getDisallowFilter :: FilterFlags -> RawFilePath -> Bool
-getDisallowFilter sf fp = case exclude sf of
-                          Nothing  -> True              -- da går alt med
-                          (Just a) -> fp `notElem` a -- da går den bare med om den ikke er element
+getDisallowFilter sf fp = maybe True (fp `notElem ` ) (exclude sf)  -- Blir True dersom fp ikke elem i 
 
+-- Hvis du vil syntes det er lesbart 
+-- getDisallowFilter = flip (maybe True . notElem) . exclude 
 
 getHiddenFilter :: FilterFlags -> RawFilePath -> Bool
-getHiddenFilter sf fp = case hideHidden sf of 
-                        True  -> BC.head fp /= '.' -- får en parser error når eg bruker 
-                        False -> True
-
+getHiddenFilter sf fp = not (hideHidden sf) || (BC.head fp /= '.')
 
 getExtentionFilter :: FilterFlags -> RawFilePath ->  Bool
 getExtentionFilter sf fp = case extention sf of
@@ -86,11 +68,7 @@ getExtentionFilter sf fp = case extention sf of
                         (Just ext) -> case getFileExtention fp of
                                         Nothing     -> False
                                         (Just curr) -> BC.tail curr == ext
-
-
 -- helpers
-
-
 getFileExtention :: Extention -> Maybe Extention
 getFileExtention fp = if BS.null ext
                       then Nothing
@@ -98,15 +76,15 @@ getFileExtention fp = if BS.null ext
                         where
                         ext = takeExtension fp
 
--- | compiles the regex pattern
 
-compileRegexFilter :: FilterFlags -> Maybe Regex 
+-- | compiles the regex pattern
+compileRegexFilter :: FilterFlags -> Maybe Regex
 compileRegexFilter sf =
   case regxPattern sf of
     Nothing  ->  Nothing
     Just pat ->  Just $ makeRegexOpts comp exec pat
   where
     comp = defaultCompOpt
-    exec = defaultExecOpt { captureGroups = False } 
+    exec = defaultExecOpt { captureGroups = False }
 
 

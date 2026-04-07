@@ -3,25 +3,17 @@ name:               lambdaSearch
 version:            0.1.0.0
 license:            AGPL-3.0-or-later
 license-file:       LICENSE
-
 author:             Martin Elde Knutsen
-
 maintainer:         maknu0536@uib.no
-
 build-type:         Simple
-
 extra-doc-files:    CHANGELOG.md
 
 common warnings
     ghc-options: -Wall -threaded
-
-
-
-
 library
     -- Import common warning flags.
     import:           warnings
-    exposed-modules: FileTraversal, TraverselsFunctions, PrintFunctions
+    exposed-modules: TraversalSettings, TraverselsFunctions, PrintFunctions, ParseInput
     build-depends:    base ^>=4.18.3.0
                     , mtl
                     , ansi-terminal
@@ -34,10 +26,14 @@ library
                     , async
                     , regex-tdfa ^>= 1.3.2
                     , filepath-bytestring
+                    , process
+                    , megaparsec
+
 
     hs-source-dirs:   src
 
     default-language: GHC2021
+
 
 executable lambdaSearch
     -- Import common warning flags.

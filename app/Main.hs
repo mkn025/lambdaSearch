@@ -1,42 +1,54 @@
 module Main where
 
-import TraverselsFunctions (treverFilePath)
-import FileTraversal
-import PrintFunctions
+import TraverselsFunctions (
+    treverFilePath , treverseDirWithSettings , applyFunctionToPath )
 
-path = "/Users/martineldeknutsen/Dev/UiB/"
-path :: String
 
+import TraversalSettings(
+      FilterFlags(..), SearchSetting(..), convertString )
+
+import PrintFunctions (
+      printResults)
+
+import System.IO (
+     stdout, BufferMode(LineBuffering), hSetBuffering )
 
 main :: IO ()
 main = do
-    lst <- treverFilePath path defaultFlags2
-    printResults lst
+        hSetBuffering stdout LineBuffering
+        out <- treverseDirWithSettings  ss
+        printResults out
 
 
+
+path :: FilePath
+path  = "/Users/martineldeknutsen/Dev/UiB/inf221/semesterProjekt/testMappe/"
+
+allPath :: [FilePath]
+allPath = [path]
 
 defaultFlags1 :: FilterFlags
 defaultFlags1 = FilterFlags {
     regxPattern = Nothing
-  , include     = Nothing
   , exclude     = Nothing
   , extention   = Just $ convertString "java"
   , hideHidden  = False
-
 }
-
 
 defaultFlags2 :: FilterFlags
 defaultFlags2 = FilterFlags {
-
-    regxPattern = Just $ convertString "fooBarFooBar"
-  , include     = Nothing
+    regxPattern = Nothing
   , exclude     = Nothing
   , extention   = Nothing
-  , hideHidden  = False
+  , hideHidden  = True
 }
 
-
-
+ss :: SearchSetting
+ss = SearchSetting {
+      searchPaths    =  allPath
+    , maxDepth       =  Nothing
+    , applyedCommand =  Nothing
+    , filters        =  defaultFlags2
+}
 
 

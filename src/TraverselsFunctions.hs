@@ -3,9 +3,15 @@
 {- HLINT ignore "Avoid lambda" -}
 {- HLINT ignore "Use if" -}
 
-module TraverselsFunctions (treverFilePath,DirContent) where
+module TraverselsFunctions (
+     treverFilePath
+    , DirContent
+    , treverseDirWithSettings
+    , applyFunctionToPath 
+    )
+where
 
-import System.Posix.Directory.Foreign
+import System.Posix.Directory.Foreign ( DirType(..), dtDir )
 
 import System.Posix.ByteString.FilePath
 import Foreign.C.Error
@@ -17,34 +23,37 @@ import UnliftIO (MonadUnliftIO, withRunInIO)
 import System.Posix.Files.ByteString (isDirectory, getFileStatus)
 
 import Control.Monad.IO.Class ( MonadIO(liftIO) )
+import qualified Data.ByteString.Char8 as BS  (
+    unpack, pack )
 
-import qualified Data.ByteString.Char8 as BS  (unpack,pack )
-import System.Posix.Directory.ByteString as PosixBS 
-
-
+import System.Posix.Directory.ByteString as PosixBS
+    ( openDirStream, closeDirStream, DirStream ) 
 import System.IO.Error
-import System.Posix.FilePath ((</>))
+    ( ioeSetFileName, ioeSetLocation, modifyIOError )
+import System.Posix.FilePath (
+    (</>))
 
-import UnliftIO.Exception ( bracket )
-
+import UnliftIO.Exception (
+    bracket )
 import Foreign.Ptr as PTR ( Ptr, nullPtr )
-import Foreign.Storable   ( Storable(peek) )
-import System.Posix.Directory.Internals (DirStream(DirStream), CDir, CDirent )
+import Foreign.Storable ( Storable(peek) )
+import System.Process (callProcess, callCommand)
+import System.Posix.Directory.Internals (
+      DirStream(DirStream) , CDir , CDirent )
 
-import FileTraversal (
-
+import TraversalSettings (
       FilterFlags
-    , getAllowFilter
+    , SearchSetting (filters, searchPaths)
     , getDisallowFilter
     , getHiddenFilter
     , getExtentionFilter
     , compileRegexFilter
-    , getRexPattern
-    )
+    , getRexPattern)
+import Control.Arrow (ArrowChoice(right))
+
 
 
 type DirContent = (DirType,RawFilePath)
-
 
 -- Lager Haskll funksjoner igjennom FFI
 foreign import ccall safe "__hscore_readdir"
@@ -59,18 +68,20 @@ foreign import ccall unsafe "__hscore_d_name"
 foreign import ccall unsafe "__posixdir_d_type"
   c_type :: Ptr CDirent -> IO DirType
 
-
 -- om du peeker CDir så får du CDirent
 
 unpackDirStream :: DirStream -> Ptr CDir
 unpackDirStream (DirStream a) = a
 
 
-readDirEnt :: DirStream -> IO (Maybe DirContent)
+data ReadDirError = Interrupted | SysErr Errno
+
+readDirEnt :: DirStream -> IO (Either ReadDirError DirContent)
 readDirEnt dir = do
   alloca $ \ptr_dEnt  -> loop ptr_dEnt
     where
     loop ptr_dEnt = do
+
         let dirp = unpackDirStream  dir
         _ <- resetErrno
         r <- c_readdir dirp ptr_dEnt  --
@@ -78,12 +89,12 @@ readDirEnt dir = do
             True -> do
                 dEnt <- peek ptr_dEnt   -- leser innholder på det  somer på peker, dererferer
                 if dEnt == PTR.nullPtr  -- s
-                    then pure Nothing   --  pure (dtUnknown, BS.empty) 
+                    then pure Interrupted   --  pure (dtUnknown, BS.empty) 
                     else do
                         dName <- c_name dEnt >>= (\l -> peekFilePath l) -- bare lamdda siden det er letter å lese
                         dType <- c_type dEnt
                         c_freeDirEnt dEnt
-                        pure $ Just (dType, dName)
+                        pure $   (dType, dName)
             False -> do
                 errno <- getErrno
                 if errno == eINTR   --kjører loopen på dersom error er en intetuped systcall 
@@ -91,9 +102,8 @@ readDirEnt dir = do
                     else do
                         let (Errno errorCode) = errno -- patter matcher og henter errorCode 
                         if errorCode == 0
-                            then pure  Nothing --(dtUnknown, BS.empty)
+                            then pure Nothing --(dtUnknown, BS.empty)
                             else throwErrno "readDirEnt"
-
 
 
 modifyIOErrorUnliftIO :: (MonadUnliftIO m) => (IOError -> IOError) -> m a -> m a
@@ -101,7 +111,9 @@ modifyIOErrorUnliftIO f action =
   withRunInIO $ \runInIO -> do
     modifyIOError f (runInIO action)
 
+
 traverseDirectoryContents :: (MonadUnliftIO m)
+
                           => (a -> DirContent -> m a)  -- fold funksjon
                           -> a                          -- accumulator
                           -> RawFilePath                -- directory path
@@ -130,49 +142,52 @@ traverseDirectoryContents f s0 p =
                         loop acc' dirp
 
 
-
-
 treversRecursively :: FilterFlags -> [DirContent] -> RawFilePath -> IO [DirContent]
-treversRecursively sf arr p =  topLoop
+treversRecursively flt arr rfp =  topLoop
     where
-
-    reg = seq const $ compileRegexFilter sf
+    regexCompiled = seq const $ compileRegexFilter flt
     topLoop :: IO [DirContent]
     topLoop = do
-        isDir <- liftIO $ isDirectory <$> getFileStatus p
+        isDir <- liftIO $ isDirectory <$> getFileStatus rfp
 
         if not isDir  -- bruker negasjonen slik at koden skal se bedre ut
-
             then pure arr
-            else traverseDirectoryContents innerLoop arr p
+            else traverseDirectoryContents innerLoop arr rfp
 
         where
             innerLoop :: [DirContent] -> DirContent -> IO [DirContent]
             innerLoop acc t@(typ,file) = do
-                let fullpath = p </> file --legg sammen slik at vi er inne på riktig sti
-                isDir <- liftIO . pure $ typ == dtDir
+                let fullpath = rfp </> file  --legg sammen slik at vi er inne på riktig sti
+                isDir <- pure $ typ == dtDir
                 if not isDir
                     then do
 
-                        rg  <- pure $ getRexPattern      reg file
-
-                        af  <- pure $ getAllowFilter     sf file 
-                        df  <- pure $ getDisallowFilter  sf file 
-                        hf  <- pure $ getHiddenFilter    sf file 
-                        ef  <- pure $ getExtentionFilter sf file 
-                        
-                        if and [rg, af, df ,ef ,hf]  
-                            then pure ((typ,fullpath):acc)
+                        rg  <- pure $ getRexPattern      regexCompiled file
+                        df  <- pure $ getDisallowFilter  flt rfp
+                        hf  <- pure $ getHiddenFilter    flt file
+                        ef  <- pure $ getExtentionFilter flt file 
+                        if and [rg, df ,ef ,hf]  
+                            then pure  $ (typ,fullpath) :acc
                             else pure acc
-                    else treversRecursively sf (t : acc) fullpath
+                    else treversRecursively flt (t : acc) fullpath
 
 
 
 
+-- Sånn sett dårlig, men det holder forløpig det
+applyFunctionToPath :: DirContent -> String -> IO () 
+applyFunctionToPath  dc cmd | fst dc    /= dtDir = callCommand s
+                            | otherwise          =  putStrLn "can only to command on file"
+    where 
+        s = cmd <> " " <> (BS.unpack  . snd ) dc
 
+
+treverseDirWithSettings  :: SearchSetting -> IO [DirContent]
+treverseDirWithSettings  ss = concat <$> traverse f (searchPaths  ss)
+    where
+        f = flip treverFilePath (filters ss) 
 
 treverFilePath :: FilePath -> FilterFlags -> IO [DirContent]
 treverFilePath fp sf = treversRecursively sf [] $ BS.pack fp
-
 
 

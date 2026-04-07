@@ -1,17 +1,12 @@
 
 
 
-## Nyttige funksjoner
-- BC.unpack :: ByteString -> String
 
+# Notat
 
-## notat
-- Bruker heller ByteString siden det skal være mye kjappere
--  fe fe
-
-
-## unsafeCoerce
-- https://hackage-content.haskell.org/package/base-4.22.0.0/docs/Unsafe-Coerce.html
+- hvordan jeg har tenkt å kjøre cabal appen på
+- lms {regxPattern} {sti} (--hide-dots {False/Ture} --searchDepth {[ø,1 ....]} --exclude [],)?
+  
 
 
 
