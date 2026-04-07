@@ -44,10 +44,10 @@ defaultFlags2 = FilterFlags {
   , hideHidden  = True
 }
 
+
 searchSettings :: SearchSetting
 searchSettings = SearchSetting {
       searchPaths    =  allPath
-    , maxDepth       =  Nothing
     , applyedCommand =  Nothing
     , filters        =  defaultFlags2
 }
