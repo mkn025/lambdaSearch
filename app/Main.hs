@@ -1,7 +1,8 @@
 module Main where
 
-import TraverselsFunctions (treverseDirWithSettings)
+import ParseInput (parseLamdaSearch, runMyParser)
 
+import TraverselsFunctions (treverseDirWithSettings)
 import TraversalSettings (
       FilterFlags(..), SearchSetting(..), convertString,  )
 
@@ -14,13 +15,15 @@ import System.IO (
 
 main :: IO ()
 main = do
-     
      hSetBuffering stdout LineBuffering 
-     output <- TraverselsFunctions.treverseDirWithSettings  searchSettings
+     input  <- getLine 
+     output <- case runMyParser parseLamdaSearch input of
+        Nothing -> TraverselsFunctions.treverseDirWithSettings searchSettings
+        Just ss -> TraverselsFunctions.treverseDirWithSettings ss
      printResults output
 
 path :: FilePath
-path  = "/Users/martineldeknutsen/Dev/UiB/inf221/semesterProjekt/testMappe/"
+path  = "/Users/martineldeknutsen/Dev/UiB/inf221/semesterProjekt/"
 
 allPath :: [FilePath]
 allPath = [path]
@@ -45,6 +48,6 @@ searchSettings :: SearchSetting
 searchSettings = SearchSetting {
       searchPaths    =  allPath
     , applyedCommand =  Nothing
-    , filters        =  Just  defaultFlags2
+    , filters        =  defaultFlags2
 }
 

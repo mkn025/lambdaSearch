@@ -25,7 +25,7 @@ type Command       = Maybe String
 data SearchSetting = SearchSetting {
       searchPaths    :: [FilePath]
     , applyedCommand :: Maybe Command
-    , filters        :: Maybe FilterFlags
+    , filters        :: FilterFlags
 } deriving (Eq,Show)
 
 

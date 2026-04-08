@@ -19,7 +19,7 @@ import Text.Megaparsec (
     , manyTill
     , eof
     , lookAhead
-    , choice, skipMany )
+    , choice, skipMany, runParser )
 import Data.List (foldl')
  
 type Parser = Parsec Void String
@@ -63,11 +63,12 @@ data DataFlags =
 
 pFlags :: Parser DataFlags
 pFlags = choice
-    [  SearchPatternFlag <$> ((string "-p" <|> string  "--pattern")    *> sc *> parseUntilSpace)
+    [
+       SearchPatternFlag <$> ((string "-p" <|> string  "--pattern"   ) *> sc *> parseUntilSpace)
      , HiddenFilesFlag   <$  ( string "-a" <|> string  "--show--dots")
-     , ExtentionFlag     <$> ((string "-e" <|> string  "--extention")  *> sc *> parseUntilSpace)
-     , IgnoreFlag        <$> ((string "-i" <|> string  "--ignore")     *> sc *> pathsUntilFlag)
-     , ExecuteFlag       <$> ((string "-x" <|> string  "--execute")    *> sc *> parseUntilSpace) --skipper forløpign
+     , ExtentionFlag     <$> ((string "-e" <|> string  "--extention" ) *> sc *> parseUntilSpace)
+     , IgnoreFlag        <$> ((string "-i" <|> string  "--ignore"    ) *> sc *> pathsUntilFlag )
+     , ExecuteFlag       <$> ((string "-x" <|> string  "--execute"   ) *> sc *> parseUntilSpace) --skipper forløpign
     ]
 
 
@@ -86,7 +87,7 @@ parseAllFlags = many (sc *> pFlags <* sc)
 -- Satan for en eleganse i dette. Hadde tenkt å bruke state monaden, men trenger ikke det
 parseFlags :: Parser FilterFlags
 parseFlags = do
-  fs <- parseAllFlags --Løfter ut 
+  fs <- parseAllFlags --Løfter ut monaden
   pure (foldl' applyFlag emptyFilterFlags fs)  --foldr over
 
 -- parser for stier
@@ -109,11 +110,15 @@ parseLamdaSearch = do
         { 
            searchPaths    = paths
          , applyedCommand = Nothing
-         , filters        = Just flags
+         , filters        = flags
         }
-    
 
-    
+
+runMyParser :: Parser a -> String ->  Maybe a
+runMyParser parser input =
+  case runParser parser "" input of
+    Left _   -> Nothing
+    Right x  -> Just x
 
 
 
