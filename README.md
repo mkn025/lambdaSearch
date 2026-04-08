@@ -27,7 +27,7 @@ git clone git@git.app.uib.no:martin.e.knutsen/inf221-Semesteroppgave.git && cd i
 ## Eksmepel på hvordan man kjører appen (Fungerer ikke enda)
 ```bash
 lms "/Users/lorem/testMappe/" -p lorem122 -a -e md -i "/foo/bar/foo/bar" "/foo/bar/foo/bar"  -x "pandoc -o {}.pdf {}"
-lms /Users/lorem/testMappe/ -p lorem122 -a -e md -i exclude "/Users/lorem/ikkeTaMeddette" -x "pandoc -o {}.pdf {}"
+lms /Users/lorem/testMappe/ -p lorem122 -e md -i "/Users/lorem/ikkeTaMeddette" -x "pandoc -o {}.pdf {}"
 lms -p cola -e png #søker etter alle filer med cola i seg som er en png. mappen du står i
 ```
 
