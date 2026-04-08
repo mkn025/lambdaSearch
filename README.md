@@ -6,7 +6,7 @@
 
 ### Eksempel på tenkt bruk
 ```bash
-lms /Users/lorem/testMappe/  -p lorem122 -a -e md --exclude ["/Users/lorem/ikkeTaMeddette"] -x pandoc -o {}.pdf {}
+lms /Users/lorem/testMappe/ -p lorem122 -a -e md -i exclude ["/Users/lorem/ikkeTaMeddette"] -x "pandoc -o {}.pdf {}"
 ```
 
 ### Hvordan man kjører appen
