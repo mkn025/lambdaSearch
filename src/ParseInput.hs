@@ -1,16 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -Wno-unused-do-bind #-}
-
 module ParseInput where
 
-
 import TraversalSettings    ( SearchSetting (..), FilterFlags (..))
-
 import Data.Void            (Void)
 import Control.Applicative  ((<|>))
 import Data.Functor         (($>))
 
-import Text.Megaparsec.Char (char, string, hspace1 )
+import Text.Megaparsec.Char (char, string)
 import Text.Megaparsec (
       Parsec
     , satisfy
@@ -42,14 +39,13 @@ data DataFlags =
     | IgnoreFlag
     | ExecuteFlag
 
-
 pFlags :: Parser DataFlags
 pFlags = choice
-    [  SearchPatternFlag <$ string "-p"
-     , HiddenFilesFlag   <$ string "-a"
-     , ExtentionFlag     <$ string "-e"
-     , IgnoreFlag        <$ string "-i"
-     , ExecuteFlag       <$ string "-x"
+    [  SearchPatternFlag <$ (string "-p" <|> string  "--pattern")
+     , HiddenFilesFlag   <$ (string "-a" <|> string  "--show--dots")
+     , ExtentionFlag     <$ (string "-e" <|> string  "--extention")
+     , IgnoreFlag        <$ (string "-i" <|> string  "--ignore")
+     , ExecuteFlag       <$ (string "-x" <|> string  "--execute")
     ]
 
 parsePath :: Parser String
@@ -63,16 +59,16 @@ pathsUntilFlag =
 
 
 
-
 parseLamdaSearch :: Parser SearchSetting
 parseLamdaSearch = do 
     parseLms 
     paths <- pathsUntilFlag 
+    pure $ SearchSetting 
+        {
+          searchPaths     = paths
+         , applyedCommand = Nothing
+         , filters        = Nothing
 
-    pure $ SearchSetting {
-          searchPaths    = paths
-        , applyedCommand = Nothing
-        , filters        = Nothing
         }
     
 
