@@ -49,7 +49,7 @@ pFlags = choice
      , HiddenFilesFlag   <$ string "-a"
      , ExtentionFlag     <$ string "-e"
      , IgnoreFlag        <$ string "-i"
-     , ExecuteFlag        <$ string "-i"
+     , ExecuteFlag       <$ string "-x"
     ]
 
 parsePath :: Parser String
