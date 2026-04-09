@@ -1,3 +1,8 @@
+
+> [!NOTE]
+> coverted to markdown with pandoc. View pdf for official  
+
+
 # Status Report --- Haskell File Search Tool (find/fd-like/lamdaSearch)
 
 ### Core directory traversal (mostly done)
