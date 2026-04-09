@@ -10,7 +10,7 @@ import Control.Applicative  ((<|>))
 import Data.Functor         (($>))
 
 import Text.Megaparsec.Char (char, string)
-import Text.Megaparsec (
+import Text.Megaparsec      (
       Parsec
     , satisfy
     , parseTest
@@ -20,6 +20,7 @@ import Text.Megaparsec (
     , eof
     , lookAhead
     , choice, skipMany, runParser )
+
 import Data.List (foldl')
  
 type Parser = Parsec Void String
@@ -68,10 +69,8 @@ pFlags = choice
      , HiddenFilesFlag   <$  ( string "-a" <|> string  "--show--dots")
      , ExtentionFlag     <$> ((string "-e" <|> string  "--extention" ) *> sc *> parseUntilSpace)
      , IgnoreFlag        <$> ((string "-i" <|> string  "--ignore"    ) *> sc *> pathsUntilFlag )
-     , ExecuteFlag       <$> ((string "-x" <|> string  "--execute"   ) *> sc *> parseUntilSpace) --skipper forløpign
+     , ExecuteFlag       <$> ((string "-x" <|> string  "--execute"   ) *> sc *> parseUntilSpace) --skipper forløpig
     ]
-
-
 
 applyFlag :: FilterFlags -> DataFlags -> FilterFlags
 applyFlag st df = case df of
@@ -83,6 +82,7 @@ applyFlag st df = case df of
 
 parseAllFlags :: Parser [DataFlags]
 parseAllFlags = many (sc *> pFlags <* sc)
+
 
 -- Satan for en eleganse i dette. Hadde tenkt å bruke state monaden, men trenger ikke det
 parseFlags :: Parser FilterFlags
@@ -100,11 +100,13 @@ pathsUntilFlag =
     (parsePath <* sc)
     (lookAhead (pFlags $> () <|> eof))
 
+
+
 -- Main parser
 parseLamdaSearch :: Parser SearchSetting
 parseLamdaSearch = do 
-    parseLms 
-    paths <- pathsUntilFlag 
+    sc *> parseLms  
+    paths <- pathsUntilFlag
     flags <- parseFlags 
     pure $ SearchSetting 
         { 
@@ -117,8 +119,8 @@ parseLamdaSearch = do
 runMyParser :: Parser a -> String ->  Maybe a
 runMyParser parser input =
   case runParser parser "" input of
-    Left _   -> Nothing
-    Right x  -> Just x
+    Left _  -> Nothing
+    Right x -> Just x
 
 
 

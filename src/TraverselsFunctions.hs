@@ -8,6 +8,7 @@ module TraverselsFunctions (
     , DirContent
     , treverseDirWithSettings
     , applyFunctionToPath
+    , getwd 
     )
 where
 
@@ -23,7 +24,7 @@ import UnliftIO                      (MonadUnliftIO, finally,askRunInIO, throwIO
 import System.Posix.Files.ByteString (isDirectory, getFileStatus)
 import Control.Monad.IO.Class        ( MonadIO(liftIO) )
 
-import System.Posix.Directory.ByteString as PosixBS (openDirStream, closeDirStream, DirStream )
+import System.Posix.Directory.ByteString as PosixBS (openDirStream, closeDirStream, DirStream, getWorkingDirectory )
 import qualified Data.ByteString.Char8 as BS        (unpack, pack)
 import System.Posix.FilePath                        ((</>))
 import Foreign.Ptr as PTR                           (Ptr, nullPtr)
@@ -166,5 +167,9 @@ treverseDirWithSettings  ss = concat <$> traverse f (searchPaths  ss)
 
 treverFilePath :: FilePath -> FilterFlags -> IO [DirContent]
 treverFilePath fp sf = treversRecursively sf [] $ BS.pack fp
+
+
+getwd :: IO RawFilePath
+getwd = getWorkingDirectory 
 
 

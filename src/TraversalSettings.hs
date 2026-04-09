@@ -42,7 +42,6 @@ data FilterFlags = FilterFlags {
 }  deriving (Eq, Show)
 
 
-
 getRexPattern :: Maybe Regex -> RawFilePath -> Bool
 getRexPattern Nothing      _  = True
 getRexPattern (Just regex) fp = matchTest regex fp
