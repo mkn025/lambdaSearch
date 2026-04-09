@@ -31,6 +31,7 @@ import Foreign.Ptr as PTR                           (Ptr, nullPtr)
 import Foreign.Storable                             (Storable (peek))
 import System.Process                               (callCommand)
 import System.Posix.Directory.Internals             (DirStream(DirStream) , CDir , CDirent )
+import Foreign.C.Error (Errno(..))
 
 import TraversalSettings (
       FilterFlags
@@ -52,6 +53,16 @@ type DirContent = (DirType,RawFilePath)
 foreign import ccall safe "__hscore_readdir"
   c_readdir  :: Ptr CDir -> Ptr (Ptr CDirent) -> IO CInt  --der c skriver adressen. eller pekeren til adressen til neste dir entry
 
+ -- readdir_r var  depreciated  ... rip  vil derfor ikke fungere moderene linux distoreer (ofc. )
+ -- It is recommended that applications use readdir(3) instead of
+ -- readdir_r().  Furthermore, since glibc 2.24, glibc deprecates
+ -- readdir_r().  The reasons are as follows:
+ -- https://www.man7.org/linux/man-pages/man3/readdir_r.3.html 
+
+
+foreign import ccall unsafe "readdir"
+  c_readdir_new :: Ptr CDir -> IO (Ptr CDirent)
+
 foreign import ccall unsafe "__hscore_free_dirent"
   c_freeDirEnt  :: Ptr CDirent -> IO ()
 
@@ -68,8 +79,8 @@ unpackDirStream (DirStream a) = a
 data DirError = UnexpectedErrnoZero | ReadDirErr Errno 
  
 instance Show DirError where
-    show (ReadDirErr        _) = "ReadDirErr: Ernno"
-    show UnexpectedErrnoZero   = "UnexpectedErrnoZero"
+    show (ReadDirErr (Errno n)) = "ReadDirErr: Ernno code: " <> show n
+    show UnexpectedErrnoZero    = "UnexpectedErrnoZero"
 
 instance Exception DirError 
 type DirContentT = ExceptT DirError IO (Maybe DirContent)
@@ -84,6 +95,7 @@ readDirEnt dir = ExceptT $ alloca $ \ptr_dEnt  -> readContent ptr_dEnt
         let dirp = unpackDirStream  dir
         resetErrno -- tråden kan inneholde feilmelding fra tideligere opprasjon. Denne restter
         r <- c_readdir dirp ptr_dEnt  --
+
         case r  of
             0 -> do  -- Success
                 dEnt <- peek ptr_dEnt
