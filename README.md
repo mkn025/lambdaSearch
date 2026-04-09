@@ -1,13 +1,13 @@
 # Notat
 - Program som lar deg søke igjennom  datamskinen din
-- lms {sti} -p {regxPattern}  (--hide-dots {False/Ture}  --exclude [],)?
+- lambdaSearch {sti}  
 
 
 ### Hvordan man kjører appen
 - Har enda ikke implementert parsing så du må inn i `app/Main.hs` å legge inn manuelt in datastukturene
 
 ```bash
-git clone git@git.app.uib.no:martin.e.knutsen/inf221-Semesteroppgave.git && cd inf221-Semesteroppgave && cabal install
+git clone https://git.app.uib.no/martin.e.knutsen/inf221-Semesteroppgave.git && cd inf221-Semesteroppgave && cabal install
 ```
 
 
@@ -18,7 +18,7 @@ git clone git@git.app.uib.no:martin.e.knutsen/inf221-Semesteroppgave.git && cd i
 lambdaSearch "/foo/bar" -e java
 lambdaSearch "/foo/bar" "/bar/foo" -p test -e java
 
-# Gir jo ut til stdout så du kan bruke med andre cli tools fzf, grep, sk, tmux 
+# Gir jo ut til stdout så du kan bruke med andre cli tools fzf, grep, sk, tmux, nvim
 lambdaSearch "/foo/bar" "/bar/foo" -p test -e java
 lambdaSearch "/foo/bar" "/bar/foo" -e hs | fzf --tmux 80%  | xargs nvim
 ```
