@@ -38,8 +38,7 @@ cabal run
 lms "/Users/martineldeknutsen/Dev/UiB/inf221" -e java  
 ```
 
-![how it works gif]("inf221-Semesteroppgave/pictures/lamdaSerchVideo.gif") 
-
+![how it works gif](./pictures/lamdaSerchVideo.gif)
 
 
 
