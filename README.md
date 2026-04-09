@@ -36,16 +36,14 @@ lambdaSearch "/foo/bar" "/bar/foo" -e hs | fzf --tmux 80%  | xargs nvim
 | `-x` | `--execute` | **ExecuteFlag** - Executes a command on processed files |
 
 
-
-## Eksmepel på hvordan man kjører appen (Fungerer ikke enda)
+## Eksmepel på hvordan man kjører appen når den er ferdig
 ```bash
-lms "/Users/lorem/testMappe/" -p lorem122 -a -e md -i "/foo/bar/foo/bar" "/foo/bar/foo/bar"  -x "pandoc -o {}.pdf {}"
-lms /Users/lorem/testMappe/ -p lorem122 -e md -i "/Users/lorem/ikkeTaMeddette" -x "pandoc -o {}.pdf {}"
-lms -p cola -e png #søker etter alle filer med cola i seg som er en png. mappen du står i
+lambdaSearch "/Users/lorem/testMappe/" -p lorem122 -a -e md -i "/foo/bar/foo/bar" "/foo/bar/foo/bar"  -x "pandoc -o {}.pdf {}"
+lambdaSearch /Users/lorem/testMappe/ -p lorem122 -e md -i "/Users/lorem/ikkeTaMeddette" -x "pandoc -o {}.pdf {}"
+lambdaSearch -p cola -e png #søker etter alle filer med cola i seg som er en png. mappen du står i
 ```
 
 
-![how it works gif](./pictures/lamdaSerchVideo.gif)
 
 
 
