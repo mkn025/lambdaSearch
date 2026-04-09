@@ -1,9 +1,12 @@
 module Main where
 
-import TraverselsFunctions (treverseDirWithSettings)
+import System.Environment(getArgs )
 
+import ParseInput (parseLamdaSearch, runMyParser)
+
+import TraverselsFunctions (treverseDirWithSettings)
 import TraversalSettings (
-      FilterFlags(..), SearchSetting(..), convertString,  )
+      FilterFlags(..), SearchSetting(..), )
 
 import PrintFunctions (
       printResults)
@@ -14,37 +17,34 @@ import System.IO (
 
 main :: IO ()
 main = do
-     
      hSetBuffering stdout LineBuffering 
-     output <- TraverselsFunctions.treverseDirWithSettings  searchSettings
+     --input  <- getArgs 
+     --let inpString =  concatMap ( ' ' :) input
+     imp <- getLine 
+     output <- case runMyParser parseLamdaSearch imp of
+        Just ss -> TraverselsFunctions.treverseDirWithSettings ss
+        Nothing -> TraverselsFunctions.treverseDirWithSettings dss
      printResults output
 
 path :: FilePath
-path  = "/Users/martineldeknutsen/Dev/UiB/inf221/semesterProjekt/testMappe/"
+path  = "/Users/martineldeknutsen/Dev/UiB/inf221/semesterProjekt/"
 
 allPath :: [FilePath]
 allPath = [path]
 
-defaultFlags1 :: FilterFlags
-defaultFlags1 = FilterFlags {
-    regxPattern = Nothing
-  , exclude     = Nothing
-  , extention   = Just $ convertString "java"
-  , hideHidden  = False
-}
 
-defaultFlags2 :: FilterFlags
-defaultFlags2 = FilterFlags {
+defaultFlags :: FilterFlags
+defaultFlags = FilterFlags {
     regxPattern = Nothing
   , exclude     = Nothing
   , extention   = Nothing
   , hideHidden  = True
 }
 
-searchSettings :: SearchSetting
-searchSettings = SearchSetting {
+dss :: SearchSetting
+dss = SearchSetting {
       searchPaths    =  allPath
     , applyedCommand =  Nothing
-    , filters        =  defaultFlags2
+    , filters        =  defaultFlags
 }
 

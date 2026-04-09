@@ -2,7 +2,7 @@ module TraversalSettings where
 
 
 import System.Posix.ByteString               (RawFilePath)
-import qualified Data.ByteString.Char8 as BC (head,pack,tail)
+import qualified Data.ByteString.Char8 as BC (head,pack,tail,unpack)
 import qualified Data.ByteString as BS       (null)
 import System.FilePath.ByteString            (takeExtension)
 
@@ -40,7 +40,6 @@ data FilterFlags = FilterFlags {
     , hideHidden    :: Bool
 
 }  deriving (Eq, Show)
-
 
 
 getRexPattern :: Maybe Regex -> RawFilePath -> Bool
@@ -85,4 +84,8 @@ compileRegexFilter sf =
 
 convertString :: String -> RawFilePath
 convertString = BC.pack
+
+convertToString :: RawFilePath  -> String
+convertToString = BC.unpack
+
 
