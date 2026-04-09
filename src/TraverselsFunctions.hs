@@ -84,25 +84,23 @@ readDirEnt dir = ExceptT $ alloca $ \ptr_dEnt  -> readContent ptr_dEnt
         let dirp = unpackDirStream  dir
         resetErrno -- tråden kan inneholde feilmelding fra tideligere opprasjon. Denne restter
         r <- c_readdir dirp ptr_dEnt  --
-        case r == 0 of
-            True -> do
-                dEnt <- peek ptr_dEnt   -- leser innholder på det  somer på peker, dererferer. gir ut IO. derfor må vi pakke i mondade
-                if dEnt == PTR.nullPtr  -- s
-                    then pure $  Right Nothing   --  pure (dtUnknown, BS.empty) 
+        case r  of
+            0 -> do  -- Success
+                dEnt <- peek ptr_dEnt
+                if dEnt == PTR.nullPtr
+                    then pure $ Right Nothing  -- End of directory
                     else do
-                        dName <- c_name dEnt >>= (\l -> peekFilePath l) -- bare lamdda siden det er letter å lese
+                        dName <- c_name dEnt >>= peekFilePath
                         dType <- c_type dEnt
                         c_freeDirEnt dEnt
                         pure $ Right $ Just (dType, dName)
-            False -> do
+            (-1) -> do  -- Error
                 errno <- getErrno
-                if errno == eINTR   --kjører loopen på dersom error er en intetuped systcall. Derfor vi trenger loop
-                    then readContent ptr_dEnt
-                    else do
-                        let (Errno errorCode) = errno -- patter matcher og henter errorCode 
-                        if errorCode == 0
-                            then pure . Left $ UnexpectedErrnoZero 
-                            else pure . Left $ ReadDirErr errno    
+                if errno == eINTR
+                    then readContent ptr_dEnt  -- Retry on interrupt
+                    else pure . Left $ ReadDirErr errno
+
+            _ -> pure . Left $ UnexpectedErrnoZero  -- Unexpected return value
 
 
 traverseDirectoryContents :: (MonadUnliftIO m)
