@@ -7,10 +7,23 @@
 - Har enda ikke implementert parsing så du må inn i `app/Main.hs` å legge inn manuelt in datastukturene
 
 ```bash
-git clone git@git.app.uib.no:martin.e.knutsen/inf221-Semesteroppgave.git && cd inf221-Semesteroppgave && cabal run
+git clone git@git.app.uib.no:martin.e.knutsen/inf221-Semesteroppgave.git && cd inf221-Semesteroppgave && cabal install
 ```
 
 
+##  Eksmepl på noen som kjører
+-  Du må forløpig gi hele stien, men støtte for . kommer
+
+```bash
+lambdaSearch "/foo/bar" -e java
+lambdaSearch "/foo/bar" "/bar/foo" -p test -e java
+
+# Gir jo ut til stdout så du kan bruke med andre cli tools fzf, grep, sk, tmux 
+lambdaSearch "/foo/bar" "/bar/foo" -p test -e java
+lambdaSearch "/foo/bar" "/bar/foo" -e hs | fzf --tmux 80%  | xargs nvim
+```
+
+![nvim fzf tmux showcase](./pictures/lamdaSearchTmuxNvimshowcase.gif)
 
 # Flag dokumentasjon
 
@@ -22,21 +35,15 @@ git clone git@git.app.uib.no:martin.e.knutsen/inf221-Semesteroppgave.git && cd i
 | `-i` | `--ignore` | **IgnoreFlag** - Specifies files or paths to exclude from processing |
 | `-x` | `--execute` | **ExecuteFlag** - Executes a command on processed files |
 
+
+
 ## Eksmepel på hvordan man kjører appen (Fungerer ikke enda)
 ```bash
 lms "/Users/lorem/testMappe/" -p lorem122 -a -e md -i "/foo/bar/foo/bar" "/foo/bar/foo/bar"  -x "pandoc -o {}.pdf {}"
 lms /Users/lorem/testMappe/ -p lorem122 -e md -i "/Users/lorem/ikkeTaMeddette" -x "pandoc -o {}.pdf {}"
 lms -p cola -e png #søker etter alle filer med cola i seg som er en png. mappen du står i
-
-
 ```
 
-##  Eksmepl på noen som kjører
--  Tar ikke argumnter enda. Du må derfor  kjøre lms... etter at du har kjøre cabal run (bruker bare `getLine` forløpig)
-```bash
-cabal run 
-lms "/Users/martineldeknutsen/Dev/UiB/inf221" -e java  
-```
 
 ![how it works gif](./pictures/lamdaSerchVideo.gif)
 
