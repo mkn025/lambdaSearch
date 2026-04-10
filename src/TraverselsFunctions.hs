@@ -19,7 +19,6 @@ import Foreign.C.Error                  ( Errno(..), eINTR,  getErrno, resetErrn
 import Foreign.C.String                 ( CString )
 import Foreign.C.Types                  ( CInt (..), CInt )
 
-import Foreign.Marshal.Alloc         (alloca)
 import UnliftIO                      (MonadUnliftIO, finally,askRunInIO, throwIO, Exception )
 import System.Posix.Files.ByteString (isDirectory, getFileStatus)
 import Control.Monad.IO.Class        ( MonadIO(liftIO) )
@@ -98,19 +97,14 @@ readDirEnt dir = ExceptT readContent
       let dirp = unpackDirStream dir
       resetErrno
       dEnt <- c_readdir_new dirp   -- c_readdir_new :: Ptr CDir -> IO (Ptr CDirent)
-
       if dEnt == PTR.nullPtr
         then do
           err <- getErrno
           case err of
-           e | eOK == e ->  pure $ Right Nothing
-
-
-          if err == eOK
-            then pure $ Right Nothing                -- end of directory
-            else if err == eINTR
-              then readContent                      -- retry on interrupt
-              else pure . Left  $ ReadDirErr err    -- real error
+            e | e == eINTR -> readContent                        -- Retry on interrupt
+            e | e == eOK   -> pure . Right $ Nothing             -- End of directory
+              | otherwise  -> pure . Left  $ ReadDirErr err      -- Real error
+              -- har mulihet å legge til flere type feil 
         else do
           dName <- c_name dEnt >>= peekFilePath
           dType <- c_type dEnt
