@@ -31,7 +31,6 @@ import Foreign.Ptr as PTR                           (Ptr, nullPtr)
 import Foreign.Storable                             (Storable (peek))
 import System.Process                               (callCommand)
 import System.Posix.Directory.Internals             (DirStream(DirStream) , CDir , CDirent )
-import Foreign.C.Error (Errno(..))
 
 import TraversalSettings (
       FilterFlags
@@ -84,6 +83,7 @@ instance Show DirError where
 
 instance Exception DirError 
 type DirContentT = ExceptT DirError IO (Maybe DirContent)
+
 -- | Funksjonen leser en Enten en Dirstram ved å bruke readDir syscall. Eller så gir den  en feil
 -- | Fungere ved å allocere minne til pekeren. så så leser vi hva som er på pekeren
 -- |  Men skriver også det blir lest til etr_dEnt. Derfor vi kan hente ut fra pekeren
@@ -94,26 +94,35 @@ readDirEnt dir = ExceptT $ alloca $ \ptr_dEnt  -> readContent ptr_dEnt
     readContent ptr_dEnt = do
         let dirp = unpackDirStream  dir
         resetErrno -- tråden kan inneholde feilmelding fra tideligere opprasjon. Denne restter
-        r <- c_readdir dirp ptr_dEnt  --
 
-        case r  of
-            0 -> do  -- Success
-                dEnt <- peek ptr_dEnt
-                if dEnt == PTR.nullPtr
-                    then pure $ Right Nothing  -- End of directory
-                    else do
-                        dName <- c_name dEnt >>= peekFilePath
-                        dType <- c_type dEnt
-                        c_freeDirEnt dEnt
-                        pure $ Right $ Just (dType, dName)
-            (-1) -> do  -- Error
-                errno <- getErrno
-                if errno == eINTR
-                    then readContent ptr_dEnt  -- Retry on interrupt
-                    else pure . Left $ ReadDirErr errno
+        r <- c_readdir dirp ptr_dEnt  
+        new <- c_readdir_new  dirp 
+        if new == PTR.nullPtr 
+        then do
+            err <- getErrno 
+            case err of 
+                 eINTR -> pure $ Right Nothing
 
-            _ -> pure . Left $ UnexpectedErrnoZero  -- Unexpected return value
+        else 
+            pure $ Right Nothing
 
+--        case r  of
+--            0 -> do  -- Success
+--                dEnt <- peek ptr_dEnt
+--                if dEnt == PTR.nullPtr
+--                    then pure $ Right Nothing  -- End of directory
+--                    else do
+--                        dName <- c_name dEnt >>= peekFilePath
+--                        dType <- c_type dEnt
+--                        c_freeDirEnt dEnt
+--                        pure $ Right $ Just (dType, dName)
+--            (-1) -> do  -- Error
+--                errno <- getErrno
+--                if errno == eINTR
+--                    then readContent ptr_dEnt  -- Retry on interrupt
+--                    else pure . Left $ ReadDirErr errno
+--
+--            _ -> pure . Left $ UnexpectedErrnoZero  -- Unexpected return value
 
 traverseDirectoryContents :: (MonadUnliftIO m)
                           => (a -> DirContent -> m a)   -- fold funksjon
