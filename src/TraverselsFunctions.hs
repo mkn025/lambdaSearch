@@ -15,11 +15,10 @@ where
 import System.Posix.Directory.Foreign ( DirType(..), dtDir )
 
 import System.Posix.ByteString.FilePath ( RawFilePath, peekFilePath )
-import Foreign.C.Error                  ( Errno(..), eINTR, getErrno, resetErrno )
+import Foreign.C.Error                  ( Errno(..), eINTR,  getErrno, resetErrno,eOK )
 import Foreign.C.String                 ( CString )
-import Foreign.C.Types                  ( CInt (..) )
+import Foreign.C.Types                  ( CInt (..), CInt )
 
-import Foreign.Marshal.Alloc         (alloca)
 import UnliftIO                      (MonadUnliftIO, finally,askRunInIO, throwIO, Exception )
 import System.Posix.Files.ByteString (isDirectory, getFileStatus)
 import Control.Monad.IO.Class        ( MonadIO(liftIO) )
@@ -28,7 +27,6 @@ import System.Posix.Directory.ByteString as PosixBS (openDirStream, closeDirStre
 import qualified Data.ByteString.Char8 as BS        (unpack, pack)
 import System.Posix.FilePath                        ((</>))
 import Foreign.Ptr as PTR                           (Ptr, nullPtr)
-import Foreign.Storable                             (Storable (peek))
 import System.Process                               (callCommand)
 import System.Posix.Directory.Internals             (DirStream(DirStream) , CDir , CDirent )
 
@@ -52,6 +50,17 @@ type DirContent = (DirType,RawFilePath)
 foreign import ccall safe "__hscore_readdir"
   c_readdir  :: Ptr CDir -> Ptr (Ptr CDirent) -> IO CInt  --der c skriver adressen. eller pekeren til adressen til neste dir entry
 
+ -- readdir_r var  depreciated  ... rip  vil derfor ikke fungere moderene linux distoreer (ofc. )
+ -- It is recommended that applications use readdir(3) instead of
+ -- readdir_r().  Furthermore, since glibc 2.24, glibc deprecates
+ -- readdir_r().  The reasons are as follows:
+ -- https://www.man7.org/linux/man-pages/man3/readdir_r.3.html 
+
+
+foreign import ccall unsafe "readdir"
+  c_readdir_new :: Ptr CDir -> IO (Ptr CDirent)
+
+
 foreign import ccall unsafe "__hscore_free_dirent"
   c_freeDirEnt  :: Ptr CDirent -> IO ()
 
@@ -68,42 +77,44 @@ unpackDirStream (DirStream a) = a
 data DirError = UnexpectedErrnoZero | ReadDirErr Errno 
  
 instance Show DirError where
-    show (ReadDirErr        _) = "ReadDirErr: Ernno"
-    show UnexpectedErrnoZero   = "UnexpectedErrnoZero"
+    show (ReadDirErr (Errno n)) = "ReadDirErr: Ernno code: " <> show n
+    show UnexpectedErrnoZero    = "UnexpectedErrnoZero"
 
 instance Exception DirError 
 type DirContentT = ExceptT DirError IO (Maybe DirContent)
+
 -- | Funksjonen leser en Enten en Dirstram ved å bruke readDir syscall. Eller så gir den  en feil
 -- | Fungere ved å allocere minne til pekeren. så så leser vi hva som er på pekeren
--- |  Men skriver også det blir lest til etr_dEnt. Derfor vi kan hente ut fra pekeren
--- | bruker transformatoren siden vi øsnker bare å kaste å gi feil dersom syscallet feiler. ikke ellers
-readDirEnt :: DirStream ->  DirContentT
-readDirEnt dir = ExceptT $ alloca $ \ptr_dEnt  -> readContent ptr_dEnt
-    where
-    readContent ptr_dEnt = do
-        let dirp = unpackDirStream  dir
-        resetErrno -- tråden kan inneholde feilmelding fra tideligere opprasjon. Denne restter
-        r <- c_readdir dirp ptr_dEnt  --
-        case r == 0 of
-            True -> do
-                dEnt <- peek ptr_dEnt   -- leser innholder på det  somer på peker, dererferer. gir ut IO. derfor må vi pakke i mondade
-                if dEnt == PTR.nullPtr  -- s
-                    then pure $  Right Nothing   --  pure (dtUnknown, BS.empty) 
-                    else do
-                        dName <- c_name dEnt >>= (\l -> peekFilePath l) -- bare lamdda siden det er letter å lese
-                        dType <- c_type dEnt
-                        c_freeDirEnt dEnt
-                        pure $ Right $ Just (dType, dName)
-            False -> do
-                errno <- getErrno
-                if errno == eINTR   --kjører loopen på dersom error er en intetuped systcall. Derfor vi trenger loop
-                    then readContent ptr_dEnt
-                    else do
-                        let (Errno errorCode) = errno -- patter matcher og henter errorCode 
-                        if errorCode == 0
-                            then pure . Left $ UnexpectedErrnoZero 
-                            else pure . Left $ ReadDirErr errno    
+-- | Men skriver også det blir lest til etr_dEnt. Derfor vi kan hente ut fra pekeren
+-- | bruker transformatoren siden vi øsnker bare å kaste å gi feil dersom syscallet feiler. ikke når den vi er på slutten
+-- | vil derfor ha mulighet til å 
 
+readDirEnt :: DirStream ->  DirContentT
+readDirEnt dir = ExceptT readContent 
+    where
+    readContent :: IO (Either DirError (Maybe DirContent))
+    readContent = do
+      let dirp = unpackDirStream dir
+      resetErrno
+      dEnt <- c_readdir_new dirp   -- c_readdir_new :: Ptr CDir -> IO (Ptr CDirent)
+      if dEnt == PTR.nullPtr
+        then do
+          err <- getErrno
+          case err of
+            e | e == eINTR -> readContent                        -- Retry on interrupt
+            e | e == eOK   -> pure . Right $ Nothing             -- End of directory
+              | otherwise  -> pure . Left  $ ReadDirErr err      -- Real error
+              -- har mulihet å legge til flere type feil 
+        else do
+          dName <- c_name dEnt >>= peekFilePath
+          dType <- c_type dEnt
+
+        -- fra wiki. Vi trenger ikke å free den
+        -- IMPORTANT: do NOT free dEnt for readdir()
+        -- On success, readdir() returns a pointer to a dirent structure.
+        -- (This structure may be statically allocated; do not attempt to
+        -- free(3) it.)
+          pure . Right . Just  $ (dType, dName)
 
 traverseDirectoryContents :: (MonadUnliftIO m)
                           => (a -> DirContent -> m a)   -- fold funksjon
@@ -125,6 +136,7 @@ traverseDirectoryContents f s0 p = do
                                               else do
                                                 acc' <- run $ f acc content
                                                 loop run acc' dirp
+
 
 treversRecursively :: FilterFlags -> [DirContent] -> RawFilePath -> IO [DirContent]
 treversRecursively flt arr rfp =  topLoop
