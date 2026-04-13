@@ -16,7 +16,6 @@ import System.IO (
 
 
 
-
 main :: IO ()
 main = do
      hSetBuffering stdout LineBuffering 
@@ -25,9 +24,6 @@ main = do
      ss     <- runParserIO inpString
      output <- treverseDirWithSettings ss
      printResults output
-
-
-
 
 
 path :: FilePath
@@ -46,7 +42,7 @@ defaultFlags = FilterFlags {
 
 dss :: SearchSetting
 dss = SearchSetting {
-      searchPaths    =  allPath
+      searchPaths    =  Nothing
     , applyedCommand =  Nothing
     , filters        =  defaultFlags
 }

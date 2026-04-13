@@ -17,7 +17,7 @@ import Control.Exception.Base (throwIO)
 import Text.Megaparsec      (
       Parsec
     , satisfy
-    , between 
+    , between
     , parseTest
     , many
     , manyTill
@@ -29,34 +29,22 @@ import Text.Megaparsec      (
 
 import Data.List (foldl')
 import Text.Megaparsec.Error (errorBundlePretty)
- 
+import Data.Maybe (isNothing)
+
 type Parser = Parsec Void String
 
 tester :: IO ()
-tester = do 
-    
-    parseTest pathsUntilFlag "/foo/bar/ /foo/bar/foo/"
+tester = do
 
-    inp <- getLine 
-    parseTest pathsUntilFlag inp
-
-    inp2 <- getLine 
-    parseTest pathsUntilFlag inp2
+    parseTest parseLamdaSearch "      .                -p tester"
 
 
--- Parser helper
-parseSpace :: Parser Char
-parseSpace = char ' '
-
-parseLms :: Parser String
-parseLms = string "lms "
 
 sc :: Parser ()
 sc = skipMany (char ' ' <|> char '\t')
 
-parseUntilSpace :: Parser String 
+parseUntilSpace :: Parser String
 parseUntilSpace = many (satisfy (/=' ') )
-
 
 emptyFilterFlags :: FilterFlags
 emptyFilterFlags = FilterFlags {
@@ -64,10 +52,14 @@ emptyFilterFlags = FilterFlags {
     , exclude     = Nothing
     , extention   = Nothing
     , hideHidden  = False
-    } 
+    }
 
 
-data DataFlags = 
+data Paths =
+      NoPath
+    | ManyPaths [String]
+
+data DataFlags =
       SearchPatternFlag String
     | HiddenFilesFlag
     | ExtentionFlag     String
@@ -109,11 +101,10 @@ parsePath :: Parser String
 parsePath = do
     slash      <- sc *> char '/'
     entirePath <- parseUntilSpace
-    pure (slash : entirePath ) 
+    pure (slash : entirePath )
 
 parsePathWithQuote :: Parser String
 parsePathWithQuote = between (char '"') (char '"') (many (satisfy (/= '"')))
-
 
 pathsUntilFlag :: Parser [String]
 pathsUntilFlag =
@@ -122,18 +113,28 @@ pathsUntilFlag =
     (lookAhead (pFlags $> () <|> eof)) -- end of file. fungere med null flagg også
 
 
+parsePathOrDot :: Parser Paths
+parsePathOrDot = choice
+     [
+          NoPath     <$ (sc *> char '.' <* sc )
+        , ManyPaths  <$> pathsUntilFlag
+     ]
+
 
 -- Main parser
 parseLamdaSearch :: Parser SearchSetting
-parseLamdaSearch = do 
-    paths <- sc *> pathsUntilFlag
-    flags <- parseFlags 
-    pure $ SearchSetting 
-        { 
-           searchPaths    = paths
+parseLamdaSearch = do
+    paths <- sc *> parsePathOrDot
+    flags <- parseFlags
+    let ss = SearchSetting{
+           searchPaths    = Nothing
          , applyedCommand = Nothing
-         , filters        = flags
-        }
+         , filters        = flags }
+
+    case paths of
+        NoPath        -> pure ss
+        (ManyPaths p) -> pure ss { searchPaths = if null p then Nothing else Just p} 
+
 
 
 runMyParser :: Parser a -> String ->  Either String a
