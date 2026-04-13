@@ -130,7 +130,7 @@ parseLamdaSearch = do
     flags <- parseFlags 
     pure $ SearchSetting 
         { 
-           searchPaths    = paths
+           searchPaths    = Just paths
          , applyedCommand = Nothing
          , filters        = flags
         }

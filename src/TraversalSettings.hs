@@ -23,11 +23,10 @@ type SearchFilters = [RawFilePath]
 type Command       = Maybe String
 
 data SearchSetting = SearchSetting {
-      searchPaths    :: [FilePath]
+      searchPaths    :: Maybe [FilePath]
     , applyedCommand :: Maybe Command
     , filters        :: FilterFlags
 } deriving (Eq,Show)
-
 
 -- | regxPattern. regexFilter 
 -- | exclude liste med mapper du vil eksludere

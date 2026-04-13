@@ -42,6 +42,7 @@ import TraversalSettings (
 import Control.Monad.Except (
       runExceptT
     , ExceptT(..) )
+import Text.Regex.TDFA.Common (DoPa(DoPa))
 
 
 type DirContent = (DirType,RawFilePath)
@@ -83,6 +84,7 @@ instance Show DirError where
 instance Exception DirError 
 type DirContentT = ExceptT DirError IO (Maybe DirContent)
 
+
 -- | Funksjonen leser en Enten en Dirstram ved å bruke readDir syscall. Eller så gir den  en feil
 -- | Fungere ved å allocere minne til pekeren. så så leser vi hva som er på pekeren
 -- | Men skriver også det blir lest til etr_dEnt. Derfor vi kan hente ut fra pekeren
@@ -96,7 +98,8 @@ readDirEnt dir = ExceptT readContent
     readContent = do
       let dirp = unpackDirStream dir
       resetErrno
-      dEnt <- c_readdir_new dirp   -- c_readdir_new :: Ptr CDir -> IO (Ptr CDirent)
+      -- c_readdir_new :: Ptr CDir -> IO (Ptr CDirent)
+      dEnt <- c_readdir_new dirp   
       if dEnt == PTR.nullPtr
         then do
           err <- getErrno
@@ -106,7 +109,7 @@ readDirEnt dir = ExceptT readContent
               | otherwise  -> pure . Left  $ ReadDirErr err      -- Real error
               -- har mulihet å legge til flere type feil 
         else do
-          dName <- c_name dEnt >>= peekFilePath
+          dName <- c_name dEnt >>= (\l -> peekFilePath l) 
           dType <- c_type dEnt
 
         -- fra wiki. Vi trenger ikke å free den
@@ -160,9 +163,10 @@ treversRecursively flt arr rfp =  topLoop
                         hf  <- pure $ getHiddenFilter    flt file
                         ef  <- pure $ getExtentionFilter flt file
                         if and [rg, df, ef, hf]
-                            then pure  $ (typ, fullpath) :acc
+                            then pure  $ (typ, fullpath) : acc
                             else pure acc
                     else treversRecursively flt (t : acc) fullpath
+
 
 
 -- Sånn sett dårlig, men det holder forløpig det
@@ -172,13 +176,16 @@ applyFunctionToPath  dc cmd | fst dc    /= dtDir = callCommand s
     where
         s = cmd <> " " <> (BS.unpack  . snd ) dc
 
-treverseDirWithSettings  :: SearchSetting -> IO [DirContent]
-treverseDirWithSettings  ss = concat <$> traverse f (searchPaths  ss)
-    where
-        f = flip treverFilePath (filters ss)
 
-treverFilePath :: FilePath -> FilterFlags -> IO [DirContent]
-treverFilePath fp sf = treversRecursively sf [] $ BS.pack fp
+treverseDirWithSettings  :: SearchSetting -> IO [DirContent]
+treverseDirWithSettings  ss = case searchPaths  ss of
+                                Nothing  -> getWorkingDirectory  >>= treverseWithFilter . BS.unpack 
+                                (Just a) -> concat <$> mapM treverseWithFilter a
+                                where 
+                                    treverseWithFilter =  treverFilePath  $ filters ss
+
+treverFilePath :: FilterFlags -> FilePath -> IO [DirContent]
+treverFilePath ff sp = treversRecursively ff [] $ BS.pack sp
 
 
 getwd :: IO RawFilePath
