@@ -1,9 +1,16 @@
+
+{-# LANGUAGE OverloadedStrings #-}
 module PrintFunctions (printResults ) where
 
-
+import Prelude hiding (reverse,break,span ) 
 import TraverselsFunctions                   (DirContent) 
-import qualified Data.ByteString.Char8 as BS (unpack)
+import qualified Data.ByteString.Char8 as BS (unpack, pack )
 import System.Posix.Directory.Foreign        (dtLnk, dtDir)
+
+import Data.ByteString(span,reverse )
+import Data.ByteString.Internal(c2w)
+
+
 
 import System.Console.ANSI
     ( setSGR,
@@ -12,6 +19,7 @@ import System.Console.ANSI
       ConsoleLayer(Foreground),
       SGR(Reset, SetColor) 
       )
+import System.Console.ANSI.Codes (setSGRCode)
 
 printResults :: [DirContent] -> IO ()
 printResults contents = do
@@ -21,10 +29,18 @@ printResults contents = do
 
 -- | printer et Enkelt DirContent element
 printDirContent :: DirContent -> IO ()
-printDirContent = putStrLn . BS.unpack . snd   
+printDirContent (_, a) = do
+    let (post,pre) = span (/= c2w '/') $ reverse a
+    putStrLn $ BS.unpack pre
+        <> setSGRCode [SetColor Foreground Vivid Red]
+        <> BS.unpack post
+        <> setSGRCode [Reset]
+    
+
 
 -- | printer et Enkelt DirContent element
 -- | Printer men legger til / for mappe
+
 printDirContentWithType :: DirContent -> IO ()
 printDirContentWithType (dirType, rawFilePath) = do
   let path = BS.unpack rawFilePath

@@ -26,6 +26,11 @@ main = do
      output <- treverseDirWithSettings ss
      printResults output
 
+tester :: IO ()
+tester = do
+     output <- treverseDirWithSettings dss
+     printResults output
+
 
 
 

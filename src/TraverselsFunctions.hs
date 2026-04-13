@@ -19,7 +19,7 @@ import Foreign.C.Error                  ( Errno(..), eINTR,  getErrno, resetErrn
 import Foreign.C.String                 ( CString )
 import Foreign.C.Types                  ( CInt (..), CInt )
 
-import UnliftIO                      (MonadUnliftIO, finally,askRunInIO, throwIO, Exception )
+import UnliftIO                      (MonadUnliftIO, finally, askRunInIO, throwIO, Exception )
 import System.Posix.Files.ByteString (isDirectory, getFileStatus)
 import Control.Monad.IO.Class        ( MonadIO(liftIO) )
 
