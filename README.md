@@ -23,9 +23,11 @@ lambdaSearch  -e java
 lambdaSearch "/foo/bar" -e java
 lambdaSearch "/foo/bar" "/bar/foo" -p test -e java
 
-# Gir jo ut til stdout så du kan bruke med andre cli tools fzf, grep, sk, tmux, nvim, awk, cut, sed
+# Gir jo ut til stdout så du kan bruke med andre cli tools fzf, grep, sk, vim, awk, cut, sed etc...
 lambdaSearch "/foo/bar" "/bar/foo" -p test -e java
 lambdaSearch "/foo/bar" "/bar/foo" -e hs | fzf --tmux 80%  | xargs nvim
+lambdaSearch . -e hs | cut -d / -f 10 | sort | uniq -c
+
 ```
 
 ![nvim fzf tmux showcase](./pictures/lamdaSearchTmuxNvimshowcase.gif)
