@@ -14,6 +14,7 @@ import Text.Regex.TDFA
   , makeRegexOpts
   , matchTest
   )
+import Data.ByteString (ByteString)
 
 -- Datastruktur som holder filnavnet
 -- type FolderState a = StateT FolderAndContent IO a
@@ -56,17 +57,25 @@ getHiddenFilter :: FilterFlags -> RawFilePath -> Bool
 getHiddenFilter sf fp = not (hideHidden sf) || (BC.head fp /= '.')
 
 
-getExtentionFilter :: FilterFlags -> RawFilePath ->  Bool
+getExtentionFilter :: FilterFlags -> RawFilePath -> Bool
 getExtentionFilter sf fp = case extention sf of
                         Nothing    ->  True
                         (Just ext) -> case getFileExtention fp of
                                         Nothing     -> False
-                                        (Just curr) -> BC.tail curr == ext
+                                        (Just curr) ->  curr == ext
+
+                            
+
 -- helpers
+safeHead :: ByteString -> Maybe ByteString
+safeHead b = if BS.null b
+             then Nothing
+             else Just $ BC.tail b
+
 getFileExtention :: Extention -> Maybe Extention
 getFileExtention fp = if BS.null ext
                       then Nothing
-                      else Just ext
+                      else safeHead ext
                         where
                         ext = takeExtension fp
 
