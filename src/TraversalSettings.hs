@@ -2,10 +2,25 @@
 module TraversalSettings where
 
 
+{-|
+
+Module      : TraversalSettings
+Description : Innstillinger og filtre for fil-/mappetraversering
+License     : (ukjent)
+Maintainer  : (ukjent)
+
+Denne modulen definerer:
+* 'SearchSetting' – overordnede søkeinnstillinger (stier, kommando, filterflagg)
+* 'FilterFlags'   – filtre som kan begrense hvilke filer som skal vurderes
+* Hjelpefunksjoner for å kompilere regex og for å sjekke skjulte filer/filendelser
+
+Typene bruker 'RawFilePath' (ByteString-basert) fra @unix@-økosystemet.
+
+-}
 
 import System.Posix.ByteString               (RawFilePath)
-import qualified Data.ByteString.Char8 as BC (head,pack,unpack)
-import qualified Data.ByteString as BS       (null, tail)
+import qualified Data.ByteString.Char8 as BC (head,pack,unpack,tail)
+import qualified Data.ByteString as BS       (null)
 import System.FilePath.ByteString            (takeExtension)
 
 import Text.Regex.TDFA
@@ -18,7 +33,6 @@ import Text.Regex.TDFA
   )
 import Data.ByteString (ByteString)
 
-
 -- Datastruktur som holder filnavnet
 -- type FolderState a = StateT FolderAndContent IO a
 type Extention     = RawFilePath
@@ -26,11 +40,14 @@ type SearchPattern = RawFilePath
 type SearchFilters = [RawFilePath]
 type Command       = Maybe String
 
+
+
 data SearchSetting = SearchSetting {
       searchPaths    :: Maybe [FilePath]
     , applyedCommand :: Maybe Command
     , filters        :: FilterFlags
 } deriving (Eq,Show)
+
 
 -- | regxPattern. regexFilter 
 -- | exclude liste med mapper du vil eksludere
@@ -55,25 +72,14 @@ getDisallowFilter sf fp = maybe True (fp `notElem ` ) (exclude sf)  -- Blir True
 
 -- Hvis du vil:
 -- getDisallowFilter = flip (maybe True . notElem) . exclude 
-
 getHiddenFilter :: FilterFlags -> RawFilePath -> Bool
 getHiddenFilter sf fp = not (hideHidden sf) || (BC.head fp /= '.')
-
 
 getExtentionFilter :: FilterFlags -> RawFilePath -> Bool
 getExtentionFilter (extention -> Nothing) _                                  = True
 getExtentionFilter (extention -> (Just _)  ) (getFileExtention -> Nothing)   = False
 getExtentionFilter (extention -> (Just ext)) (getFileExtention -> Just curr) = curr == ext
 
-
--- helpers
-safeHead :: ByteString -> Maybe ByteString
-safeHead (BS.null -> False) = Nothing
-safeHead xs                 = Just $ BS.tail xs
-
-getFileExtention :: RawFilePath -> Maybe Extention
-getFileExtention (BS.null -> True) = Nothing
-getFileExtention  fp               = safeHead . takeExtension $ fp
 
 -- | compiles the regex pattern
 compileRegexFilter :: FilterFlags -> Maybe Regex
@@ -83,6 +89,15 @@ compileRegexFilter (regxPattern  -> (Just pat)) = Just $ makeRegexOpts comp exec
     comp = defaultCompOpt
     exec = defaultExecOpt { captureGroups = False }
 
+
+-- helpers
+getFileExtention :: RawFilePath -> Maybe Extention
+getFileExtention (BS.null -> True) = Nothing
+getFileExtention  fp               = safeHead . takeExtension $ fp
+
+safeHead :: ByteString -> Maybe ByteString
+safeHead (BS.null -> True)  = Nothing
+safeHead xs                 = Just $ BC.tail xs
 
 convertString :: String -> RawFilePath
 convertString = BC.pack
@@ -98,8 +113,6 @@ getExtentionFilter_ sf fp = case extention sf of
                         (Just ext) -> case getFileExtention fp of
                                         Nothing     -> False
                                         (Just curr) ->  curr == ext
-
-
 -- {-# DEPRECATED message #-}
 compileRegexFilter_ :: FilterFlags -> Maybe Regex
 compileRegexFilter_ sf =

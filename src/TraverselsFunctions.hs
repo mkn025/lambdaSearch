@@ -178,11 +178,11 @@ applyFunctionToPath  dc cmd | fst dc    /= dtDir = callCommand s
 
 
 treverseDirWithSettings  :: SearchSetting -> IO [DirContent]
-treverseDirWithSettings  ss = case searchPaths  ss of
+treverseDirWithSettings  ss = case searchPaths ss of
                                 Nothing  -> getWorkingDirectory  >>= treverseWithFilter . BS.unpack 
                                 (Just a) -> concat <$> mapM treverseWithFilter a
                                 where 
-                                    treverseWithFilter =  treverFilePath  $ filters ss
+                                    treverseWithFilter = treverFilePath  $ filters ss
 
 treverFilePath :: FilterFlags -> FilePath -> IO [DirContent]
 treverFilePath ff sp = treversRecursively ff [] $ BS.pack sp
