@@ -2,7 +2,7 @@
 {-# OPTIONS_GHC -Wno-unused-do-bind #-}
 {- HLINT ignore "Use <$>" -}
 
-module ParseInput (runParserIO ) where
+module ParseInput (runParserIO) where
 
 
 import TraversalSettings    ( SearchSetting (..), FilterFlags (..), convertString)
@@ -29,13 +29,11 @@ import Text.Megaparsec      (
 
 import Data.List (foldl')
 import Text.Megaparsec.Error (errorBundlePretty)
-import Data.Maybe (isNothing)
 
 type Parser = Parsec Void String
 
 tester :: IO ()
 tester = do
-
     parseTest parseLamdaSearch "      .                -p tester"
 
 
@@ -134,7 +132,6 @@ parseLamdaSearch = do
     case paths of
         NoPath        -> pure ss
         (ManyPaths p) -> pure ss { searchPaths = if null p then Nothing else Just p} 
-
 
 
 runMyParser :: Parser a -> String ->  Either String a

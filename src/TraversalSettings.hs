@@ -1,7 +1,4 @@
 {-# LANGUAGE ViewPatterns #-}
-module TraversalSettings where
-
-
 {-|
 
 Module      : TraversalSettings
@@ -17,6 +14,8 @@ Denne modulen definerer:
 Typene bruker 'RawFilePath' (ByteString-basert) fra @unix@-økosystemet.
 
 -}
+
+module TraversalSettings where
 
 import System.Posix.ByteString               (RawFilePath)
 import qualified Data.ByteString.Char8 as BC (head,pack,unpack,tail)
@@ -61,7 +60,6 @@ data FilterFlags = FilterFlags {
 
 }  deriving (Eq, Show)
 
-
 getRexPattern :: Maybe Regex -> RawFilePath -> Bool
 getRexPattern Nothing      _  = True
 getRexPattern (Just regex) fp = matchTest regex fp
@@ -89,7 +87,6 @@ compileRegexFilter (regxPattern  -> (Just pat)) = Just $ makeRegexOpts comp exec
     comp = defaultCompOpt
     exec = defaultExecOpt { captureGroups = False }
 
-
 -- helpers
 getFileExtention :: RawFilePath -> Maybe Extention
 getFileExtention (BS.null -> True) = Nothing
@@ -104,7 +101,6 @@ convertString = BC.pack
 
 convertToString :: RawFilePath  -> String
 convertToString = BC.unpack
-
 
 -- {-# DEPRECATED message #-}
 getExtentionFilter_ :: FilterFlags -> RawFilePath -> Bool

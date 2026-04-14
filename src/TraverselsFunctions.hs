@@ -8,7 +8,6 @@ module TraverselsFunctions (
     , DirContent
     , treverseDirWithSettings
     , applyFunctionToPath
-    , getwd 
     )
 where
 
@@ -42,7 +41,6 @@ import TraversalSettings (
 import Control.Monad.Except (
       runExceptT
     , ExceptT(..) )
-import Text.Regex.TDFA.Common (DoPa(DoPa))
 
 
 type DirContent = (DirType,RawFilePath)
@@ -168,7 +166,6 @@ treversRecursively flt arr rfp =  topLoop
                     else treversRecursively flt (t : acc) fullpath
 
 
-
 -- Sånn sett dårlig, men det holder forløpig det
 applyFunctionToPath :: DirContent -> String -> IO ()
 applyFunctionToPath  dc cmd | fst dc    /= dtDir = callCommand s
@@ -187,8 +184,5 @@ treverseDirWithSettings  ss = case searchPaths ss of
 treverFilePath :: FilterFlags -> FilePath -> IO [DirContent]
 treverFilePath ff sp = treversRecursively ff [] $ BS.pack sp
 
-
-getwd :: IO RawFilePath
-getwd = getWorkingDirectory 
 
 
