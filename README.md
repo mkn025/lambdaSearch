@@ -15,11 +15,17 @@
 git clone https://git.app.uib.no/martin.e.knutsen/inf221-Semesteroppgave.git && cd inf221-Semesteroppgave && cabal install
 ```
 
-##  Eksmepl på noen som kjører
+## Eksempelbruk
 
 ```bash
 lambdaSearch . -e hs
 lambdaSearch  -e hs
+
+# Fungerer med vilkårlig rekkefølge på argumentet. Og med både long og short sammen
+lambdaSearch  -p foo -e hs
+lambdaSearch --extention hs -p Pars
+
+lambdaSearch /foo/bar -e hs
 lambdaSearch "/foo/bar" -e hs
 lambdaSearch "/foo/bar" "/bar/foo" -p test -e hs
 
