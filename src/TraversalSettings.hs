@@ -17,6 +17,7 @@ import Text.Regex.TDFA
   , matchTest
   )
 import Data.ByteString (ByteString)
+import GHC.Conc (ThreadStatus(ThreadRunning))
 
 
 -- Datastruktur som holder filnavnet
@@ -61,13 +62,18 @@ getHiddenFilter sf fp = not (hideHidden sf) || (BC.head fp /= '.')
 
 
 getExtentionFilter :: FilterFlags -> RawFilePath -> Bool
-getExtentionFilter sf fp = case extention sf of
+getExtentionFilter (extention -> Nothing) _                                  = True
+getExtentionFilter (extention -> (Just _)  ) (getFileExtention -> Nothing)   = False
+getExtentionFilter (extention -> (Just ext)) (getFileExtention -> Just curr) = curr == ext
+
+
+-- {-# DEPRECATED message #-}
+getExtentionFilter_ :: FilterFlags -> RawFilePath -> Bool
+getExtentionFilter_ sf fp = case extention sf of
                         Nothing    ->  True
                         (Just ext) -> case getFileExtention fp of
                                         Nothing     -> False
                                         (Just curr) ->  curr == ext
-
-
 
 -- helpers
 safeHead :: ByteString -> Maybe ByteString
@@ -75,12 +81,9 @@ safeHead (BS.null -> False) = Nothing
 safeHead xs                 = Just $ BS.tail xs
 
 
-
-
 getFileExtention :: RawFilePath -> Maybe Extention
 getFileExtention (BS.null -> True) = Nothing
 getFileExtention  fp               = safeHead . takeExtension $ fp
-
 
 
 
