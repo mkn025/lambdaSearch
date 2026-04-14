@@ -17,7 +17,6 @@ import Text.Regex.TDFA
   , matchTest
   )
 import Data.ByteString (ByteString)
-import GHC.Conc (ThreadStatus(ThreadRunning))
 
 
 -- Datastruktur som holder filnavnet
@@ -72,26 +71,17 @@ safeHead :: ByteString -> Maybe ByteString
 safeHead (BS.null -> False) = Nothing
 safeHead xs                 = Just $ BS.tail xs
 
-
 getFileExtention :: RawFilePath -> Maybe Extention
 getFileExtention (BS.null -> True) = Nothing
 getFileExtention  fp               = safeHead . takeExtension $ fp
 
-
-
-
 -- | compiles the regex pattern
-
-
 compileRegexFilter :: FilterFlags -> Maybe Regex
 compileRegexFilter (regxPattern  -> Nothing)    = Nothing
 compileRegexFilter (regxPattern  -> (Just pat)) = Just $ makeRegexOpts comp exec pat
   where
     comp = defaultCompOpt
     exec = defaultExecOpt { captureGroups = False }
-
-
-
 
 
 convertString :: String -> RawFilePath
@@ -110,8 +100,7 @@ getExtentionFilter_ sf fp = case extention sf of
                                         (Just curr) ->  curr == ext
 
 
-
-
+-- {-# DEPRECATED message #-}
 compileRegexFilter_ :: FilterFlags -> Maybe Regex
 compileRegexFilter_ sf =
   case regxPattern sf of
