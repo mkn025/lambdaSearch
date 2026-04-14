@@ -1,9 +1,11 @@
+{-# LANGUAGE ViewPatterns #-}
 module TraversalSettings where
 
 
+
 import System.Posix.ByteString               (RawFilePath)
-import qualified Data.ByteString.Char8 as BC (head,pack,tail,unpack)
-import qualified Data.ByteString as BS       (null)
+import qualified Data.ByteString.Char8 as BC (head,pack,unpack)
+import qualified Data.ByteString as BS       (null, empty,tail)
 import System.FilePath.ByteString            (takeExtension)
 
 import Text.Regex.TDFA
@@ -15,6 +17,7 @@ import Text.Regex.TDFA
   , matchTest
   )
 import Data.ByteString (ByteString)
+import qualified Text.Regex.TDFA.CorePattern as BS
 
 -- Datastruktur som holder filnavnet
 -- type FolderState a = StateT FolderAndContent IO a
@@ -64,13 +67,13 @@ getExtentionFilter sf fp = case extention sf of
                                         Nothing     -> False
                                         (Just curr) ->  curr == ext
 
-                            
+
 
 -- helpers
 safeHead :: ByteString -> Maybe ByteString
-safeHead b = if BS.null b
-             then Nothing
-             else Just $ BC.tail b
+safeHead (BS.null -> False) = Nothing
+safeHead xs                 = Just $ BS.tail xs
+
 
 getFileExtention :: Extention -> Maybe Extention
 getFileExtention fp = if BS.null ext
