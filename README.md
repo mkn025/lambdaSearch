@@ -18,13 +18,13 @@ git clone https://git.app.uib.no/martin.e.knutsen/inf221-Semesteroppgave.git && 
 ##  Eksmepl på noen som kjører
 
 ```bash
-lambdaSearch . -e java
-lambdaSearch  -e java
-lambdaSearch "/foo/bar" -e java
-lambdaSearch "/foo/bar" "/bar/foo" -p test -e java
+lambdaSearch . -e hs
+lambdaSearch  -e hs
+lambdaSearch "/foo/bar" -e hs
+lambdaSearch "/foo/bar" "/bar/foo" -p test -e hs
 
 # Gir jo ut til stdout så du kan bruke med andre cli tools fzf, grep, sk, vim, awk, cut, sed etc...
-lambdaSearch "/foo/bar" "/bar/foo" -p test -e java
+lambdaSearch "/foo/bar" "/bar/foo" -p test -e hs
 lambdaSearch "/foo/bar" "/bar/foo" -e hs | fzf --tmux 80%  | xargs nvim
 lambdaSearch . -e hs | cut -d / -f 10 | sort | uniq -c
 
