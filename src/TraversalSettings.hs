@@ -5,7 +5,7 @@ module TraversalSettings where
 
 import System.Posix.ByteString               (RawFilePath)
 import qualified Data.ByteString.Char8 as BC (head,pack,unpack)
-import qualified Data.ByteString as BS       (null, empty,tail)
+import qualified Data.ByteString as BS       (null, tail)
 import System.FilePath.ByteString            (takeExtension)
 
 import Text.Regex.TDFA
@@ -17,7 +17,7 @@ import Text.Regex.TDFA
   , matchTest
   )
 import Data.ByteString (ByteString)
-import qualified Text.Regex.TDFA.CorePattern as BS
+
 
 -- Datastruktur som holder filnavnet
 -- type FolderState a = StateT FolderAndContent IO a
@@ -75,12 +75,15 @@ safeHead (BS.null -> False) = Nothing
 safeHead xs                 = Just $ BS.tail xs
 
 
-getFileExtention :: Extention -> Maybe Extention
-getFileExtention fp = if BS.null ext
-                      then Nothing
-                      else safeHead ext
-                        where
-                        ext = takeExtension fp
+
+
+getFileExtention :: RawFilePath -> Maybe Extention
+getFileExtention (BS.null -> True) = Nothing
+getFileExtention  fp               = safeHead . takeExtension $ fp
+
+
+
+
 
 -- | compiles the regex pattern
 compileRegexFilter :: FilterFlags -> Maybe Regex
