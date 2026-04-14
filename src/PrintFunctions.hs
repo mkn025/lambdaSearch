@@ -1,6 +1,5 @@
 module PrintFunctions (printResults ) where
 
-
 import TraverselsFunctions                   (DirContent) 
 import qualified Data.ByteString.Char8 as BS (unpack)
 import System.Posix.Directory.Foreign        (dtLnk, dtDir)
