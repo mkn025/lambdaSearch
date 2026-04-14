@@ -67,14 +67,6 @@ getExtentionFilter (extention -> (Just _)  ) (getFileExtention -> Nothing)   = F
 getExtentionFilter (extention -> (Just ext)) (getFileExtention -> Just curr) = curr == ext
 
 
--- {-# DEPRECATED message #-}
-getExtentionFilter_ :: FilterFlags -> RawFilePath -> Bool
-getExtentionFilter_ sf fp = case extention sf of
-                        Nothing    ->  True
-                        (Just ext) -> case getFileExtention fp of
-                                        Nothing     -> False
-                                        (Just curr) ->  curr == ext
-
 -- helpers
 safeHead :: ByteString -> Maybe ByteString
 safeHead (BS.null -> False) = Nothing
@@ -89,14 +81,17 @@ getFileExtention  fp               = safeHead . takeExtension $ fp
 
 
 -- | compiles the regex pattern
+
+
 compileRegexFilter :: FilterFlags -> Maybe Regex
-compileRegexFilter sf =
-  case regxPattern sf of
-    Nothing  ->  Nothing
-    Just pat ->  Just $ makeRegexOpts comp exec pat
+compileRegexFilter (regxPattern  -> Nothing)    = Nothing
+compileRegexFilter (regxPattern  -> (Just pat)) = Just $ makeRegexOpts comp exec pat
   where
     comp = defaultCompOpt
     exec = defaultExecOpt { captureGroups = False }
+
+
+
 
 
 convertString :: String -> RawFilePath
@@ -106,3 +101,22 @@ convertToString :: RawFilePath  -> String
 convertToString = BC.unpack
 
 
+-- {-# DEPRECATED message #-}
+getExtentionFilter_ :: FilterFlags -> RawFilePath -> Bool
+getExtentionFilter_ sf fp = case extention sf of
+                        Nothing    ->  True
+                        (Just ext) -> case getFileExtention fp of
+                                        Nothing     -> False
+                                        (Just curr) ->  curr == ext
+
+
+
+
+compileRegexFilter_ :: FilterFlags -> Maybe Regex
+compileRegexFilter_ sf =
+  case regxPattern sf of
+    Nothing  ->  Nothing
+    Just pat ->  Just $ makeRegexOpts comp exec pat
+  where
+    comp = defaultCompOpt
+    exec = defaultExecOpt { captureGroups = False }
