@@ -1,7 +1,7 @@
-{-# LANGUAGE OverloadedStrings #-}
 {- HLINT ignore "Use let" -}
 {- HLINT ignore "Avoid lambda" -}
 {- HLINT ignore "Use if" -}
+
 
 module TraverselsFunctions (
      treverFilePath
@@ -45,23 +45,22 @@ import Control.Monad.Except (
 
 type DirContent = (DirType,RawFilePath)
 
--- Lager Haskll funksjoner igjennom FFI
 foreign import ccall safe "__hscore_readdir"
   c_readdir  :: Ptr CDir -> Ptr (Ptr CDirent) -> IO CInt  --der c skriver adressen. eller pekeren til adressen til neste dir entry
 
- -- readdir_r var  depreciated  ... rip  vil derfor ikke fungere moderene linux distoreer (ofc. )
+ -- readdir_r var  depreciated  ... rip  vil derfor ikke fungere derfor ikke distroer
  -- It is recommended that applications use readdir(3) instead of
  -- readdir_r().  Furthermore, since glibc 2.24, glibc deprecates
  -- readdir_r().  The reasons are as follows:
  -- https://www.man7.org/linux/man-pages/man3/readdir_r.3.html 
 
 
-foreign import ccall unsafe "readdir"
-  c_readdir_new :: Ptr CDir -> IO (Ptr CDirent)
-
 
 foreign import ccall unsafe "__hscore_free_dirent"
   c_freeDirEnt  :: Ptr CDirent -> IO ()
+
+foreign import ccall unsafe "readdir"
+  c_readdir_new :: Ptr CDir -> IO (Ptr CDirent) --Leser fra allerede åpenet dirStream
 
 foreign import ccall unsafe "__hscore_d_name"
   c_name :: Ptr CDirent -> IO CString
@@ -112,6 +111,7 @@ readDirEnt dir = ExceptT readContent
 
         -- fra wiki. Vi trenger ikke å free den
         -- IMPORTANT: do NOT free dEnt for readdir()
+
         -- On success, readdir() returns a pointer to a dirent structure.
         -- (This structure may be statically allocated; do not attempt to
         -- free(3) it.)
