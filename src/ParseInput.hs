@@ -1,9 +1,6 @@
-{-# LANGUAGE OverloadedStrings #-}
-{-# OPTIONS_GHC -Wno-unused-do-bind #-}
 {- HLINT ignore "Use <$>" -}
 
 module ParseInput (runParserIO) where
-
 
 import TraversalSettings    ( SearchSetting (..), FilterFlags (..), convertString)
 import Data.Void            (Void)
@@ -31,6 +28,7 @@ import Data.List (foldl')
 import Text.Megaparsec.Error (errorBundlePretty)
 
 type Parser = Parsec Void String
+
 
 tester :: IO ()
 tester = do
@@ -118,7 +116,6 @@ parsePathOrDot = choice
         , ManyPaths  <$> pathsUntilFlag
      ]
 
-
 -- Main parser
 parseLamdaSearch :: Parser SearchSetting
 parseLamdaSearch = do
@@ -130,8 +127,10 @@ parseLamdaSearch = do
          , filters        = flags }
 
     case paths of
-        NoPath        -> pure ss
-        (ManyPaths p) -> pure ss { searchPaths = if null p then Nothing else Just p} 
+        NoPath           -> pure ss
+        (ManyPaths [])   -> pure ss 
+        (ManyPaths p)    -> pure ss {searchPaths = Just p} 
+
 
 
 runMyParser :: Parser a -> String ->  Either String a
@@ -140,16 +139,18 @@ runMyParser parser input =
     Left err  -> Left $ errorBundlePretty err
     Right x   -> Right x
 
-
 type StringToParse = String
 
 runParserIO :: StringToParse -> IO SearchSetting
-runParserIO s = case runMyParser parseLamdaSearch s of
+runParserIO (runMyParser parseLamdaSearch -> (Right ss)) = pure  ss
+runParserIO (runMyParser parseLamdaSearch -> (Left er))  = throwIO $ userError er 
+
+
+--{-# DEPRECATED message #-}
+runParserIO_ :: StringToParse -> IO SearchSetting
+runParserIO_ s = case runMyParser parseLamdaSearch s of
         Right ss -> pure ss
         Left  er -> throwIO (userError  er)
-
-
-
 
 
 
