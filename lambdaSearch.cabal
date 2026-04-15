@@ -9,7 +9,7 @@ build-type:         Simple
 extra-doc-files:    CHANGELOG.md
 
 common warnings
-    ghc-options: -Wall -threaded
+    ghc-options: -Wall -threaded -XViewPatterns -XOverloadedStrings 
 library
     -- Import common warning flags.
     import:           warnings
