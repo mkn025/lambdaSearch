@@ -68,6 +68,7 @@ getRexPattern (Just regex) fp = matchTest regex fp
 getDisallowFilter :: FilterFlags -> RawFilePath -> Bool
 getDisallowFilter sf fp = maybe True (fp `notElem ` ) (exclude sf)  -- Blir True dersom fp ikke elem i 
 
+
 -- Hvis du vil:
 -- getDisallowFilter = flip (maybe True . notElem) . exclude 
 getHiddenFilter :: FilterFlags -> RawFilePath -> Bool
@@ -101,6 +102,8 @@ convertString = BC.pack
 
 convertToString :: RawFilePath  -> String
 convertToString = BC.unpack
+
+
 
 -- {-# DEPRECATED message #-}
 getExtentionFilter_ :: FilterFlags -> RawFilePath -> Bool

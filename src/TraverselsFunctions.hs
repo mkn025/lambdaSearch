@@ -4,7 +4,7 @@
 
 
 module TraverselsFunctions (
-     treverFilePath
+     treverPathWithFilterFlags
     , DirContent
     , treverseDirWithSettings
     , applyFunctionToPath
@@ -21,6 +21,7 @@ import Foreign.C.Types                  ( CInt (..), CInt )
 import UnliftIO                      (MonadUnliftIO, finally,askRunInIO, throwIO, Exception )
 import System.Posix.Files.ByteString (isDirectory, getFileStatus)
 import Control.Monad.IO.Class        ( MonadIO(liftIO) )
+import Control.Monad                 (liftM2)
 
 import System.Posix.Directory.ByteString as PosixBS (openDirStream, closeDirStream, DirStream, getWorkingDirectory )
 import qualified Data.ByteString.Char8 as BS        (unpack, pack)
@@ -40,7 +41,8 @@ import TraversalSettings (
 
 import Control.Monad.Except (
       runExceptT
-    , ExceptT(..) )
+    , ExceptT(..)
+    )
 
 
 type DirContent = (DirType,RawFilePath)
@@ -155,6 +157,7 @@ treversRecursively flt arr rfp =  topLoop
                 let fullpath = rfp </> file  --legg sammen slik at vi er inne på riktig sti
                 isDir <- pure $ typ == dtDir
                 if not isDir
+
                     then do
                         rg  <- pure $ getRexPattern      regexCompiled file
                         df  <- pure $ getDisallowFilter  flt rfp
@@ -174,15 +177,29 @@ applyFunctionToPath  dc cmd | fst dc    /= dtDir = callCommand s
         s = cmd <> " " <> (BS.unpack  . snd ) dc
 
 
+
+
 treverseDirWithSettings  :: SearchSetting -> IO [DirContent]
-treverseDirWithSettings  ss = case searchPaths ss of
+treverseDirWithSettings ss = treveseManyPathsWithFlags  (filters ss) (searchPaths ss)
+
+
+
+treveseManyPathsWithFlags  :: FilterFlags ->  Maybe [FilePath]  -> IO [DirContent]
+treveseManyPathsWithFlags ff Nothing   = getWorkingDirectory  >>= treverPathWithFilterFlags ff . BS.unpack
+treveseManyPathsWithFlags ff (Just fp) = concat <$> mapM (treverPathWithFilterFlags ff) fp
+
+treverPathWithFilterFlags :: FilterFlags -> FilePath -> IO [DirContent]
+treverPathWithFilterFlags ff sp = treversRecursively ff [] $ BS.pack sp
+
+
+treverseDirWithSettings__ = liftM2 treveseManyPathsWithFlags filters searchPaths
+
+
+treverseDirWithSettings_  :: SearchSetting -> IO [DirContent]
+treverseDirWithSettings_  ss = case searchPaths ss of
                                 Nothing  -> getWorkingDirectory  >>= treverseWithFilter . BS.unpack 
                                 (Just a) -> concat <$> mapM treverseWithFilter a
                                 where 
-                                    treverseWithFilter = treverFilePath  $ filters ss
-
-treverFilePath :: FilterFlags -> FilePath -> IO [DirContent]
-treverFilePath ff sp = treversRecursively ff [] $ BS.pack sp
-
+                                    treverseWithFilter = treverPathWithFilterFlags  $ filters ss
 
 
