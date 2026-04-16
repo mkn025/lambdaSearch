@@ -6,14 +6,13 @@ import ParseInput (runParserIO)
 
 import TraverselsFunctions (treverseDirWithSettings)
 import TraversalSettings (
-      FilterFlags(..), SearchSetting(..), )
+      Arguments(..), SearchSetting(..), )
 
 import PrintFunctions (
       printResults)
 
 import System.IO (
      stdout, BufferMode(LineBuffering), hSetBuffering )
-
 
 
 main :: IO ()
@@ -32,18 +31,18 @@ path  = "/Users/martineldeknutsen/Dev/UiB/inf221/semesterProjekt/"
 allPath :: [FilePath]
 allPath = [path]
 
-defaultFlags :: FilterFlags
-defaultFlags = FilterFlags {
-    regxPattern = Nothing
-  , exclude     = Nothing
-  , extention   = Nothing
-  , hideHidden  = True
+defaultFlags :: Arguments
+defaultFlags = Arguments {
+    regxPattern    = Nothing
+  , exclude        = Nothing
+  , extention      = Nothing
+  , hideHidden     = True
+  , applyedCommand = Nothing
 }
 
 dss :: SearchSetting
 dss = SearchSetting {
       searchPaths    =  Nothing
-    , applyedCommand =  Nothing
-    , filters        =  defaultFlags
+    , arguments      =  defaultFlags 
 }
 
