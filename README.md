@@ -1,9 +1,20 @@
 # Notat
-- Program som lar deg søke igjennom  datamskinen din
-- lambdaSearch {sti}  
+- Program som lar deg søke igjennom datamskinen din etter filer
+- `lambdaSearch  [input-file]... [options]`
+
+# Flag dokumentasjon
+| Flag | Long Form | Purpose |
+|------|-----------|---------|
+| `-p` | `--pattern` | **SearchPatternFlag** - Defines a search pattern to filter files |
+| `-a` | `--show--dots` | **HiddenFilesFlag** - Shows hidden files (those starting with a dot) |
+| `-e` | `--extention` | **ExtentionFlag** - Filters or processes files by extension |
+| `-i` | `--ignore` | **IgnoreFlag** - Specifies files or paths to exclude from processing |
+| `-x` | `--execute` | **ExecuteFlag** - Executes a command on processed files |
+
 
 ### Gjort siden innleveringen 
 - Gjort det mulig å søke med `.` eller ingen argumenter. Dette vil da til da bruke working directory
+- Gjort det mulig å kjøre commando på filer du søker etter (beta)
 
 ### Mangler.
 - Lage TUI for søkingen
@@ -33,27 +44,9 @@ lambdaSearch "/foo/bar" "/bar/foo" -e hs | fzf --tmux 80%  | xargs nvim
 lambdaSearch . -e hs | cut -d / -f 10 | sort | uniq -c
 
 # Execute commands on files found substiue {} for filepath
-# Maybe a little buggy stil
+# Kanskje litt buggy
 lambdaSearch -e hs -x cat {} 
 ```
 
 ![nvim fzf tmux showcase](./pictures/lamdaSearchTmuxNvimshowcase.gif)
 ![command execution](./pictures/showCaseProcessExecution.gif)
-
-# Flag dokumentasjon
-
-| Flag | Long Form | Purpose |
-|------|-----------|---------|
-| `-p` | `--pattern` | **SearchPatternFlag** - Defines a search pattern to filter files |
-| `-a` | `--show--dots` | **HiddenFilesFlag** - Shows hidden files (those starting with a dot) |
-| `-e` | `--extention` | **ExtentionFlag** - Filters or processes files by extension |
-| `-i` | `--ignore` | **IgnoreFlag** - Specifies files or paths to exclude from processing |
-| `-x` | `--execute` | **ExecuteFlag** - Executes a command on processed files |
-
-
-
-
-
-
-
-
