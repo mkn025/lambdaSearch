@@ -6,7 +6,6 @@
 - Gjort det mulig å søke med `.` eller ingen argumenter. Dette vil da til da bruke working directory
 
 ### Mangler.
-- Kjøre en kommando på filer den søker etter
 - Lage TUI for søkingen
 - Treversere paralelt med STM monaden
 - Fuzzy search funksjonalitet.
@@ -16,7 +15,6 @@ git clone https://git.app.uib.no/martin.e.knutsen/inf221-Semesteroppgave.git && 
 ```
 
 ## Eksempelbruk
-
 ```bash
 lambdaSearch . -e hs
 lambdaSearch  -e hs
@@ -34,9 +32,13 @@ lambdaSearch "/foo/bar" "/bar/foo" -p test -e hs
 lambdaSearch "/foo/bar" "/bar/foo" -e hs | fzf --tmux 80%  | xargs nvim
 lambdaSearch . -e hs | cut -d / -f 10 | sort | uniq -c
 
+# Execute commands on files found substiue {} for filepath
+# Maybe a little buggy stil
+lambdaSearch -e hs -x cat {} 
 ```
 
 ![nvim fzf tmux showcase](./pictures/lamdaSearchTmuxNvimshowcase.gif)
+![command execution](./pictures/showCaseProcessExecution.gif)
 
 # Flag dokumentasjon
 

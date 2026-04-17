@@ -2,7 +2,6 @@
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
 
-
 module ParseInput (runParserIO) where
 
 import Data.Void            (Void)
@@ -43,7 +42,7 @@ type Parser = Parsec Void String
 
 tester :: IO ()
 tester = do
-    let inp = ". -e hs -x cat {} foo bar foo bar {} -p test"
+    let inp = ". -e hs -x pandoc f html t pdf {} "
     parseTest parseLamdaSearch inp
 
 
@@ -95,10 +94,22 @@ pFlags = choice
 
 parseArgs :: Parser Command
 parseArgs = do
-        s <- sc *> parseWord <* sc
+        s <- sc *> (parseArgumentAndWord <|> parseWord) <* sc
         if s == "{}"
         then pure PathToSubs
         else pure $ Text s
+
+
+parseArgumentAndWord :: Parser String
+parseArgumentAndWord = do
+    f <- char '-'
+    w <- parseWord <* sc
+    s <- parseWord 
+    pure (f : w <> s)
+
+    
+
+
 
 parseManyArgs :: Parser [Command]
 parseManyArgs =
@@ -187,11 +198,6 @@ runParserIO :: StringToParse -> IO SearchSetting
 runParserIO (runMyParser parseLamdaSearch -> (Right ss)) = pure  ss
 runParserIO (runMyParser parseLamdaSearch -> (Left er))  = throwIO $ userError er
 
---{-# DEPRECATED message #-}
-runParserIO_ :: StringToParse -> IO SearchSetting
-runParserIO_ s = case runMyParser parseLamdaSearch s of
-        Right ss -> pure ss
-        Left  er -> throwIO (userError  er)
 
 
 
