@@ -2,7 +2,6 @@
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
 
-
 module ParseInput (runParserIO) where
 
 import Data.Void            (Void)
@@ -106,7 +105,7 @@ parseArgumentAndWord = do
     f <- char '-'
     w <- parseWord <* sc
     s <- parseWord 
-    pure (f : w <> " " <> s)
+    pure (f : w <> s)
 
     
 
@@ -199,11 +198,6 @@ runParserIO :: StringToParse -> IO SearchSetting
 runParserIO (runMyParser parseLamdaSearch -> (Right ss)) = pure  ss
 runParserIO (runMyParser parseLamdaSearch -> (Left er))  = throwIO $ userError er
 
---{-# DEPRECATED message #-}
-runParserIO_ :: StringToParse -> IO SearchSetting
-runParserIO_ s = case runMyParser parseLamdaSearch s of
-        Right ss -> pure ss
-        Left  er -> throwIO (userError  er)
 
 
 
