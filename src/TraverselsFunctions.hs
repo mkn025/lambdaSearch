@@ -1,37 +1,30 @@
-{- HLINT ignore "Use let" -}
-{- HLINT ignore "Avoid lambda" -}
-{- HLINT ignore "Use if" -}
+{- HLINT ignore "Use let" -} 
 
 
 module TraverselsFunctions (
-     treverPathWithFilterArgs
-    , DirContent
+      DirContent
     , treverseDirWithSettings
     , executeOnFile 
     )
+
 where
 
 import System.Posix.Directory.Foreign ( DirType(..), dtDir )
 
 import System.Posix.ByteString.FilePath ( RawFilePath, peekFilePath )
-import Foreign.C.Error                  ( Errno(..), eINTR,  getErrno, resetErrno,eOK )
+import Foreign.C.Error                  ( Errno  (..), eINTR,  getErrno, resetErrno,eOK )
 import Foreign.C.String                 ( CString )
-import Foreign.C.Types                  ( CInt (..), CInt )
 
-import UnliftIO                      (MonadUnliftIO, finally,askRunInIO, throwIO, Exception )
-import System.Posix.Files.ByteString (isDirectory, getFileStatus)
-import Control.Monad.IO.Class        ( MonadIO(liftIO) )
+import UnliftIO                         (MonadUnliftIO, finally,askRunInIO, throwIO, Exception )
+import System.Posix.Files.ByteString    (isDirectory, getFileStatus)
+import Control.Monad.IO.Class           ( MonadIO(liftIO) )
 
 import System.Posix.Directory.ByteString as PosixBS (openDirStream, closeDirStream, DirStream, getWorkingDirectory )
 import qualified Data.ByteString.Char8 as BS        (unpack, pack)
 import System.Posix.FilePath                        ((</>))
 import Foreign.Ptr as PTR                           (Ptr, nullPtr)
-import System.Process                               (createProcess, proc, waitForProcess,readCreateProcessWithExitCode)
+import System.Process                               (createProcess, proc, waitForProcess)
 import System.Exit                                  (ExitCode (..))
-import System.IO                                    (stderr ,hPutStrLn )
-
-
-
 
 import System.Posix.Directory.Internals             (DirStream(DirStream) , CDir , CDirent )
 
@@ -43,32 +36,18 @@ import TraversalSettings (
     , getExtentionFilter
     , compileRegexFilter
     , getRexPattern
-    , Command
     , executeFunction
+    , ConstrucedCommand
+    , substituePath
+
     )
 
 import Control.Monad.Except (
       runExceptT
     , ExceptT(..)
     )
-import UnliftIO.Internals.Async (Conc(Pure))
-
 
 type DirContent = (DirType,RawFilePath)
-
-foreign import ccall safe "__hscore_readdir"
-  c_readdir  :: Ptr CDir -> Ptr (Ptr CDirent) -> IO CInt  --der c skriver adressen. eller pekeren til adressen til neste dir entry
-
- -- readdir_r var  depreciated  ... rip  vil derfor ikke fungere derfor ikke distroer
- -- It is recommended that applications use readdir(3) instead of
- -- readdir_r().  Furthermore, since glibc 2.24, glibc deprecates
- -- readdir_r().  The reasons are as follows:
- -- https://www.man7.org/linux/man-pages/man3/readdir_r.3.html 
-
-
-
-foreign import ccall unsafe "__hscore_free_dirent"
-  c_freeDirEnt  :: Ptr CDirent -> IO ()
 
 foreign import ccall unsafe "readdir"
   c_readdir_new :: Ptr CDir -> IO (Ptr CDirent) --Leser fra allerede åpenet dirStream
@@ -98,7 +77,6 @@ type DirContentT = ExceptT DirError IO (Maybe DirContent)
 -- | Men skriver også det blir lest til etr_dEnt. Derfor vi kan hente ut fra pekeren
 -- | bruker transformatoren siden vi øsnker bare å kaste å gi feil dersom syscallet feiler. ikke når den vi er på slutten
 -- | vil derfor ha mulighet til å 
-
 readDirEnt :: DirStream ->  DirContentT
 readDirEnt dir = ExceptT readContent
     where
@@ -117,7 +95,7 @@ readDirEnt dir = ExceptT readContent
               | otherwise  -> pure . Left  $ ReadDirErr err      -- Real error
               -- har mulihet å legge til flere type feil 
         else do
-          dName <- c_name dEnt >>= (\l -> peekFilePath l)
+          dName <- c_name dEnt >>= peekFilePath  
           dType <- c_type dEnt
 
         -- fra wiki. Vi trenger ikke å free den
@@ -164,16 +142,15 @@ treversRecursively flt arr rfp =  topLoop
         where
             innerLoop :: [DirContent] -> DirContent -> IO [DirContent]
             innerLoop acc t@(typ,file) = do
-                let fullpath = rfp </> file  --legg sammen slik at vi er inne på riktig sti
+                let fullpath = rfp </> file 
                 isDir <- pure $ typ == dtDir
                 if not isDir
-
                     then do
+
                         rg  <- pure $ getRexPattern      regexCompiled file
                         df  <- pure $ getDisallowFilter  flt rfp
                         hf  <- pure $ getHiddenFilter    flt file
                         ef  <- pure $ getExtentionFilter flt file
-                        
                         if and [rg, df, ef, hf]
                             then do
                                 executeFunction flt fullpath executeOnFile
@@ -182,46 +159,30 @@ treversRecursively flt arr rfp =  topLoop
                     else treversRecursively flt (t : acc) fullpath
 
 
--- Sånn sett dårlig, men det holder forløpig det
 
-
-executeOnFile :: Command -> RawFilePath ->  IO ()
-executeOnFile cmd rfd = case generateCmdAndArgs cmd rfd of
-                            Nothing -> pure ()
-                            Just (prog,args)  -> do
-                                (_, _, _, ph) <- createProcess (proc prog args) 
+executeOnFile :: ConstrucedCommand -> RawFilePath ->  IO ()
+executeOnFile c@(prog, args) rfd = do
+                                let argsWithPath = substituePath args rfd
+                                print argsWithPath 
+                                (_, _, _, ph) <- createProcess $ proc prog argsWithPath
                                 ec <- waitForProcess ph
                                 case ec of
                                     ExitSuccess   -> pure ()
-                                    ExitFailure n -> ioError (userError ("Command failed: " ++ show cmd ++ " (exit " ++ show n ++ ")"))
-
-
-
-
-
-
-
-
-  -- print child output
-
-generateCmdAndArgs :: Command -> RawFilePath -> Maybe (String, [String])
-generateCmdAndArgs [] _        = Nothing
-generateCmdAndArgs (x:xs) path = Just (x, map (substituteForPath path) xs )
-            where
-                  substituteForPath :: RawFilePath -> String ->  String
-                  substituteForPath rfp s = if s == "{}" then BS.unpack rfp else s
-
-
+                                    ExitFailure n -> ioError $ userError (
+                                           "Command failed: "
+                                        <> show c
+                                        <> " (exit " ++ show n ++ ")"    )
 
 
 treverseDirWithSettings  :: SearchSetting -> IO [DirContent]
 treverseDirWithSettings ss = treveseManyPathsWithArgs  (arguments ss) (searchPaths ss)
 
 treveseManyPathsWithArgs  :: Arguments ->  Maybe [FilePath]  -> IO [DirContent]
-treveseManyPathsWithArgs ff Nothing   = getWorkingDirectory  >>= treverPathWithFilterArgs ff . BS.unpack
-treveseManyPathsWithArgs ff (Just fp) = concat <$> mapM (treverPathWithFilterArgs ff) fp
+treveseManyPathsWithArgs ff Nothing   = getWorkingDirectory  >>= treverseOnPathWithArgs ff . BS.unpack
+treveseManyPathsWithArgs ff (Just fp) = concat <$> mapM (treverseOnPathWithArgs ff) fp
 
-treverPathWithFilterArgs :: Arguments -> FilePath -> IO [DirContent]
-treverPathWithFilterArgs ff sp = treversRecursively ff [] $ BS.pack sp
+
+treverseOnPathWithArgs :: Arguments -> FilePath -> IO [DirContent]
+treverseOnPathWithArgs ff sp = treversRecursively ff [] $ BS.pack sp
 
 

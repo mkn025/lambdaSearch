@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-unused-top-binds #-}
 module PrintFunctions (printResults ) where
 
 import TraverselsFunctions                   (DirContent) 
@@ -33,7 +34,4 @@ printDirContentWithType (dirType, rawFilePath) = do
                  l | l == dtLnk -> "@"  
                  _              -> ""   
   putStrLn $ path ++ marker
-
-
-
 
