@@ -43,7 +43,7 @@ type Parser = Parsec Void String
 
 tester :: IO ()
 tester = do
-    let inp = ". -e hs -x cat {} foo bar foo bar {} -p test"
+    let inp = ". -e hs -x pandoc f html t pdf {} "
     parseTest parseLamdaSearch inp
 
 
@@ -95,10 +95,22 @@ pFlags = choice
 
 parseArgs :: Parser Command
 parseArgs = do
-        s <- sc *> parseWord <* sc
+        s <- sc *> (parseArgumentAndWord <|> parseWord) <* sc
         if s == "{}"
         then pure PathToSubs
         else pure $ Text s
+
+
+parseArgumentAndWord :: Parser String
+parseArgumentAndWord = do
+    f <- char '-'
+    w <- parseWord <* sc
+    s <- parseWord 
+    pure (f : w <> " " <> s)
+
+    
+
+
 
 parseManyArgs :: Parser [Command]
 parseManyArgs =
