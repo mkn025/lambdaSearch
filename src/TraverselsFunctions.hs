@@ -28,6 +28,9 @@ import System.Exit                                  (ExitCode (..))
 
 import System.Posix.Directory.Internals             (DirStream(DirStream) , CDir , CDirent )
 
+import System.Console.ANSI.Codes                    (setSGRCode)
+import System.Console.ANSI                          (SGR (SetColor), ConsoleLayer (Foreground), ColorIntensity (Vivid))
+
 import TraversalSettings (
       Arguments   (..)
     , SearchSetting (..)
@@ -132,7 +135,7 @@ traverseDirectoryContents f s0 p = do
 treversRecursively :: Arguments -> [DirContent] -> RawFilePath -> IO [DirContent]
 treversRecursively flt arr rfp =  topLoop
     where
-    regexCompiled = seq const $ compileRegexFilter flt
+    regexCompiled =  compileRegexFilter flt
     topLoop :: IO [DirContent]
     topLoop = do
         isDir <- liftIO $ isDirectory <$> getFileStatus rfp
@@ -154,9 +157,11 @@ treversRecursively flt arr rfp =  topLoop
                         if and [rg, df, ef, hf]
                             then do
                                 executeFunction flt fullpath executeOnFile
-                                pure  $ (typ, fullpath) : acc
+                                let colorRisedPath = rfp  </>  coloriseFile  file
+                                pure  $ (typ, colorRisedPath) : acc
                             else pure acc
                     else treversRecursively flt (t : acc) fullpath
+
 
 
 
@@ -174,6 +179,7 @@ executeOnFile c@(prog, args) rfd = do
                                         <> " (exit " ++ show n ++ ")"    )
 
 
+
 treverseDirWithSettings  :: SearchSetting -> IO [DirContent]
 treverseDirWithSettings ss = treveseManyPathsWithArgs  (arguments ss) (searchPaths ss)
 
@@ -184,5 +190,9 @@ treveseManyPathsWithArgs ff (Just fp) = concat <$> mapM (treverseOnPathWithArgs 
 
 treverseOnPathWithArgs :: Arguments -> FilePath -> IO [DirContent]
 treverseOnPathWithArgs ff sp = treversRecursively ff [] $ BS.pack sp
+
+coloriseFile :: RawFilePath -> RawFilePath
+coloriseFile rfp =  BS.pack $ setSGRCode[SetColor Foreground Vivid Red] <> BS.unpack rfp <> setSGRCode[Reset]
+
 
 
