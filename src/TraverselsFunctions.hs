@@ -29,7 +29,7 @@ import System.Exit                                  (ExitCode (..))
 import System.Posix.Directory.Internals             (DirStream(DirStream) , CDir , CDirent )
 
 import System.Console.ANSI.Codes                    (setSGRCode)
-import System.Console.ANSI                          (SGR (SetColor), ConsoleLayer (Foreground), ColorIntensity (Vivid))
+import System.Console.ANSI                          (SGR (SetColor, Reset), ConsoleLayer (Foreground), ColorIntensity (Vivid), Color (Red))
 
 import TraversalSettings (
       Arguments   (..)
