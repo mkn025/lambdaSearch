@@ -1,4 +1,3 @@
-{- HLINT ignore "Use let" -}
 
 
 module TraverselsFunctions (
@@ -31,7 +30,7 @@ import System.Exit                                  (ExitCode (..))
 import System.Posix.Directory.Internals             (DirStream(DirStream) , CDir , CDirent )
 
 
-import System.Console.ANSI ( 
+import System.Console.ANSI (
       Color(Red),
       ColorIntensity(Vivid),
       ConsoleLayer(Foreground),
@@ -150,7 +149,7 @@ treversRecursively flt arr rfp =  topLoop
     topLoop :: IO [DirContent]
     topLoop = do
 
-        
+
         isDir <- liftIO $ isDirectory <$> getFileStatus rfp
         if not isDir
             then pure arr
@@ -159,15 +158,15 @@ treversRecursively flt arr rfp =  topLoop
             innerLoop :: [DirContent] -> DirContent -> IO [DirContent]
             innerLoop acc t@(typ,file) = do
                 let fullpath = rfp </> file
-                colorise <- coloriseFileIfTTY 
-                isDir <- pure $ typ == dtDir
+                colorise <- coloriseFileIfTTY
+                let isDir = typ == dtDir
                 if not isDir
                     then do
 
-                        rg  <- pure $ getRexPattern      regexCompiled file
-                        df  <- pure $ getDisallowFilter  flt rfp
-                        hf  <- pure $ getHiddenFilter    flt file
-                        ef  <- pure $ getExtentionFilter flt file
+                        let rg = getRexPattern      regexCompiled file
+                        let df = getDisallowFilter  flt rfp
+                        let hf = getHiddenFilter    flt file
+                        let ef = getExtentionFilter flt file
                         if and [rg, df, ef, hf]
                             then do
                                 executeFunction flt fullpath executeOnFile
@@ -206,6 +205,7 @@ treverseOnPathWithArgs ff sp = treversRecursively ff [] $ BS.pack sp
 
 coloriseFile :: RawFilePath -> RawFilePath
 coloriseFile rfp =  BS.pack $  setSGRCode [SetColor Foreground Vivid Red] <> BS.unpack rfp <> setSGRCode [Reset]
+
 
 coloriseFileIfTTY :: IO (RawFilePath -> RawFilePath)
 coloriseFileIfTTY = do
