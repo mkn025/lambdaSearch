@@ -1,18 +1,13 @@
 module Main where
 
-import System.Environment(getArgs )
+import System.Environment  (getArgs )
 
-import ParseInput (runParserIO)
+import ParseInput          (runParserIO)
 
-import TraverselsFunctions (treverseDirWithSettings,tester3)
-import TraversalSettings (
-      Arguments(..), SearchSetting(..), convertString, )
-
-import PrintFunctions (
-      printResults, printResults_ )
-
-import System.IO (
-     stdout, BufferMode(LineBuffering), hSetBuffering )
+import TraverselsFunctions (treverseDirWithSettings)
+import TraversalSettings   (Arguments(..), SearchSetting(..)) 
+import PrintFunctions      (printResults)
+import System.IO           (stdout, BufferMode(LineBuffering), hSetBuffering )
 
 
 main :: IO ()
@@ -25,9 +20,6 @@ main = do
      printResults output
 
 
-testNew = do
-    x <- tester3  defaultFlags (convertString  path)
-    printResults_ x
 
 
 
