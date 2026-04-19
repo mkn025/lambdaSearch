@@ -4,12 +4,12 @@ import System.Environment(getArgs )
 
 import ParseInput (runParserIO)
 
-import TraverselsFunctions (treverseDirWithSettings)
+import TraverselsFunctions (treverseDirWithSettings,tester3)
 import TraversalSettings (
-      Arguments(..), SearchSetting(..), )
+      Arguments(..), SearchSetting(..), convertString, )
 
 import PrintFunctions (
-      printResults)
+      printResults, printResults_ )
 
 import System.IO (
      stdout, BufferMode(LineBuffering), hSetBuffering )
@@ -25,6 +25,12 @@ main = do
      printResults output
 
 
+testNew = do
+    x <- tester3  defaultFlags (convertString  path)
+    printResults_ x
+
+
+
 path :: FilePath
 path  = "/Users/martineldeknutsen/Dev/UiB/inf221/semesterProjekt/"
 
@@ -33,7 +39,7 @@ allPath = [path]
 
 defaultFlags :: Arguments
 defaultFlags = Arguments {
-    regxPattern    = Nothing
+    regxPattern    = Just "Parse"
   , exclude        = Nothing
   , extention      = Nothing
   , hideHidden     = True

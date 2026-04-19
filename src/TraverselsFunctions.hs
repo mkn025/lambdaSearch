@@ -2,8 +2,10 @@
 
 module TraverselsFunctions (
       DirContent
+    , FileInfomation(..)
     , treverseDirWithSettings
     , executeOnFile
+    , tester3
     )
 
 where
@@ -61,6 +63,12 @@ import Control.Monad.Except (
     )
 
 type DirContent = (DirType,RawFilePath)
+
+
+data FileInfomation = FileInfomation{
+      filePath         :: RawFilePath
+    , dirContent       :: Maybe DirContent
+    } deriving (Eq,Show)
 
 foreign import ccall unsafe "readdir"
   c_readdir_new :: Ptr CDir -> IO (Ptr CDirent) --Leser fra allerede åpenet dirStream
@@ -139,6 +147,63 @@ traverseDirectoryContents f s0 p = do
                                               else do
                                                 acc' <- run $ f acc content
                                                 loop run acc' dirp
+
+
+
+-- | En funksjone som definerer generetlt hvordan den skal treverse igjennom  filsystemet 
+-- | Den har også en fold funkson som bestemmer hvordan den skal sammele opp listne  
+foldDirectoryTree
+    :: (a -> RawFilePath -> DirContent -> IO a) --Foldfunction
+    -> a
+    -> RawFilePath
+    -> IO a
+foldDirectoryTree foldFunc acc rootPath  = do
+    isDir <- isDirectory <$> getFileStatus  rootPath
+    if not isDir
+        then pure acc
+        else traverseDirectoryContents innerloop acc rootPath
+    where
+        innerloop currentAcc dc@(typ,filename) = do
+            let filePath = rootPath  </> filename
+            let isDir = typ == dtDir
+
+            -- legge  funskjonen på  
+            nextAcc <- foldFunc currentAcc rootPath dc
+            if not isDir
+                then pure nextAcc
+                else foldDirectoryTree foldFunc nextAcc filePath
+
+
+
+
+
+
+treversRecursively_ :: Arguments -> [FileInfomation] -> RawFilePath -> IO [FileInfomation]
+treversRecursively_ args = foldDirectoryTree foldFunc 
+    where
+    regexCompiled = compileRegexFilter args
+    foldFunc :: [FileInfomation] -> RawFilePath -> DirContent -> IO [FileInfomation]
+    foldFunc acc parentPath dc@(typ,file)  = do
+        let fullPath = parentPath  </> file
+        let isDir = typ == dtDir
+
+        if isDir
+            then pure $ FileInfomation {filePath  = fullPath , dirContent  = Nothing } : acc -- om den er nothign så er det bare en mappe
+            else do
+                let rg = getRexPattern      regexCompiled file
+                let hf = getHiddenFilter    args file
+                let df = getDisallowFilter  args parentPath
+                let ef = getExtentionFilter args file
+                if and [rg, df, ef, hf]
+                then do
+                    executeFunction args fullPath executeOnFile
+                    pure $  FileInfomation {filePath  = parentPath, dirContent  = Just dc}  : acc
+                -- om et av filter blir False, da går den her og legg ikke i noe
+                else pure acc
+
+
+
+tester3 args start = treversRecursively_ args [] start 
 
 
 
