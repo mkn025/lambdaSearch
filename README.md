@@ -15,8 +15,10 @@
 ### Gjort siden innleveringen 
 - Gjort det mulig å søke med `.` eller ingen argumenter. Dette vil da til da bruke working directory
 - Gjort det mulig å kjøre commando på filer du søker etter (beta)
+- Gjort slik at det er bare filen som blir rød. Og ikke hele stien (gif er ikke oppdatert)
 
 ### Mangler.
+- Skrive Treverseingsfunkjonen mer generelt
 - Lage TUI for søkingen
 - Treversere paralelt med STM monaden
 - Fuzzy search funksjonalitet.
