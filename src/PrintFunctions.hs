@@ -10,7 +10,6 @@ printResults :: [DirContent] -> IO ()
 printResults contents = do
     mapM_ printDirContent $ filter ((/= dtDir ) . fst) contents 
 
-
 -- | printer et Enkelt DirContent element
 printDirContent :: DirContent -> IO ()
 printDirContent = putStrLn . BS.unpack . snd   

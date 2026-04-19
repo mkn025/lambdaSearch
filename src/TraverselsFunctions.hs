@@ -1,15 +1,17 @@
-{- HLINT ignore "Use let" -} 
+{- HLINT ignore "Use let" -}
 
 
 module TraverselsFunctions (
       DirContent
     , treverseDirWithSettings
-    , executeOnFile 
+    , executeOnFile
     )
 
 where
 
-import System.Posix.Directory.Foreign ( DirType(..), dtDir )
+import System.Posix.Directory.Foreign   ( DirType(..), dtDir )
+import System.Posix.IO                  (stdOutput)
+import System.Posix.Terminal            (queryTerminal )
 
 import System.Posix.ByteString.FilePath ( RawFilePath, peekFilePath )
 import Foreign.C.Error                  ( Errno  (..), eINTR,  getErrno, resetErrno,eOK )
@@ -28,8 +30,17 @@ import System.Exit                                  (ExitCode (..))
 
 import System.Posix.Directory.Internals             (DirStream(DirStream) , CDir , CDirent )
 
-import System.Console.ANSI.Codes                    (setSGRCode)
-import System.Console.ANSI                          (SGR (SetColor, Reset), ConsoleLayer (Foreground), ColorIntensity (Vivid), Color (Red))
+
+import System.Console.ANSI ( 
+      Color(Red),
+      ColorIntensity(Vivid),
+      ConsoleLayer(Foreground),
+      SGR(Reset, SetColor),
+      setSGRCode,
+      SGR(SetColor),
+      ConsoleLayer(Foreground),
+      ColorIntensity(Vivid) )
+
 
 import TraversalSettings (
       Arguments   (..)
@@ -98,7 +109,7 @@ readDirEnt dir = ExceptT readContent
               | otherwise  -> pure . Left  $ ReadDirErr err      -- Real error
               -- har mulihet å legge til flere type feil 
         else do
-          dName <- c_name dEnt >>= peekFilePath  
+          dName <- c_name dEnt >>= peekFilePath
           dType <- c_type dEnt
 
         -- fra wiki. Vi trenger ikke å free den
@@ -135,9 +146,11 @@ traverseDirectoryContents f s0 p = do
 treversRecursively :: Arguments -> [DirContent] -> RawFilePath -> IO [DirContent]
 treversRecursively flt arr rfp =  topLoop
     where
-    regexCompiled =  compileRegexFilter flt
+    regexCompiled = seq const $ compileRegexFilter flt
     topLoop :: IO [DirContent]
     topLoop = do
+
+        
         isDir <- liftIO $ isDirectory <$> getFileStatus rfp
         if not isDir
             then pure arr
@@ -145,7 +158,8 @@ treversRecursively flt arr rfp =  topLoop
         where
             innerLoop :: [DirContent] -> DirContent -> IO [DirContent]
             innerLoop acc t@(typ,file) = do
-                let fullpath = rfp </> file 
+                let fullpath = rfp </> file
+                colorise <- coloriseFileIfTTY 
                 isDir <- pure $ typ == dtDir
                 if not isDir
                     then do
@@ -157,18 +171,17 @@ treversRecursively flt arr rfp =  topLoop
                         if and [rg, df, ef, hf]
                             then do
                                 executeFunction flt fullpath executeOnFile
-                                let colorRisedPath = rfp  </>  coloriseFile  file
+                                let colorRisedPath = rfp  </> colorise file
                                 pure  $ (typ, colorRisedPath) : acc
                             else pure acc
                     else treversRecursively flt (t : acc) fullpath
 
 
 
-
 executeOnFile :: ConstrucedCommand -> RawFilePath ->  IO ()
 executeOnFile c@(prog, args) rfd = do
                                 let argsWithPath = substituePath args rfd
-                                print argsWithPath 
+                                print argsWithPath
                                 (_, _, _, ph) <- createProcess $ proc prog argsWithPath
                                 ec <- waitForProcess ph
                                 case ec of
@@ -177,7 +190,6 @@ executeOnFile c@(prog, args) rfd = do
                                            "Command failed: "
                                         <> show c
                                         <> " (exit " ++ show n ++ ")"    )
-
 
 
 treverseDirWithSettings  :: SearchSetting -> IO [DirContent]
@@ -191,8 +203,14 @@ treveseManyPathsWithArgs ff (Just fp) = concat <$> mapM (treverseOnPathWithArgs 
 treverseOnPathWithArgs :: Arguments -> FilePath -> IO [DirContent]
 treverseOnPathWithArgs ff sp = treversRecursively ff [] $ BS.pack sp
 
+
 coloriseFile :: RawFilePath -> RawFilePath
-coloriseFile rfp =  BS.pack $ setSGRCode[SetColor Foreground Vivid Red] <> BS.unpack rfp <> setSGRCode[Reset]
+coloriseFile rfp =  BS.pack $  setSGRCode [SetColor Foreground Vivid Red] <> BS.unpack rfp <> setSGRCode [Reset]
+
+coloriseFileIfTTY :: IO (RawFilePath -> RawFilePath)
+coloriseFileIfTTY = do
+    tty <- queryTerminal stdOutput
+    pure $ if tty then coloriseFile else id
 
 
 
