@@ -20,7 +20,8 @@ library
                     , ParseInput
                     , SearchTUI
 
-    build-depends:    base ^>=4.18.3.0
+    build-depends:    text ^>=2.0.2
+                    , base ^>=4.18.3.0
                     , mtl
                     , ansi-terminal
                     , unix
@@ -34,6 +35,10 @@ library
                     , filepath-bytestring
                     , process
                     , megaparsec
+                    , brick
+                    , microlens
+                    , microlens-th 
+                    , containers
 
 
     hs-source-dirs:   src
