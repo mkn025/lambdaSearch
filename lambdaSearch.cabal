@@ -13,7 +13,13 @@ common warnings
 library
     -- Import common warning flags.
     import:           warnings
-    exposed-modules: TraversalSettings, TraverselsFunctions, PrintFunctions, ParseInput
+    exposed-modules: 
+                      TraversalSettings
+                    , TraverselsFunctions
+                    , PrintFunctions
+                    , ParseInput
+                    , SearchTUI
+
     build-depends:    base ^>=4.18.3.0
                     , mtl
                     , ansi-terminal
