@@ -1,32 +1,26 @@
-
-
 module TraverselsFunctions (
       DirContent
     , FileInfomation(..)
-    , treverseDirWithSettings
-    )
+    , treverseDirWithSettings)
+    where
 
-where
 
-import System.Posix.Directory.Foreign   (DirType(..), dtDir )
-import System.Posix.ByteString.FilePath (RawFilePath, peekFilePath )
-import Foreign.C.Error                  (Errno  (..), eINTR,  getErrno, resetErrno,eOK )
-import Foreign.C.String                 (CString )
-
-import UnliftIO                         (MonadUnliftIO, finally,askRunInIO, throwIO, Exception )
-import System.Posix.Files.ByteString    (isDirectory, getFileStatus)
-import Control.Monad.IO.Class           (MonadIO(liftIO) )
+import System.Posix.Directory.Foreign               (DirType(..), dtDir )
+import System.Posix.ByteString.FilePath             (RawFilePath, peekFilePath )
+import Foreign.C.Error                              (Errno  (..), eINTR,  getErrno, resetErrno,eOK )
+import Foreign.C.String                             (CString )
+import UnliftIO                                     (MonadUnliftIO, finally,askRunInIO, throwIO, Exception )
+import System.Posix.Files.ByteString                (isDirectory, getFileStatus)
+import Control.Monad.IO.Class                       (MonadIO(liftIO) )
 
 import System.Posix.Directory.ByteString as PosixBS (openDirStream, closeDirStream, DirStream, getWorkingDirectory )
-import qualified Data.ByteString.Char8 as BS        (unpack, pack)
+import qualified Data.ByteString.Char8   as BS      (unpack, pack)
 import System.Posix.FilePath                        ((</>))
 import Foreign.Ptr as PTR                           (Ptr, nullPtr)
 import System.Process                               (createProcess, proc, waitForProcess)
 import System.Exit                                  (ExitCode (..))
 
-import System.Posix.Directory.Internals             (DirStream(DirStream) , CDir , CDirent )
-
-
+import System.Posix.Directory.Internals             (DirStream(DirStream), CDir, CDirent)
 
 import TraversalSettings (
       Arguments   (..)
@@ -39,7 +33,6 @@ import TraversalSettings (
     , executeFunction
     , ConstrucedCommand
     , substituePath
-
     )
 
 import Control.Monad.Except (
@@ -47,8 +40,8 @@ import Control.Monad.Except (
     , ExceptT(..)
     )
 
-type DirContent = (DirType,RawFilePath)
 
+type DirContent = (DirType, RawFilePath)
 
 data FileInfomation = FileInfomation{
       filePath         :: RawFilePath
@@ -114,13 +107,13 @@ readDirEnt dir = ExceptT readContent
 
 
 traverseDirectoryContents :: (MonadUnliftIO m)
-                          => (a -> DirContent -> m a)   -- fold funksjon
-                          -> a                          -- accumulator [Tenkt at det skal være en lite]
-                          -> RawFilePath                -- directory path
+                          => (a -> DirContent -> m a)   -- Fold funksjon
+                          -> a                          -- Accumulator [Tenkt at det skal være en lite]
+                          -> RawFilePath                -- Directory path
                           -> m a
 traverseDirectoryContents f s0 p = do
     dirp      <- liftIO $ PosixBS.openDirStream p
-    liftToIO_ <- askRunInIO  -- askRunInIO :: MonadUnliftIO m => m (m a -> IO a) -- jukser det litt til, men takk hoogle
+    liftToIO_ <- askRunInIO  --askRunInIO :: MonadUnliftIO m => m (m a -> IO a) -- jukser det litt til, men takk hoogle
     liftIO (loop liftToIO_ s0 dirp) `finally` liftIO (PosixBS.closeDirStream dirp)
   where
     loop run acc dirp = do
@@ -153,7 +146,7 @@ foldDirectoryTree foldFunc acc rootPath  = do
             let filePath = rootPath  </> filename
             let isDir = typ == dtDir
 
-            -- legge  funskjonen på  
+            -- legge funskjonen på  
             nextAcc <- foldFunc currentAcc rootPath dc
             if not isDir
                 then pure nextAcc
@@ -184,6 +177,8 @@ treversRecursively_ args = foldDirectoryTree foldFunc
                 -- Om et av filter blir False, da går den her og legg ikke i noe
                 else pure acc
 
+
+
 executeOnFile :: ConstrucedCommand -> RawFilePath ->  IO ()
 executeOnFile c@(prog, args) rfd = do
                                 let argsWithPath = substituePath args rfd
@@ -196,6 +191,7 @@ executeOnFile c@(prog, args) rfd = do
                                            "Command failed: "
                                         <> show c
                                         <> " (exit " ++ show n ++ ")"    )
+
 
 
 
