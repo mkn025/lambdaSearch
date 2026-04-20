@@ -178,12 +178,10 @@ parseLamdaSearch = do
     let ss = SearchSetting {
            searchPaths  = Nothing
          , arguments    = args }
-
     case paths of
         NoPath           -> pure ss
         (ManyPaths [])   -> pure ss
         (ManyPaths p)    -> pure ss {searchPaths = Just p}
-
 
 runMyParser :: Parser a -> String ->  Either String a
 runMyParser parser input =

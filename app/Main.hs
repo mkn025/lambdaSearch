@@ -21,8 +21,6 @@ main = do
 
 
 
-
-
 path :: FilePath
 path  = "/Users/martineldeknutsen/Dev/UiB/inf221/semesterProjekt/"
 

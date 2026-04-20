@@ -8,14 +8,14 @@ module TraverselsFunctions (
 
 where
 
-import System.Posix.Directory.Foreign   ( DirType(..), dtDir )
-import System.Posix.ByteString.FilePath ( RawFilePath, peekFilePath )
-import Foreign.C.Error                  ( Errno  (..), eINTR,  getErrno, resetErrno,eOK )
-import Foreign.C.String                 ( CString )
+import System.Posix.Directory.Foreign   (DirType(..), dtDir )
+import System.Posix.ByteString.FilePath (RawFilePath, peekFilePath )
+import Foreign.C.Error                  (Errno  (..), eINTR,  getErrno, resetErrno,eOK )
+import Foreign.C.String                 (CString )
 
 import UnliftIO                         (MonadUnliftIO, finally,askRunInIO, throwIO, Exception )
 import System.Posix.Files.ByteString    (isDirectory, getFileStatus)
-import Control.Monad.IO.Class           ( MonadIO(liftIO) )
+import Control.Monad.IO.Class           (MonadIO(liftIO) )
 
 import System.Posix.Directory.ByteString as PosixBS (openDirStream, closeDirStream, DirStream, getWorkingDirectory )
 import qualified Data.ByteString.Char8 as BS        (unpack, pack)
@@ -52,7 +52,7 @@ type DirContent = (DirType,RawFilePath)
 
 data FileInfomation = FileInfomation{
       filePath         :: RawFilePath
-    , dirContent       :: Maybe DirContent
+    , dirContent       :: Maybe DirContent -- Nothing dersom det er en mappe som ikke har
     } deriving (Eq,Show)
 
 foreign import ccall unsafe "readdir"
@@ -112,6 +112,7 @@ readDirEnt dir = ExceptT readContent
         -- free(3) it.)
           pure . Right . Just  $ (dType, dName)
 
+
 traverseDirectoryContents :: (MonadUnliftIO m)
                           => (a -> DirContent -> m a)   -- fold funksjon
                           -> a                          -- accumulator [Tenkt at det skal være en lite]
@@ -138,7 +139,7 @@ traverseDirectoryContents f s0 p = do
 -- | En funksjone som definerer generetlt hvordan den skal treverse igjennom  filsystemet 
 -- | Den har også en fold funkson som bestemmer hvordan den skal sammele opp listne  
 foldDirectoryTree
-    :: (a -> RawFilePath -> DirContent -> IO a) --Foldfunction
+    :: (a -> RawFilePath -> DirContent -> IO a) -- Foldfunction
     -> a
     -> RawFilePath
     -> IO a
@@ -161,8 +162,6 @@ foldDirectoryTree foldFunc acc rootPath  = do
 
 
 
-
-
 treversRecursively_ :: Arguments -> [FileInfomation] -> RawFilePath -> IO [FileInfomation]
 treversRecursively_ args = foldDirectoryTree foldFunc 
     where
@@ -171,9 +170,8 @@ treversRecursively_ args = foldDirectoryTree foldFunc
     foldFunc acc parentPath dc@(typ,file)  = do
         let fullPath = parentPath  </> file
         let isDir = typ == dtDir
-
         if isDir
-            then pure $ FileInfomation {filePath  = fullPath , dirContent  = Nothing } : acc -- om den er nothign så er det bare en mappe
+            then pure $ FileInfomation {filePath = fullPath, dirContent = Nothing}:acc -- om den er nothign så er det bare en mappe
             else do
                 let rg = getRexPattern      regexCompiled file
                 let hf = getHiddenFilter    args file
@@ -182,12 +180,9 @@ treversRecursively_ args = foldDirectoryTree foldFunc
                 if and [rg, df, ef, hf]
                 then do
                     executeFunction args fullPath executeOnFile
-                    pure $  FileInfomation {filePath  = parentPath, dirContent  = Just dc}  : acc
-                -- om et av filter blir False, da går den her og legg ikke i noe
+                    pure $ FileInfomation {filePath = parentPath, dirContent = Just dc} : acc
+                -- Om et av filter blir False, da går den her og legg ikke i noe
                 else pure acc
-
-
-
 
 executeOnFile :: ConstrucedCommand -> RawFilePath ->  IO ()
 executeOnFile c@(prog, args) rfd = do
@@ -204,7 +199,6 @@ executeOnFile c@(prog, args) rfd = do
 
 
 
-
 treverseDirWithSettings  :: SearchSetting -> IO [FileInfomation]
 treverseDirWithSettings ss = treveseManyPathsWithArgs  (arguments ss) (searchPaths ss)
 
@@ -212,8 +206,5 @@ treveseManyPathsWithArgs  :: Arguments ->  Maybe [FilePath]  -> IO [FileInfomati
 treveseManyPathsWithArgs ff Nothing   = getWorkingDirectory  >>= treverseOnPathWithArgs ff . BS.unpack
 treveseManyPathsWithArgs ff (Just fp) = concat <$> mapM (treverseOnPathWithArgs ff) fp
 
-
 treverseOnPathWithArgs :: Arguments -> FilePath -> IO [FileInfomation]
 treverseOnPathWithArgs ff sp = treversRecursively_ ff [] $ BS.pack sp
-
-
