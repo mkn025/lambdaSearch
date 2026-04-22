@@ -5,10 +5,8 @@ import System.Environment  (getArgs )
 import ParseInput          (runParserIO)
 
 import TraverselsFunctions (treverseDirWithSettings)
-import TraversalSettings   (Arguments(..), SearchSetting(..)) 
 import PrintFunctions      (printResults)
 import System.IO           (stdout, BufferMode(LineBuffering), hSetBuffering )
-
 
 main :: IO ()
 main = do
@@ -21,24 +19,4 @@ main = do
 
 
 
-path :: FilePath
-path  = "/Users/martineldeknutsen/Dev/UiB/inf221/semesterProjekt/"
-
-allPath :: [FilePath]
-allPath = [path]
-
-defaultFlags :: Arguments
-defaultFlags = Arguments {
-    regxPattern    = Just "Parse"
-  , exclude        = Nothing
-  , extention      = Nothing
-  , hideHidden     = True
-  , applyedCommand = Nothing
-}
-
-dss :: SearchSetting
-dss = SearchSetting {
-      searchPaths    =  Nothing
-    , arguments      =  defaultFlags 
-}
 
