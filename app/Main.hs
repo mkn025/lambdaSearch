@@ -1,4 +1,4 @@
-module Main where
+module Main (main) where
 
 import SearchTUI           (mainTUI)
 import ParseInput          (runParserIO)
@@ -8,11 +8,13 @@ import TraverselsFunctions (treverseDirWithSettings)
 import PrintFunctions      (printResults)
 import System.IO           (stdout, BufferMode(LineBuffering), hSetBuffering )
 
+
 main :: IO ()
 main = do
      hSetBuffering stdout LineBuffering
      input  <- getArgs
      actOnInput input
+
 
 
 runTUI :: IO ()
@@ -29,7 +31,6 @@ actOnInput :: [String] ->  IO()
 actOnInput []                           = runCLi []
 actOnInput ((=="TUI") . head -> True)   = runTUI
 actOnInput x                            = runCLi x
-
 
 
 
