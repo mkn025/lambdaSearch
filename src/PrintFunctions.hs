@@ -33,11 +33,10 @@ printFileInformation colorFunc fi = do
                 let path = fp <> ( '/' : colorFunc fn)
                 putStrLn path 
 
-
--- | Printer et Enkelt DirContent element
+-- Legger på ansi codes  på dersom du skal sende den til terminal. eller er det bare id
 coloriseFileIfTTY :: IO (String -> String)
 coloriseFileIfTTY = do
-    tty <- queryTerminal stdOutput
+    tty <- queryTerminal stdOutput -- burkes til å finne ut om vi skal til terminal eller til en pipe
     pure $ if tty
            then coloriseFile
            else id
