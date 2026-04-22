@@ -27,6 +27,10 @@ import System.Exit                                  (ExitCode (..))
 
 import System.Posix.Directory.Internals             (DirStream(DirStream), CDir, CDirent)
 
+import UnliftIO.Exception                           (bracketOnError)
+import Control.Exception.Base                       (catch)
+import System.IO.Error                              (isPermissionError)
+
 import TraversalSettings (
       Arguments   (..)
     , SearchSetting (..)
@@ -44,10 +48,6 @@ import Control.Monad.Except (
       runExceptT
     , ExceptT(..)
     )
-import UnliftIO.Exception (bracketOnError)
-import Control.Exception.Base (catch)
-import System.IO.Error (isPermissionError)
-import GHC.IO.FD (readRawBufferPtr)
 
 
 type DirContent = (DirType, RawFilePath)
@@ -119,19 +119,25 @@ readDirEnt dir = ExceptT readContent
           pure . Right . Just  $ (dType, dName)
 
 
+
+-- åpner en dirstrem kaster funksjonen på alle elemenne. Lukker dirstrem 
+-- hopper helettil 
+
 traverseDirectoryContents :: (MonadUnliftIO m)
                           => (a -> DirContent -> m a)
                           -> a
                           -> RawFilePath
                           -> m a
 traverseDirectoryContents f s0 p = do
+
     run <- askRunInIO
     liftIO $ bracketOnError
         (openDirStreamPermissive p)
-        (mapM_ PosixBS.closeDirStream)   -- kjøre bare dersom den kaster feil; Nothing = never opened
+        (mapM_ PosixBS.closeDirStream)   -- kjøre bare dersom den kaster feil. 
         (\case
             Nothing   -> pure s0         -- access denied, skip silently
             Just dirp -> loop run s0 dirp `finally` PosixBS.closeDirStream dirp)
+
   where
     openDirStreamPermissive :: RawFilePath -> IO (Maybe DirStream)
     openDirStreamPermissive path =
@@ -145,7 +151,7 @@ traverseDirectoryContents f s0 p = do
         dirAnd <- runExceptT $ readDirEnt dirp
         case dirAnd of
             Left  errMsg                   -> throwIO errMsg
-            Right Nothing                  -> pure acc
+            Right Nothing                  -> pure acc          -- Om den er kommeet til enden av dir
             Right (Just content@(_typ, e)) -> if e == "." || e == ".."
                                               then loop run acc dirp
                                               else do
@@ -157,7 +163,7 @@ traverseDirectoryContents f s0 p = do
 -- | Den har også en fold funkson som bestemmer hvordan den skal sammele opp listne  
 foldDirectoryTree
     :: (a -> RawFilePath -> DirContent -> IO a) -- Foldfunction
-    -> a
+    -> a -- 
     -> RawFilePath
     -> IO a
 foldDirectoryTree foldFunc acc rootPath  = do
