@@ -4,6 +4,7 @@ module TraverselsFunctions (
       DirContent
     , FileInfomation(..)
     , treverseDirWithSettings
+    , constructFilePath 
     )
 
 where
@@ -208,3 +209,10 @@ treveseManyPathsWithArgs ff (Just fp) = concat <$> mapM (treverseOnPathWithArgs 
 
 treverseOnPathWithArgs :: Arguments -> FilePath -> IO [FileInfomation]
 treverseOnPathWithArgs ff sp = treversRecursively_ ff [] $ BS.pack sp
+
+
+constructFilePath :: FileInfomation -> Maybe String
+constructFilePath fi = case dirContent fi of
+                        Nothing     -> Nothing
+                        Just (_ ,b) ->  Just $ BS.unpack $ filePath fi </>  b
+
