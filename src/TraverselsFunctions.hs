@@ -10,7 +10,7 @@ where
 
 import System.Posix.Directory.Foreign               (DirType(..), dtDir )
 import System.Posix.ByteString.FilePath             (RawFilePath, peekFilePath )
-import Foreign.C.Error                              (Errno  (..), eINTR,  getErrno, resetErrno,eOK )
+import Foreign.C.Error                              (Errno  (..), eINTR,  getErrno, resetErrno,eOK, eACCES, ePERM )
 import Foreign.C.String                             (CString )
 import UnliftIO                                     (MonadUnliftIO, finally,askRunInIO, throwIO, Exception )
 import System.Posix.Files.ByteString                (isDirectory, getFileStatus)
@@ -92,9 +92,12 @@ readDirEnt dir = ExceptT readContent
         then do
           err <- getErrno
           case err of
-            e | e == eINTR -> readContent                        -- Retry on interrupt
-            e | e == eOK   -> pure . Right $ Nothing             -- End of directory
-              | otherwise  -> pure . Left  $ ReadDirErr err      -- Real error
+            e | e == eINTR  -> readContent                        -- Retry on interrupt
+            e | e == eOK    -> pure . Right $ Nothing             -- End of directory
+            e | e == eACCES -> pure . Right $ Nothing             -- Om du ikke har til tilgang til filen
+            e | e == ePERM  -> pure . Right $ Nothing             -- Om du ikke har lov å gjøre oppprasjonen
+
+              | otherwise   -> pure . Left  $ ReadDirErr err      -- Real error
               -- har mulihet å legge til flere type feil 
         else do
           dName <- c_name dEnt >>= peekFilePath
@@ -115,8 +118,10 @@ traverseDirectoryContents :: (MonadUnliftIO m)
                           -> RawFilePath                -- Directory path
                           -> m a
 traverseDirectoryContents f s0 p = do
+
     dirp      <- liftIO $ PosixBS.openDirStream p
-    liftToIO_ <- askRunInIO  --askRunInIO :: MonadUnliftIO m => m (m a -> IO a) -- jukser det litt til, men takk hoogle
+        --askRunInIO :: MonadUnliftIO m => m (m a -> IO a) -- jukser det litt til,  takk hoogle
+    liftToIO_ <- askRunInIO  
     liftIO (loop liftToIO_ s0 dirp) `finally` liftIO (PosixBS.closeDirStream dirp)
   where
     loop run acc dirp = do
@@ -140,6 +145,7 @@ foldDirectoryTree
     -> RawFilePath
     -> IO a
 foldDirectoryTree foldFunc acc rootPath  = do
+
     isDir <- isDirectory <$> getFileStatus  rootPath
     if not isDir
         then pure acc
@@ -148,7 +154,6 @@ foldDirectoryTree foldFunc acc rootPath  = do
         innerloop currentAcc dc@(typ,filename) = do
             let filePath = rootPath  </> filename
             let isDir = typ == dtDir
-
             -- legge funskjonen på  
             nextAcc <- foldFunc currentAcc rootPath dc
             if not isDir
