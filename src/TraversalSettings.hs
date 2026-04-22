@@ -121,8 +121,8 @@ getFileExtention (BS.null -> True) = Nothing
 getFileExtention  fp               = safeHead . takeExtension $ fp
 
 safeHead :: ByteString -> Maybe ByteString
-safeHead (BS.null -> True)  = Nothing
-safeHead xs                 = Just $ BC.tail xs
+safeHead (BS.null -> True) = Nothing
+safeHead xs                = Just $ BC.tail xs
 
 convertString :: String -> RawFilePath
 convertString = BC.pack
