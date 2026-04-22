@@ -38,6 +38,8 @@ library
                     , brick
                     , microlens
                     , microlens-th 
+                    , microlens-mtl 
+                    , vty
                     , containers
 
 
