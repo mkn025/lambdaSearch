@@ -1,97 +1,157 @@
-{-# LANGUAGE TemplateHaskell #-}
-{- HLINT ignore "Use newtype instead of data" -}
-
 module SearchTUI where
 
+import TraverselsFunctions (treverseDirWithSettings, constructFilePath)
+import ParseInput          (runParserIO)
 
-import Brick
-import Brick.Widgets.Border   (border)
-import Graphics.Vty            (defAttr)
-import qualified Graphics.Vty  as V
+import Brick (
+        attrMap
+      , attrName
+      , defaultMain
+      , halt
+      , showFirstCursor
+      , on
+      , (<+>)
+      , (<=>)
+      , padAll
+      , padLeftRight
+      , str
+      , vBox
+      , viewport
+      , visible
+      , withAttr
+      , modify
+      , AttrName
+      , App(..)
+      , EventM
+      , BrickEvent(VtyEvent)
+      , ViewportType(Vertical)
+      , Widget
+      , zoom
+      , get
+    )
 
-data TuiState = TuiState 
-  { paths    :: [FilePath]
-  , selected :: Int        -- index of the selected item
+import qualified Graphics.Vty as V
+import Brick.Widgets.Border   (border, hBorder)
+import Brick.Widgets.Edit     (Editor, editor, renderEditor,
+                               handleEditorEvent, getEditContents)
+import Graphics.Vty           (defAttr)
+import Control.Monad.IO.Class (liftIO)
+import Lens.Micro.Type        (Lens')
+import Data.Maybe             (mapMaybe)
+
+
+data Mode = Browsing   | Searching deriving (Eq)
+data Name = MyViewport | SearchBox deriving (Eq, Ord, Show)
+
+data TuiState = TuiState
+  { paths        :: [FilePath]
+  , selected     :: Int
+  , searchEditor :: Editor String Name
+  , mode         :: Mode
   }
-
-type Name = ()
 
 
 drawItem :: Bool -> FilePath -> Widget Name
-drawItem isFocused path =
-  let content = padLeftRight 1 $ padTopBottom 0 $ str path
-      widget  = border content
-  in if isFocused
-       then withAttr selectedAttr widget
-       else widget
+drawItem isFocused p =
+    if not isFocused
+    then widget
+    else visible $ withAttr selectedAttr widget
+  where
+    widget = border $ padLeftRight 1 $ str p
 
-
-drawItem_ :: Bool -> FilePath -> Widget name
-drawItem_ isFocused p =  
-    if not isFocused 
-    then widget 
-    else withAttr selectedAttr widget 
-    where
-        content = padLeftRight 1 $ padTopBottom 0 $ str p 
-        widget  = border content                             
-
-
--- | Draw the full UI
 drawUI :: TuiState -> [Widget Name]
 drawUI st =
   [ padAll 1 $
-      vBox (zipWith (\i p -> drawItem (i == selected st) p)
-                    [0..] (paths st))
+      
+      searchBox
+      <=>
+      hBorder
+      <=>
+      viewport MyViewport Vertical
+        (vBox (
+            zipWith (\i p -> drawItem (i == selected st) p)
+            [0..]
+            ((take 100 . paths) st))
+        )
       <=>
       str " "
       <=>
-      str "j/k to move, q to quit"
+      helpLine
   ]
+  where
+    searchBox =
+      str "Search: "
+      <+> renderEditor (str . unlines) (mode st == Searching) (searchEditor st)
+
+    helpLine = case mode st of
+      Browsing  -> str "j/k: move   /: search   q: quit     |     search queries:  -p regex -e extenton ..."
+      Searching -> str "Enter: run search   Esc: cancel"
 
 
 handleEvent :: BrickEvent Name e -> EventM Name TuiState ()
-    -- | enekl imput
-handleEvent (VtyEvent (V.EvKey (V.KChar 'k') [])) = modify moveUp
-handleEvent (VtyEvent (V.EvKey (V.KChar 'j') [])) = modify moveDown
-handleEvent (VtyEvent (V.EvKey (V.KChar 'q') [])) = halt
-handleEvent _                                     = return ()
+handleEvent (VtyEvent (V.EvKey V.KUp [] ))        = modify  moveUp
+handleEvent (VtyEvent (V.EvKey V.KDown [] ))      = modify moveDown
+handleEvent (VtyEvent (V.EvKey (V.KChar 'q') [])) = do
+    st <- get
+    case mode st of
+        Searching -> pure ()
+        Browsing  -> halt
+
+handleEvent (VtyEvent (V.EvKey (V.KChar '/') [])) = modify (\st -> st { mode = Searching })
+handleEvent (VtyEvent (V.EvKey V.KEsc []))        = modify (\st -> st { mode = Browsing })
+handleEvent (VtyEvent (V.EvKey V.KEnter []))      = do
+
+    st <- get
+    let query = concat (getEditContents (searchEditor st))  
+    results <- liftIO $ runSearch query --løfter elegeant ut 
+    modify (\s -> s { paths    = results
+                    , selected = 0
+                    , mode     = Browsing })
+
+handleEvent ev = do
+    st <- get
+    case mode st of
+      Searching -> zoom searchEditorL (handleEditorEvent ev)
+      Browsing  -> pure ()
 
 
-moveUp :: TuiState -> TuiState
-moveUp st   = st {selected = max 0 (selected st - 1)}
+searchEditorL :: Lens' TuiState (Editor String Name)
+searchEditorL f st = (\e -> st { searchEditor = e }) <$> f (searchEditor st)
 
-moveDown :: TuiState -> TuiState
+runSearch :: String -> IO [FilePath]
+runSearch query = do
+    settings <- runParserIO query
+    results  <- treverseDirWithSettings settings
+    pure $ mapMaybe constructFilePath results
+
+
+moveUp, moveDown :: TuiState -> TuiState -- begge har samme type  så vi kan putte de her
+moveUp   st = st { selected = max 0 (selected st - 1) }
 moveDown st = st { selected = min (length (paths st) - 1) (selected st + 1) }
 
 selectedAttr :: AttrName
-selectedAttr = attrName "selected"
+selectedAttr = attrName ""
 
--- | hovedapp
+
 app :: App TuiState e Name
 app = App
   { appDraw         = drawUI
-  , appChooseCursor = neverShowCursor
+  , appChooseCursor = showFirstCursor   -- lets the editor show a cursor
   , appHandleEvent  = handleEvent
-  , appStartEvent   = return ()
+  , appStartEvent   = pure ()
   , appAttrMap      = const $ attrMap defAttr
       [ (selectedAttr, V.black `on` V.yellow) ]
   }
 
 
-samplePaths :: [FilePath]
-samplePaths =
-  [ "/home/user/documents/report.pdf"
-  , "/home/user/pictures/vacation.png"
-  , "/home/user/projects/main.hs"
-  , "/etc/hosts"
-  , "/var/log/syslog"
-  ]
-
-
 main :: IO ()
 main = do
-
-  let initialState = TuiState { paths = samplePaths, selected = 0 }
+  initialPaths <- runSearch ""          
+  let initialState = TuiState
+        { paths        = initialPaths
+        , selected     = 0
+        , searchEditor = editor SearchBox (Just 1) "" 
+        , mode         = Browsing
+        }
   finalState <- defaultMain app initialState
-
-  putStrLn $ "Du vlagte" ++ paths finalState !! selected finalState
+  putStrLn $ "Du valgte: " ++ (paths finalState !! selected finalState)
