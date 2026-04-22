@@ -119,6 +119,7 @@ searchEditorL :: Lens' TuiState (Editor String Name)
 searchEditorL f st = (\e -> st { searchEditor = e }) <$> f (searchEditor st)
 
 runSearch :: String -> IO [FilePath]
+runSearch (null -> True ) = pure []
 runSearch query = do
     settings <- runParserIO query
     results  <- treverseDirWithSettings settings
