@@ -1,3 +1,4 @@
+
 # Notat
 - Program som lar deg søke igjennom datamskinen din etter filer
 - `lambdaSearch  [input-file]... [options]`
@@ -23,11 +24,16 @@
 - Treversere paralelt med STM monaden
 - Fuzzy search funksjonalitet.
 
+### Clone and install
 ```bash
 git clone https://git.app.uib.no/martin.e.knutsen/inf221-Semesteroppgave.git && cd inf221-Semesteroppgave && cabal install
+
+# if you want to install new changes
+cabal install --overwrite-policy=always
+
 ```
 
-## Eksempelbruk
+### Eksempelbruk
 ```bash
 lambdaSearch . -e hs
 lambdaSearch  -e hs
