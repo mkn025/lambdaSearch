@@ -1,4 +1,5 @@
 
+
 module TraverselsFunctions (
       DirContent
     , FileInfomation(..)
@@ -16,7 +17,8 @@ import UnliftIO                                     (MonadUnliftIO, finally,askR
 import System.Posix.Files.ByteString                (isDirectory, getFileStatus)
 import Control.Monad.IO.Class                       (MonadIO(liftIO) )
 
-import System.Posix.Directory.ByteString as PosixBS (openDirStream, closeDirStream, DirStream, getWorkingDirectory )
+import System.Posix.Directory.ByteString as PosixBS (openDirStream, closeDirStream, DirStream, getWorkingDirectory)
+
 import qualified Data.ByteString.Char8   as BS      (unpack, pack)
 import System.Posix.FilePath                        ((</>))
 import Foreign.Ptr as PTR                           (Ptr, nullPtr)
@@ -42,6 +44,10 @@ import Control.Monad.Except (
       runExceptT
     , ExceptT(..)
     )
+import UnliftIO.Exception (bracketOnError)
+import Control.Exception.Base (catch)
+import System.IO.Error (isPermissionError)
+import GHC.IO.FD (readRawBufferPtr)
 
 
 type DirContent = (DirType, RawFilePath)
@@ -59,6 +65,7 @@ foreign import ccall unsafe "__hscore_d_name"
 
 foreign import ccall unsafe "__posixdir_d_type"
   c_type :: Ptr CDirent -> IO DirType
+
 
 
 unpackDirStream :: DirStream -> Ptr CDir
@@ -96,8 +103,8 @@ readDirEnt dir = ExceptT readContent
             e | e == eOK    -> pure . Right $ Nothing             -- End of directory
             e | e == eACCES -> pure . Right $ Nothing             -- Om du ikke har til tilgang til filen
             e | e == ePERM  -> pure . Right $ Nothing             -- Om du ikke har lov å gjøre oppprasjonen
-
               | otherwise   -> pure . Left  $ ReadDirErr err      -- Real error
+
               -- har mulihet å legge til flere type feil 
         else do
           dName <- c_name dEnt >>= peekFilePath
@@ -113,28 +120,37 @@ readDirEnt dir = ExceptT readContent
 
 
 traverseDirectoryContents :: (MonadUnliftIO m)
-                          => (a -> DirContent -> m a)   -- Fold funksjon
-                          -> a                          -- Accumulator [Tenkt at det skal være en lite]
-                          -> RawFilePath                -- Directory path
+                          => (a -> DirContent -> m a)
+                          -> a
+                          -> RawFilePath
                           -> m a
 traverseDirectoryContents f s0 p = do
-
-    dirp      <- liftIO $ PosixBS.openDirStream p
-        --askRunInIO :: MonadUnliftIO m => m (m a -> IO a) -- jukser det litt til,  takk hoogle
-    liftToIO_ <- askRunInIO  
-    liftIO (loop liftToIO_ s0 dirp) `finally` liftIO (PosixBS.closeDirStream dirp)
+    run <- askRunInIO
+    liftIO $ bracketOnError
+        (openDirStreamPermissive p)
+        (mapM_ PosixBS.closeDirStream)   -- kjøre bare dersom den kaster feil; Nothing = never opened
+        (\case
+            Nothing   -> pure s0         -- access denied, skip silently
+            Just dirp -> loop run s0 dirp `finally` PosixBS.closeDirStream dirp)
   where
+    openDirStreamPermissive :: RawFilePath -> IO (Maybe DirStream)
+    openDirStreamPermissive path =
+        (Just <$> PosixBS.openDirStream path)
+        `catch`
+        \errMsg -> if isPermissionError errMsg 
+                   then pure Nothing 
+                   else throwIO errMsg
+
     loop run acc dirp = do
         dirAnd <- runExceptT $ readDirEnt dirp
         case dirAnd of
-            Left errMsg                    -> throwIO errMsg -- kaster IO siden da er vi sikker på at den kjører closeDirStream 
-            Right Nothing                  -> pure acc       -- stoper dersom dir ikke klarer å lese. 
+            Left  errMsg                   -> throwIO errMsg
+            Right Nothing                  -> pure acc
             Right (Just content@(_typ, e)) -> if e == "." || e == ".."
                                               then loop run acc dirp
                                               else do
-                                                acc' <- run $ f acc content
-                                                loop run acc' dirp
-
+                                                  acc' <- run (f acc content)
+                                                  loop run acc' dirp
 
 
 -- | En funksjone som definerer generetlt hvordan den skal treverse igjennom  filsystemet 
