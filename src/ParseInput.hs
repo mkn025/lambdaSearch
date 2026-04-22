@@ -100,14 +100,13 @@ parseArgs = do
         else pure $ Text s
 
 
+-- Litt stygg, men funker
 parseArgumentAndWord :: Parser String
 parseArgumentAndWord = do
     f <- char '-'
     w <- parseWord <* sc
     s <- parseWord 
     pure (f : w <> s)
-
-    
 
 
 
@@ -188,7 +187,6 @@ runMyParser parser input =
   case runParser parser "" input of
     Left err  -> Left $ errorBundlePretty err
     Right x   -> Right x
-
 
 type StringToParse = String
 
