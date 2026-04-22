@@ -1,17 +1,19 @@
 
 module TraversalSettings (
-      Arguments   (..)
-    , SearchSetting (..)
+      Arguments         (..)
+    , SearchSetting     (..)
+    , Command           (..)
+    , ConstrucedCommand
     , getDisallowFilter
     , getHiddenFilter
     , getExtentionFilter
     , compileRegexFilter
     , getRexPattern
     , executeFunction
-    , ConstrucedCommand
     , substituePath
     , convertString 
     , convertToString 
+
 ) where
 
 import System.Posix.ByteString               (RawFilePath)
