@@ -30,7 +30,7 @@
 ```bash
 git clone https://git.app.uib.no/martin.e.knutsen/inf221-Semesteroppgave.git && cd inf221-Semesteroppgave && cabal install
 
-# if you want to install new changes
+# Om du allerde har innstallert, men vil ha nye edringer
 cabal install --overwrite-policy=always
 
 ```
