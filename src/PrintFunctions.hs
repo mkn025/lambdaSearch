@@ -16,13 +16,16 @@ import System.Console.ANSI.Codes (
       )
 
 
+
+-- | Printer all filene som er funnet 
+-- | mapper og kaster output for hele listen
 printResults :: [FileInfomation] -> IO ()
 printResults contents = do
     color <- coloriseFileIfTTY  
     mapM_ (printFileInformation color) contents  -- mapM_ siden den bare skal >> ikke >>= basicly
 
 
--- | Printer et Enkelt DirContent element
+-- | Printer et Enkelt FileInfomation element. Og bruker fargefunksjoen på bare filen
 printFileInformation :: (String -> String) -> FileInfomation -> IO ()
 printFileInformation colorFunc fi = do
         case dirContent fi of
@@ -32,6 +35,8 @@ printFileInformation colorFunc fi = do
                 let fn   = convertToString . snd      $ dc
                 let path = fp <> ( '/' : colorFunc fn)
                 putStrLn path 
+
+
 
 -- Legger på ansi codes  på dersom du skal sende den til terminal. eller er det bare id
 coloriseFileIfTTY :: IO (String -> String)

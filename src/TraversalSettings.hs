@@ -11,6 +11,7 @@ module TraversalSettings (
     , ConstrucedCommand
     , substituePath
     , convertString 
+    , convertToString 
 ) where
 
 import System.Posix.ByteString               (RawFilePath)
@@ -35,10 +36,10 @@ type SearchPattern = RawFilePath
 type SearchFilters = [RawFilePath]
 
 
--- | TODO: Dokumenter formatet for eksterne kommandoer og argumenter.
+-- | alias som beskriver en kommaddo eksterne kommandoer og argumenter.
 type ConstrucedCommand = (String, [Command])
 
--- | TODO: Dokumenter kommandotoken brukt i @--execute@.
+-- | datatype som blir brukt i  @--execute@. for å substite path
 data Command = Text String | PathToSubs 
     deriving (Eq,Show)
 
