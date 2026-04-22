@@ -37,10 +37,7 @@ library
                     , megaparsec
                     , brick
                     , microlens
-                    , microlens-th 
-                    , microlens-mtl 
                     , vty
-                    , containers
 
 
     hs-source-dirs:   src
