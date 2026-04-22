@@ -4,31 +4,27 @@
 module SearchTUI where
 
 
-
-
-
 import Brick
-import Brick.Widgets.Border (border)
-import Brick.Widgets.Core   (str, padLeftRight, padTopBottom)
-import Graphics.Vty         (defAttr)
-import qualified Graphics.Vty as V
+import Brick.Widgets.Border   (border)
+import Graphics.Vty            (defAttr)
+import qualified Graphics.Vty  as V
 
-
-data TuiState = TuiState {
-    paths    :: [FilePath]
-  , selected :: Int        
+data TuiState = TuiState 
+  { paths    :: [FilePath]
+  , selected :: Int        -- index of the selected item
   }
 
 type Name = ()
 
+
 drawItem :: Bool -> FilePath -> Widget Name
 drawItem isFocused path =
-
   let content = padLeftRight 1 $ padTopBottom 0 $ str path
       widget  = border content
   in if isFocused
        then withAttr selectedAttr widget
        else widget
+
 
 drawItem_ :: Bool -> FilePath -> Widget name
 drawItem_ isFocused p =  
@@ -49,16 +45,17 @@ drawUI st =
       <=>
       str " "
       <=>
-      str "↑/↓ to move, q to quit"
+      str "j/k to move, q to quit"
   ]
 
 
 handleEvent :: BrickEvent Name e -> EventM Name TuiState ()
     -- | enekl imput
-handleEvent (VtyEvent (V.EvKey (V.KChar 'k') [])) =  modify moveUp
+handleEvent (VtyEvent (V.EvKey (V.KChar 'k') [])) = modify moveUp
 handleEvent (VtyEvent (V.EvKey (V.KChar 'j') [])) = modify moveDown
 handleEvent (VtyEvent (V.EvKey (V.KChar 'q') [])) = halt
-handleEvent _ = return ()
+handleEvent _                                     = return ()
+
 
 moveUp :: TuiState -> TuiState
 moveUp st   = st {selected = max 0 (selected st - 1)}
@@ -66,8 +63,8 @@ moveUp st   = st {selected = max 0 (selected st - 1)}
 moveDown :: TuiState -> TuiState
 moveDown st = st { selected = min (length (paths st) - 1) (selected st + 1) }
 
-selectedAttr = attrName "selected"
 selectedAttr :: AttrName
+selectedAttr = attrName "selected"
 
 -- | hovedapp
 app :: App TuiState e Name
@@ -80,6 +77,7 @@ app = App
       [ (selectedAttr, V.black `on` V.yellow) ]
   }
 
+
 samplePaths :: [FilePath]
 samplePaths =
   [ "/home/user/documents/report.pdf"
@@ -89,11 +87,11 @@ samplePaths =
   , "/var/log/syslog"
   ]
 
+
 main :: IO ()
 main = do
-
 
   let initialState = TuiState { paths = samplePaths, selected = 0 }
   finalState <- defaultMain app initialState
 
-  putStrLn $ "You selected: " ++ paths finalState !! selected finalState
+  putStrLn $ "Du vlagte" ++ paths finalState !! selected finalState
