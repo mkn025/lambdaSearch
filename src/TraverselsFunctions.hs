@@ -1,9 +1,11 @@
+
 module TraverselsFunctions (
       DirContent
     , FileInfomation(..)
     , treverseDirWithSettings
     , constructFilePath 
     )
+where
 
 
 import System.Posix.Directory.Foreign               (DirType(..), dtDir )
