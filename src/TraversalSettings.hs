@@ -11,6 +11,7 @@ Denne modulen definerer:
 Typene bruker 'RawFilePath' (ByteString-basert) fra @unix@-økosystemet.
 
 -}
+
 module TraversalSettings where
 
 import System.Posix.ByteString               (RawFilePath)
@@ -58,6 +59,22 @@ data Arguments = Arguments {
 
 }  deriving (Eq, Show)
 
+
+defaultFlags :: Arguments
+defaultFlags = Arguments {
+    regxPattern    = Nothing
+  , exclude        = Nothing
+  , extention      = Nothing
+  , hideHidden     = True
+  , applyedCommand = Nothing
+}
+
+dss :: SearchSetting
+dss = SearchSetting {
+      searchPaths    =  Nothing
+    , arguments      =  defaultFlags 
+}
+
 getRexPattern :: Maybe Regex -> RawFilePath -> Bool
 getRexPattern Nothing      _  = True
 getRexPattern (Just regex) fp = matchTest regex fp
@@ -89,6 +106,7 @@ compileRegexFilter (regxPattern  -> (Just pat)) = Just $ makeRegexOpts comp exec
 executeFunction :: Arguments -> RawFilePath -> (ConstrucedCommand -> RawFilePath -> IO ())  -> IO ()
 executeFunction (applyedCommand -> Nothing)  _  _ = pure ()
 executeFunction (applyedCommand -> Just cmd) fp f = f cmd fp
+
 
 -- helpers
 substituePath :: [Command] -> RawFilePath -> [String]

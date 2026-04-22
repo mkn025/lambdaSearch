@@ -1,8 +1,9 @@
 module TraverselsFunctions (
       DirContent
     , FileInfomation(..)
-    , treverseDirWithSettings)
-    where
+    , treverseDirWithSettings
+    , constructFilePath 
+    )
 
 
 import System.Posix.Directory.Foreign               (DirType(..), dtDir )
@@ -204,3 +205,10 @@ treveseManyPathsWithArgs ff (Just fp) = concat <$> mapM (treverseOnPathWithArgs 
 
 treverseOnPathWithArgs :: Arguments -> FilePath -> IO [FileInfomation]
 treverseOnPathWithArgs ff sp = treversRecursively_ ff [] $ BS.pack sp
+
+
+constructFilePath :: FileInfomation -> Maybe String
+constructFilePath fi = case dirContent fi of
+                        Nothing     -> Nothing
+                        Just (_ ,b) ->  Just $ BS.unpack $ filePath fi </>  b
+

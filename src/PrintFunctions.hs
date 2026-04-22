@@ -1,25 +1,28 @@
 module PrintFunctions (printResults) where
 
-import TraverselsFunctions                   (FileInfomation(..)) 
+import TraverselsFunctions   (FileInfomation(..)) 
 
-import System.Posix.Terminal                 (queryTerminal)
-import System.Posix.IO                       (stdOutput)
-import TraversalSettings                     (convertToString)
+import System.Posix.Terminal (queryTerminal)
+import System.Posix.IO       (stdOutput)
+import TraversalSettings     (convertToString)
 
 
 import System.Console.ANSI.Codes (
         setSGRCode
-      , Color( Green)
+      , Color         (Green)
       , ColorIntensity(Vivid)
-      , ConsoleLayer(Foreground)
-      , SGR(Reset, SetColor)
+      , ConsoleLayer  (Foreground)
+      , SGR           (Reset, SetColor)
       )
+
+
 printResults :: [FileInfomation] -> IO ()
 printResults contents = do
     color <- coloriseFileIfTTY  
-    mapM_ (printFileInformation color)   contents 
+    mapM_ (printFileInformation color) contents  -- mapM_ siden den bare skal >> ikke >>= basicly
 
--- | printer et Enkelt DirContent element
+
+-- | Printer et Enkelt DirContent element
 printFileInformation :: (String -> String) -> FileInfomation -> IO ()
 printFileInformation colorFunc fi = do
         case dirContent fi of
@@ -30,11 +33,15 @@ printFileInformation colorFunc fi = do
                 let path = fp <> ( '/' : colorFunc fn)
                 putStrLn path 
 
+
+-- | Printer et Enkelt DirContent element
 coloriseFileIfTTY :: IO (String -> String)
 coloriseFileIfTTY = do
     tty <- queryTerminal stdOutput
-    pure $ if tty then coloriseFile else id
+    pure $ if tty
+           then coloriseFile
+           else id
 
 coloriseFile :: String -> String
-coloriseFile rfp = setSGRCode [SetColor Foreground Vivid Green] <> rfp <> setSGRCode [Reset]
+coloriseFile = (<> setSGRCode [Reset]) . (setSGRCode [SetColor Foreground Vivid Green] <>)
 

@@ -1,44 +1,42 @@
 module Main where
 
+import SearchTUI           (mainTUI)
+import ParseInput          (runParserIO)
 import System.Environment  (getArgs )
 
-import ParseInput          (runParserIO)
-
 import TraverselsFunctions (treverseDirWithSettings)
-import TraversalSettings   (Arguments(..), SearchSetting(..)) 
 import PrintFunctions      (printResults)
 import System.IO           (stdout, BufferMode(LineBuffering), hSetBuffering )
 
-
 main :: IO ()
 main = do
-     hSetBuffering stdout LineBuffering 
-     input  <- getArgs 
-     let inpString =  concatMap ( ' ' :) input
+     hSetBuffering stdout LineBuffering
+     input  <- getArgs
+     actOnInput input
+
+
+runTUI :: IO ()
+runTUI = mainTUI
+
+runCLi :: [String] -> IO ()
+runCLi args = do
+     let inpString =  concatMap ( ' ' :) args
      ss     <- runParserIO inpString
      output <- treverseDirWithSettings ss
      printResults output
 
+actOnInput :: [String] ->  IO()
+actOnInput []                           = runCLi []
+actOnInput ((=="TUI") . head -> True)   = runTUI
+actOnInput x                            = runCLi x
 
 
-path :: FilePath
-path  = "/Users/martineldeknutsen/Dev/UiB/inf221/semesterProjekt/"
 
-allPath :: [FilePath]
-allPath = [path]
 
-defaultFlags :: Arguments
-defaultFlags = Arguments {
-    regxPattern    = Just "Parse"
-  , exclude        = Nothing
-  , extention      = Nothing
-  , hideHidden     = True
-  , applyedCommand = Nothing
-}
 
-dss :: SearchSetting
-dss = SearchSetting {
-      searchPaths    =  Nothing
-    , arguments      =  defaultFlags 
-}
+
+
+
+
+
 

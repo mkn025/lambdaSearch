@@ -13,8 +13,15 @@ common warnings
 library
     -- Import common warning flags.
     import:           warnings
-    exposed-modules: TraversalSettings, TraverselsFunctions, PrintFunctions, ParseInput
-    build-depends:    base ^>=4.18.3.0
+    exposed-modules: 
+                      TraversalSettings
+                    , TraverselsFunctions
+                    , PrintFunctions
+                    , ParseInput
+                    , SearchTUI
+
+    build-depends:    text ^>=2.0.2
+                    , base ^>=4.18.3.0
                     , mtl
                     , ansi-terminal
                     , unix
@@ -28,6 +35,9 @@ library
                     , filepath-bytestring
                     , process
                     , megaparsec
+                    , brick
+                    , microlens
+                    , vty
 
 
     hs-source-dirs:   src
