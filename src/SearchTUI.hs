@@ -1,4 +1,4 @@
-module SearchTUI where
+module SearchTUI (mainTUI) where
 
 import TraverselsFunctions (treverseDirWithSettings, constructFilePath)
 import ParseInput          (runParserIO)
@@ -143,9 +143,8 @@ app = App
       [ (selectedAttr, V.black `on` V.yellow) ]
   }
 
-
-main :: IO ()
-main = do
+mainTUI :: IO ()
+mainTUI = do
   initialPaths <- runSearch ""          
   let initialState = TuiState
         { paths        = initialPaths
