@@ -19,7 +19,8 @@ import System.Console.ANSI.Codes (
 printResults :: [FileInfomation] -> IO ()
 printResults contents = do
     color <- coloriseFileIfTTY  
-    mapM_ (printFileInformation color) contents 
+    mapM_ (printFileInformation color) contents  -- mapM_ siden den bare skal >> ikke >>= basicly
+
 
 -- | Printer et Enkelt DirContent element
 printFileInformation :: (String -> String) -> FileInfomation -> IO ()
@@ -42,5 +43,5 @@ coloriseFileIfTTY = do
            else id
 
 coloriseFile :: String -> String
-coloriseFile rfp = setSGRCode [SetColor Foreground Vivid Green] <> rfp <> setSGRCode [Reset]
+coloriseFile = (<> setSGRCode [Reset]) . (setSGRCode [SetColor Foreground Vivid Green] <>)
 
