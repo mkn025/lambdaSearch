@@ -16,7 +16,7 @@
 ### Gjort siden innleveringen 
 - Gjort det mulig å søke med `.` eller ingen argumenter. Dette vil da til da bruke working directory
 - Gjort det mulig å kjøre commando på filer du søker etter (beta)
-- Gjort slik at det er bare filen som blir rød. Og ikke hele stien (gif er ikke oppdatert)
+- Gjort slik at det er bare filen som blir grønn. Og ikke hele stien (gif er ikke oppdatert)
 - Lage TUI for søkingen (Veldig basic, men det er noe, kan ikke åpne i editor)
 - Skrive Treverseingsfunkjonen mer generelt
 
