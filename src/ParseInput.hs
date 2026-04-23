@@ -1,7 +1,7 @@
 {- HLINT ignore "Use <$>" -}
-{-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
 
+-- | TODO: Dokumenter parseren for CLI-søkestrenger og flagg.
 module ParseInput (runParserIO) where
 
 import Data.Void            (Void)
@@ -24,7 +24,6 @@ import Text.Megaparsec      (
       Parsec
     , satisfy
     , between
-    , parseTest
     , many
     , manyTill
     , eof
@@ -40,24 +39,22 @@ import Data.List             (foldl')
 type Parser = Parsec Void String
 
 
-tester :: IO ()
-tester = do
-    let inp = ". -e hs -x pandoc f html t pdf {} "
-    parseTest parseLamdaSearch inp
+--tester :: IO ()
+--tester = do
+    --parseTest parseLamdaSearch 
 
 
+-- | parser til whitespace-parseren. 
 sc :: Parser ()
 sc = skipMany (char ' ' <|> char '\t')
 
 
+-- | parser for ett  ord.
 parseWord :: Parser String
 parseWord = many (satisfy (\c -> c /= ' ' && c /= '\t'))
 
 
-parseQuoted :: Parser String
-parseQuoted = between (char '"') (char '"') (many (satisfy (/= '"')))
-
-
+-- |  standardverdier for filterflagg.
 emptyFilterFlags :: Arguments
 emptyFilterFlags = Arguments {
       regxPattern    = Nothing
@@ -67,11 +64,13 @@ emptyFilterFlags = Arguments {
     , applyedCommand = Nothing
     }
 
-
+--  representasjon av om søkestier er oppgitt.
 data Paths =
       NoPath
     | ManyPaths [String]
 
+
+-- | Datatype for å beskrive hvilken type informasjon vi kan parse
 data DataFlags =
       SearchPatternFlag String
     | HiddenFilesFlag
@@ -80,7 +79,7 @@ data DataFlags =
     | IgnoreFlag       [String]
 
 
-
+-- |  Parser for enkeltflagg og fmapper vår datatype på
 pFlags :: Parser DataFlags
 pFlags = choice
     [
@@ -88,10 +87,27 @@ pFlags = choice
      , HiddenFilesFlag   <$  ( string "-a" <|> string  "--show--dots")
      , ExtentionFlag     <$> ((string "-e" <|> string  "--extention" ) *> sc *> parseWord)
      , IgnoreFlag        <$> ((string "-i" <|> string  "--ignore"    ) *> sc *> pathsUntilFlag )
-     , ExecuteFlag       <$> ((string "-x" <|> string  "--execute"   ) *> sc *> parseConstrucedCommand ) 
+     , ExecuteFlag       <$> ((string "-x" <|> string  "--execute"   ) *> sc *> parseConstrucedCommand) 
     ]
 
 
+-- | Parser våres argrumenter @Brukes med execute falgget@
+-- | Parser for ConstrucedCommand datatypen
+parseConstrucedCommand :: Parser ConstrucedCommand
+parseConstrucedCommand  = do
+    cmd <- sc *> parseWord
+    args <- parseManyArgs
+    pure (cmd, args)
+
+-- | Dokumenter parser for mange execute-argumenter frem til neste flagg.
+parseManyArgs :: Parser [Command]
+parseManyArgs =
+  manyTill
+    (sc *> parseArgs)
+    (lookAhead (pFlags $> () <|> eof)) -- end of file. fungere med null flagg også
+
+
+-- | Parser for commando datatypen kan enten være en commando eller en sti
 parseArgs :: Parser Command
 parseArgs = do
         s <- sc *> (parseArgumentAndWord <|> parseWord) <* sc
@@ -99,8 +115,8 @@ parseArgs = do
         then pure PathToSubs
         else pure $ Text s
 
-
--- Litt stygg, men funker
+-- | Parser argumener som starter med @-@ og tilhørende verdi.
+-- | Brukes bare til parse commandoeen
 parseArgumentAndWord :: Parser String
 parseArgumentAndWord = do
     f <- char '-'
@@ -110,22 +126,10 @@ parseArgumentAndWord = do
 
 
 
-parseManyArgs :: Parser [Command]
-parseManyArgs =
-  manyTill
-    (sc *> parseArgs)
-    (lookAhead (pFlags $> () <|> eof)) -- end of file. fungere med null flagg også
+--- FLAG PARSER --- 
 
-
-parseConstrucedCommand :: Parser ConstrucedCommand
-parseConstrucedCommand  = do
-    cmd <- sc *> parseWord
-    args <- parseManyArgs
-    pure (cmd, args)
-
-
-
-
+-- | Tar argument datatypen og  og et flag og putter det i datastukruen våre
+-- | Blir nesten som og oppdaterte en state
 applyFlag :: Arguments -> DataFlags -> Arguments
 applyFlag st df = case df of
      SearchPatternFlag s -> st {regxPattern    = Just (convertString s)}
@@ -134,27 +138,34 @@ applyFlag st df = case df of
      ExecuteFlag       x -> st {applyedCommand = Just x}
      HiddenFilesFlag     -> st {hideHidden     = True  }
 
+
+-- | Parser mange dataflagg 
 parseAllFlags :: Parser [DataFlags]
 parseAllFlags = many (sc *> pFlags <* sc) -- 
 
 
--- Satan for en eleganse i dette. Hadde tenkt å bruke state monaden, men trenger ikke det
+-- | Parser alle flagg og folder dem inn i én 'Arguments'-verdi.
+-- | Burker listen som av flagg som er parset og applyfalg og foldr over alle og lager Arguments datastukruen
 parseFlags :: Parser Arguments
 parseFlags = do
-  fs <- parseAllFlags --Løfter ut monaden
+  fs <- parseAllFlags                          --Løfter ut monaden
   pure $ foldl' applyFlag emptyFilterFlags fs  --foldr over
 
--- parser for stier
+
+--- STI PARSER ---
+
+-- |  Parser for absolutt sti uten anførselstegn.
 parsePath :: Parser String
 parsePath = do
     slash      <- sc *> char '/'
     entirePath <- parseWord
     pure (slash : entirePath )
 
+-- | Parser for sti omgitt av anførselstegn.
 parsePathWithQuote :: Parser String
 parsePathWithQuote = between (char '"') (char '"') (many (satisfy (/= '"')))
 
-
+-- | Parser mange stier helt til vi kommer til et flag e
 pathsUntilFlag :: Parser [String]
 pathsUntilFlag =
   manyTill
@@ -162,6 +173,7 @@ pathsUntilFlag =
     (lookAhead (pFlags $> () <|> eof)) -- end of file. fungere med null flagg også
 
 
+-- |  Parse første del av input. skal enten parse et punktum eller til flaggene begnner
 parsePathOrDot :: Parser Paths
 parsePathOrDot = choice
      [
@@ -169,7 +181,9 @@ parsePathOrDot = choice
         , ManyPaths  <$> pathsUntilFlag
      ]
 
--- Main parser
+--- HOVEDPARSER ---
+
+-- | Parser hele input og generer en searchSetting datatype
 parseLamdaSearch :: Parser SearchSetting
 parseLamdaSearch = do
     paths <- sc *> parsePathOrDot
@@ -177,23 +191,29 @@ parseLamdaSearch = do
     let ss = SearchSetting {
            searchPaths  = Nothing
          , arguments    = args }
+
     case paths of
         NoPath           -> pure ss
         (ManyPaths [])   -> pure ss
         (ManyPaths p)    -> pure ss {searchPaths = Just p}
 
-runMyParser :: Parser a -> String ->  Either String a
+
+-- | Lagde en et typealias bare for å gjøre det tydelig hva strengen skal brukes til
+type StringToParse = String
+
+
+-- | Kjører parser på en streng og generer feilmelding om den feiler
+runMyParser :: Parser a -> StringToParse ->  Either String a
 runMyParser parser input =
   case runParser parser "" input of
     Left err  -> Left $ errorBundlePretty err
     Right x   -> Right x
 
-type StringToParse = String
 
+-- | IO-wrapper som kaster feil dersom vi ikke klare å parse
 runParserIO :: StringToParse -> IO SearchSetting
 runParserIO (runMyParser parseLamdaSearch -> (Right ss)) = pure  ss
-runParserIO (runMyParser parseLamdaSearch -> (Left er))  = throwIO $ userError er
-
+runParserIO (runMyParser parseLamdaSearch -> (Left er) ) = throwIO $ userError er
 
 
 

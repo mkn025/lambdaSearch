@@ -1,6 +1,6 @@
 module SearchTUI (mainTUI) where
 
-import TraverselsFunctions (treverseDirWithSettings, constructFilePath)
+import TraverselsFunctions (treverseDirWithSettings, constructFilePath, executeOnFile)
 import ParseInput          (runParserIO)
 
 import Brick (
@@ -8,7 +8,7 @@ import Brick (
       , attrName
       , defaultMain
       , halt
-      , showFirstCursor
+        , showFirstCursor
       , on
       , (<+>)
       , (<=>)
@@ -38,6 +38,7 @@ import Graphics.Vty           (defAttr)
 import Control.Monad.IO.Class (liftIO)
 import Lens.Micro.Type        (Lens')
 import Data.Maybe             (mapMaybe)
+import TraversalSettings      (Command(PathToSubs),convertString)
 
 
 data Mode = Browsing   | Searching deriving (Eq)
@@ -48,6 +49,7 @@ data TuiState = TuiState
   , selected     :: Int
   , searchEditor :: Editor String Name
   , mode         :: Mode
+  , startEditor :: Bool
   }
 
 
@@ -61,62 +63,66 @@ drawItem isFocused p =
 
 drawUI :: TuiState -> [Widget Name]
 drawUI st =
-  [ padAll 1 $
-      
+    [ 
+      padAll 1 $
       searchBox
       <=>
       hBorder
       <=>
       viewport MyViewport Vertical
-        (vBox (
-            zipWith (\i p -> drawItem (i == selected st) p)
+        (vBox (zipWith (\i p -> drawItem (i == selected st) p)
             [0..]
-            ((take 100 . paths) st))
-        )
+            ((take 100 . paths) st)))
       <=>
       str " "
       <=>
-      helpLine
-  ]
+      helpLine st
+      <=>
+      staringEditorText st 
+      ]
   where
     searchBox =
       str "Search: "
       <+> renderEditor (str . unlines) (mode st == Searching) (searchEditor st)
+    helpLine (mode  -> Browsing)  = str "ctrl-n/ctrl-p: move /: search   ctrl-q: quit  ctrl-e: open in editor (when cloing )   |   search queries:  -p regex -e extenton ..."
+    helpLine (mode -> Searching)  = str "Enter: run search   Esc: cancel"
+    staringEditorText (startEditor -> True)  = str "Staring editor when closing"
+    staringEditorText (startEditor -> False) = str "Not Staring editor when closing"
 
-    helpLine = case mode st of
-      Browsing  -> str "j/k: move   /: search   q: quit     |     search queries:  -p regex -e extenton ..."
-      Searching -> str "Enter: run search   Esc: cancel"
+
+
+
+stopInputWhileBrowing :: EventM Name TuiState () -> EventM Name TuiState ()
+stopInputWhileBrowing action  = get >>= checkBrowsing 
+    where 
+        checkBrowsing (mode -> Searching) = pure ()
+        checkBrowsing (mode -> Browsing)  = action 
 
 
 handleEvent :: BrickEvent Name e -> EventM Name TuiState ()
-handleEvent (VtyEvent (V.EvKey V.KUp [] ))        = modify  moveUp
-handleEvent (VtyEvent (V.EvKey V.KDown [] ))      = modify moveDown
-handleEvent (VtyEvent (V.EvKey (V.KChar 'q') [])) = do
-    st <- get
-    case mode st of
-        Searching -> pure ()
-        Browsing  -> halt
-
-handleEvent (VtyEvent (V.EvKey (V.KChar '/') [])) = modify (\st -> st { mode = Searching })
-handleEvent (VtyEvent (V.EvKey V.KEsc []))        = modify (\st -> st { mode = Browsing })
-handleEvent (VtyEvent (V.EvKey V.KEnter []))      = do
-
+handleEvent (VtyEvent (V.EvKey (V.KChar 'n') [V.MCtrl])) = stopInputWhileBrowing . modify $ moveDown
+handleEvent (VtyEvent (V.EvKey (V.KChar 'p') [V.MCtrl])) = stopInputWhileBrowing . modify $ moveUp
+handleEvent (VtyEvent (V.EvKey (V.KChar 'q') [V.MCtrl])) = stopInputWhileBrowing halt
+handleEvent (VtyEvent (V.EvKey (V.KChar 'c') [V.MCtrl])) = stopInputWhileBrowing halt
+handleEvent (VtyEvent (V.EvKey (V.KChar 'e') [V.MCtrl])) = stopInputWhileBrowing . modify $ (\st -> st {startEditor  = True})
+handleEvent (VtyEvent (V.EvKey (V.KChar '/') []))        = modify (\st -> st { mode = Searching })
+handleEvent (VtyEvent (V.EvKey  V.KEsc       []))        = modify (\st -> st { mode = Browsing })
+handleEvent (VtyEvent (V.EvKey  V.KEnter     []))        = do
     st <- get
     let query = concat (getEditContents (searchEditor st))  
     results <- liftIO $ runSearch query --løfter elegeant ut 
     modify (\s -> s { paths    = results
                     , selected = 0
                     , mode     = Browsing })
-
 handleEvent ev = do
     st <- get
     case mode st of
       Searching -> zoom searchEditorL (handleEditorEvent ev)
       Browsing  -> pure ()
 
-
 searchEditorL :: Lens' TuiState (Editor String Name)
 searchEditorL f st = (\e -> st { searchEditor = e }) <$> f (searchEditor st)
+
 
 runSearch :: String -> IO [FilePath]
 runSearch (null -> True ) = pure []
@@ -133,7 +139,6 @@ moveDown st = st { selected = min (length (paths st) - 1) (selected st + 1) }
 selectedAttr :: AttrName
 selectedAttr = attrName ""
 
-
 app :: App TuiState e Name
 app = App
   { appDraw         = drawUI
@@ -144,14 +149,31 @@ app = App
       [ (selectedAttr, V.black `on` V.yellow) ]
   }
 
+
+-- litt shady, men men
+openInEditor ::  TuiState ->  IO()
+openInEditor (startEditor -> False) = pure ()
+openInEditor st = do
+    let selectedPath = convertString 
+                     . fst
+                     . head
+                     . filter ((==selected st) . snd ) 
+                     $ zip (paths st) [0..]
+    let cmd = ("vim", [PathToSubs])
+    executeOnFile cmd selectedPath 
+
+
 mainTUI :: IO ()
 mainTUI = do
   initialPaths <- runSearch ""          
+
   let initialState = TuiState
         { paths        = initialPaths
         , selected     = 0
-        , searchEditor = editor SearchBox (Just 1) "" 
+        , searchEditor = editor SearchBox (Just 1) ""
         , mode         = Browsing
+        , startEditor  = False
         }
   finalState <- defaultMain app initialState
   putStrLn $ "Du valgte: " ++ (paths finalState !! selected finalState)
+  openInEditor finalState 

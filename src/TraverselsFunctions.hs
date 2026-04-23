@@ -1,10 +1,9 @@
-
-
 module TraverselsFunctions (
       DirContent
     , FileInfomation(..)
     , treverseDirWithSettings
     , constructFilePath 
+    , executeOnFile
     )
 where
 
@@ -52,10 +51,14 @@ import Control.Monad.Except (
 
 type DirContent = (DirType, RawFilePath)
 
+
+-- | TODO: Dokumenter informasjonen som lagres per fil eller mappe.
 data FileInfomation = FileInfomation{
       filePath         :: RawFilePath
-    , dirContent       :: Maybe DirContent -- Nothing dersom det er en mappe som ikke har
-    } deriving (Eq,Show)
+    , dirContent       :: Maybe DirContent -- Nothing dersom det er en mappe som i
+} deriving (Eq,Show)
+
+
 
 foreign import ccall unsafe "readdir"
   c_readdir_new :: Ptr CDir -> IO (Ptr CDirent) --Leser fra allerede åpenet dirStream
@@ -68,9 +71,11 @@ foreign import ccall unsafe "__posixdir_d_type"
 
 
 
+-- | En funksjon som pattern matcher og henter ut pekeren
 unpackDirStream :: DirStream -> Ptr CDir
 unpackDirStream (DirStream a) = a
 
+-- | TODO: Dokumenter feiltyper ved lesing av kataloginnhold.
 data DirError = UnexpectedErrnoZero | ReadDirErr Errno
 
 instance Show DirError where
@@ -81,11 +86,14 @@ instance Exception DirError
 type DirContentT = ExceptT DirError IO (Maybe DirContent)
 
 
--- | Funksjonen leser en Enten en Dirstram ved å bruke readDir syscall. Eller så gir den  en feil
--- | Fungere ved å allocere minne til pekeren. så så leser vi hva som er på pekeren
--- | Men skriver også det blir lest til etr_dEnt. Derfor vi kan hente ut fra pekeren
--- | bruker transformatoren siden vi øsnker bare å kaste å gi feil dersom syscallet feiler. ikke når den vi er på slutten
--- | vil derfor ha mulighet til å 
+-- | Leser neste element fra en åpen 'DirStream' med @readdir@.
+--
+-- TODO: Dokumenter detaljene rundt pekerhåndtering, EOF, og feilbehandling.
+-- Eksisterende notat (språkvasket):
+--
+-- - Leser fra en allerede åpen strøm.
+-- - Returnerer @Nothing@ ved slutten av katalogen.
+-- - Kaster bare feil når systemkallet faktisk feiler.
 readDirEnt :: DirStream ->  DirContentT
 readDirEnt dir = ExceptT readContent
     where
@@ -93,6 +101,7 @@ readDirEnt dir = ExceptT readContent
     readContent = do
       let dirp = unpackDirStream dir
       resetErrno
+
       -- c_readdir_new :: Ptr CDir -> IO (Ptr CDirent)
       dEnt <- c_readdir_new dirp
       if dEnt == PTR.nullPtr
@@ -120,9 +129,15 @@ readDirEnt dir = ExceptT readContent
 
 
 
--- åpner en dirstrem kaster funksjonen på alle elemenne. Lukker dirstrem 
--- hopper helettil 
-
+-- | Traverserer innholdet i en katalog med en fold-funksjon.
+-- | bruker funksjonen
+--
+-- Åpner en dirSteam til @p@, bruker @f@ på hvert element altås hver feil
+-- (unntatt @.@ og @..@), og returnerer den akkumulerte verdien.
+--
+-- * Tillatelseskfeil  håndteres ved at den skipper den
+-- * Andre IO-feil kastes videre.
+-- * Katalogstrømmen lukkes alltid, også ved expetions ('bracketOnError' + 'finally').
 traverseDirectoryContents :: (MonadUnliftIO m)
                           => (a -> DirContent -> m a)
                           -> a
@@ -159,8 +174,12 @@ traverseDirectoryContents f s0 p = do
                                                   loop run acc' dirp
 
 
--- | En funksjone som definerer generetlt hvordan den skal treverse igjennom  filsystemet 
--- | Den har også en fold funkson som bestemmer hvordan den skal sammele opp listne  
+-- | Traverserer katalogtreet rekursivt og putter det og har en fold funksjon bestemmer hvordan den skal legge inn helemeter
+--
+-- Sjekker om @rootPath@ er en dir, så bruker @foldFunc@ på hvert element
+-- (unntatt @.@ og @..@). Er elementet en en dir treveserer den rekusrsivt
+--
+-- * Er @rootPath@ ikkje ein katalog, returneras @acc@ uendra.
 foldDirectoryTree
     :: (a -> RawFilePath -> DirContent -> IO a) -- Foldfunction
     -> a -- 
@@ -174,8 +193,10 @@ foldDirectoryTree foldFunc acc rootPath  = do
         else traverseDirectoryContents innerloop acc rootPath
     where
         innerloop currentAcc dc@(typ,filename) = do
+
             let filePath = rootPath  </> filename
             let isDir = typ == dtDir
+
             -- legge funskjonen på  
             nextAcc <- foldFunc currentAcc rootPath dc
             if not isDir
@@ -184,13 +205,15 @@ foldDirectoryTree foldFunc acc rootPath  = do
 
 
 
-
+-- | rekkursiv traversering med aktive filter
+-- TODO: skriv mer
 treversRecursively_ :: Arguments -> [FileInfomation] -> RawFilePath -> IO [FileInfomation]
 treversRecursively_ args = foldDirectoryTree foldFunc 
     where
     regexCompiled = compileRegexFilter args
     foldFunc :: [FileInfomation] -> RawFilePath -> DirContent -> IO [FileInfomation]
     foldFunc acc parentPath dc@(typ,file)  = do
+
         let fullPath = parentPath  </> file
         let isDir = typ == dtDir
         if isDir
@@ -209,10 +232,11 @@ treversRecursively_ args = foldDirectoryTree foldFunc
 
 
 
+-- | kjøree 
+-- TODO: skriv mer
 executeOnFile :: ConstrucedCommand -> RawFilePath ->  IO ()
 executeOnFile c@(prog, args) rfd = do
                                 let argsWithPath = substituePath args rfd
-                                print argsWithPath
                                 (_, _, _, ph) <- createProcess $ proc prog argsWithPath
                                 ec <- waitForProcess ph
                                 case ec of
@@ -225,19 +249,25 @@ executeOnFile c@(prog, args) rfd = do
 
 
 
+
+-- | Treveser med søkinstillinger
 treverseDirWithSettings  :: SearchSetting -> IO [FileInfomation]
 treverseDirWithSettings ss = treveseManyPathsWithArgs  (arguments ss) (searchPaths ss)
 
+
+-- | Treverser med argumter, standardsti velges når ingen søkestier er oppgitt.
+-- | Treverser med mange stier
 treveseManyPathsWithArgs  :: Arguments ->  Maybe [FilePath]  -> IO [FileInfomation]
 treveseManyPathsWithArgs ff Nothing   = getWorkingDirectory  >>= treverseOnPathWithArgs ff . BS.unpack
 treveseManyPathsWithArgs ff (Just fp) = concat <$> mapM (treverseOnPathWithArgs ff) fp
 
+-- | Treveser en filsti
 treverseOnPathWithArgs :: Arguments -> FilePath -> IO [FileInfomation]
 treverseOnPathWithArgs ff sp = treversRecursively_ ff [] $ BS.pack sp
 
 
+-- Hjelpemeothde som lager helefilstien dersom, dersom det er en sti
 constructFilePath :: FileInfomation -> Maybe String
 constructFilePath fi = case dirContent fi of
                         Nothing     -> Nothing
                         Just (_ ,b) ->  Just $ BS.unpack $ filePath fi </>  b
-
