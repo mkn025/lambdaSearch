@@ -37,6 +37,7 @@ import Brick.Widgets.Edit     (Editor, editor, renderEditor,
 import Graphics.Vty           (defAttr)
 import Control.Monad.IO.Class (liftIO)
 import Lens.Micro.Type        (Lens')
+import System.Environment     (lookupEnv )
 import Data.Maybe             (mapMaybe)
 import TraversalSettings      (Command(PathToSubs),convertString)
 
@@ -154,13 +155,18 @@ app = App
 openInEditor ::  TuiState ->  IO()
 openInEditor (startEditor -> False) = pure ()
 openInEditor st = do
-    let selectedPath = convertString 
+    ed <- lookupEnv "EDITOR"
+    case ed of
+        Nothing   -> putStrLn "fant ikke noe editor i env var"
+        (Just e) -> do
+                let selectedPath =
+                       convertString 
                      . fst
                      . head
                      . filter ((==selected st) . snd ) 
                      $ zip (paths st) [0..]
-    let cmd = ("vim", [PathToSubs])
-    executeOnFile cmd selectedPath 
+                let cmd = (e, [PathToSubs])
+                executeOnFile cmd selectedPath 
 
 
 mainTUI :: IO ()
