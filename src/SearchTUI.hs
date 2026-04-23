@@ -1,6 +1,6 @@
 module SearchTUI (mainTUI) where
 
-import TraverselsFunctions (treverseDirWithSettings, constructFilePath)
+import TraverselsFunctions (treverseDirWithSettings, constructFilePath, executeOnFile)
 import ParseInput          (runParserIO)
 
 import Brick (
@@ -8,7 +8,7 @@ import Brick (
       , attrName
       , defaultMain
       , halt
-      , showFirstCursor
+        , showFirstCursor
       , on
       , (<+>)
       , (<=>)
@@ -38,6 +38,7 @@ import Graphics.Vty           (defAttr)
 import Control.Monad.IO.Class (liftIO)
 import Lens.Micro.Type        (Lens')
 import Data.Maybe             (mapMaybe)
+import TraversalSettings      (Command(PathToSubs),convertString)
 
 
 data Mode = Browsing   | Searching deriving (Eq)
@@ -62,30 +63,39 @@ drawItem isFocused p =
 drawUI :: TuiState -> [Widget Name]
 drawUI st =
   [ padAll 1 $
-      
       searchBox
       <=>
       hBorder
       <=>
       viewport MyViewport Vertical
-        (vBox (
-            zipWith (\i p -> drawItem (i == selected st) p)
+        (vBox (zipWith (\i p -> drawItem (i == selected st) p)
             [0..]
-            ((take 100 . paths) st))
-        )
+            ((take 100 . paths) st)))
       <=>
       str " "
       <=>
-      helpLine
-  ]
+      helpLine ]
   where
     searchBox =
       str "Search: "
       <+> renderEditor (str . unlines) (mode st == Searching) (searchEditor st)
-
     helpLine = case mode st of
-      Browsing  -> str "j/k: move   /: search   q: quit     |     search queries:  -p regex -e extenton ..."
+      Browsing  -> str "ctrl-n/ctrl-p: move /: search   ctrl-q: quit  ctrl-e: open in editor   |   search queries:  -p regex -e extenton ..."
       Searching -> str "Enter: run search   Esc: cancel"
+
+
+-- litt shady, men men
+openInEditor ::  EventM Name TuiState ()
+openInEditor = do
+    st <- get
+    let selectedPath = convertString 
+                     . fst
+                     . head
+                     . filter ((==selected st) . snd ) 
+                     $ zip (paths st) [0..]
+    let cmd = ("vim", [PathToSubs])
+    liftIO $ executeOnFile cmd selectedPath 
+
 
 
 stopInputWhileBrowing :: EventM Name TuiState () -> EventM Name TuiState ()
@@ -96,14 +106,13 @@ stopInputWhileBrowing action  = get >>= checkBrowsing
 
 
 handleEvent :: BrickEvent Name e -> EventM Name TuiState ()
-handleEvent (VtyEvent (V.EvKey (V.KChar 'k') [])) = stopInputWhileBrowing . modify $ moveDown
-handleEvent (VtyEvent (V.EvKey (V.KChar 'j') [])) = stopInputWhileBrowing . modify $ moveUp
-handleEvent (VtyEvent (V.EvKey (V.KChar 'q') [])) = stopInputWhileBrowing halt
-handleEvent (VtyEvent (V.EvKey (V.KChar 'e') [])) = stopInputWhileBrowing halt
-handleEvent (VtyEvent (V.EvKey (V.KChar '/') [])) = modify (\st -> st { mode = Searching })
-handleEvent (VtyEvent (V.EvKey V.KEsc        [])) = modify (\st -> st { mode = Browsing })
-
-handleEvent (VtyEvent (V.EvKey V.KEnter      [])) = do
+handleEvent (VtyEvent (V.EvKey (V.KChar 'n') [V.MCtrl])) = stopInputWhileBrowing . modify $ moveDown
+handleEvent (VtyEvent (V.EvKey (V.KChar 'p') [V.MCtrl])) = stopInputWhileBrowing . modify $ moveUp
+handleEvent (VtyEvent (V.EvKey (V.KChar 'q') [V.MCtrl])) = stopInputWhileBrowing halt
+handleEvent (VtyEvent (V.EvKey (V.KChar 'e') [V.MCtrl])) = stopInputWhileBrowing openInEditor 
+handleEvent (VtyEvent (V.EvKey (V.KChar '/') []))        = modify (\st -> st { mode = Searching })
+handleEvent (VtyEvent (V.EvKey  V.KEsc       []))        = modify (\st -> st { mode = Browsing })
+handleEvent (VtyEvent (V.EvKey  V.KEnter     []))        = do
     st <- get
     let query = concat (getEditContents (searchEditor st))  
     results <- liftIO $ runSearch query --løfter elegeant ut 
@@ -119,6 +128,7 @@ handleEvent ev = do
 searchEditorL :: Lens' TuiState (Editor String Name)
 searchEditorL f st = (\e -> st { searchEditor = e }) <$> f (searchEditor st)
 
+
 runSearch :: String -> IO [FilePath]
 runSearch (null -> True ) = pure []
 runSearch query = do
@@ -133,7 +143,6 @@ moveDown st = st { selected = min (length (paths st) - 1) (selected st + 1) }
 
 selectedAttr :: AttrName
 selectedAttr = attrName ""
-
 
 app :: App TuiState e Name
 app = App

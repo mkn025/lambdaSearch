@@ -3,6 +3,7 @@ module TraverselsFunctions (
     , FileInfomation(..)
     , treverseDirWithSettings
     , constructFilePath 
+    , executeOnFile
     )
 where
 
