@@ -2,13 +2,14 @@ module SearchTUI (mainTUI) where
 
 import TraverselsFunctions (treverseDirWithSettings, constructFilePath, executeOnFile)
 import ParseInput          (runParserIO)
+import TraversalSettings   (Command(PathToSubs), convertString)
 
 import Brick (
         attrMap
       , attrName
       , defaultMain
       , halt
-        , showFirstCursor
+      , showFirstCursor
       , on
       , (<+>)
       , (<=>)
@@ -27,8 +28,7 @@ import Brick (
       , ViewportType(Vertical)
       , Widget
       , zoom
-      , get
-    )
+      , get )
 
 import qualified Graphics.Vty as V
 import Brick.Widgets.Border   (border, hBorder)
@@ -39,7 +39,6 @@ import Control.Monad.IO.Class (liftIO)
 import Lens.Micro.Type        (Lens')
 import System.Environment     (lookupEnv )
 import Data.Maybe             (mapMaybe)
-import TraversalSettings      (Command(PathToSubs),convertString)
 
 
 data Mode = Browsing   | Searching deriving (Eq)
@@ -72,8 +71,8 @@ drawUI st =
       <=>
       viewport MyViewport Vertical
         (vBox (zipWith (\i p -> drawItem (i == selected st) p)
-            [0..]
-            ((take 100 . paths) st)))
+        [0..]
+        ((take 100 . paths) st)))
       <=>
       str " "
       <=>

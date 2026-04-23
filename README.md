@@ -19,6 +19,8 @@
 - Gjort slik at det er bare filen som blir grønn. Og ikke hele stien (gif er ikke oppdatert)
 - Lage TUI for søkingen (Veldig basic, men det er noe, kan ikke åpne i editor)
 - Skrive Treverseingsfunkjonen mer generelt
+- Du kan åpne det du har søkt på i vim igjennom TUI-en 
+
 
 ### Mangler.
 - Tester
