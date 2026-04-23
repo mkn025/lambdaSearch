@@ -1,6 +1,3 @@
-
-
--- | TODO: Dokumenter traversering av kataloger og filtrering av filer.
 module TraverselsFunctions (
       DirContent
     , FileInfomation(..)
@@ -73,7 +70,7 @@ foreign import ccall unsafe "__posixdir_d_type"
 
 
 
--- | TODO: Dokumenter hvordan en 'DirStream' pakkes ut til en C-peker.
+-- | En funksjon som pattern matcher og henter ut pekeren
 unpackDirStream :: DirStream -> Ptr CDir
 unpackDirStream (DirStream a) = a
 
@@ -207,7 +204,7 @@ foldDirectoryTree foldFunc acc rootPath  = do
 
 
 
--- | rekkursiv traversering med aktive filtere og eventuell kommando-kjøring. 
+-- | rekkursiv traversering med aktive filter
 -- TODO: skriv mer
 treversRecursively_ :: Arguments -> [FileInfomation] -> RawFilePath -> IO [FileInfomation]
 treversRecursively_ args = foldDirectoryTree foldFunc 
