@@ -17,9 +17,9 @@
 - Gjort det mulig å søke med `.` eller ingen argumenter. Dette vil da til da bruke working directory
 - Gjort det mulig å kjøre commando på filer du søker etter (beta)
 - Gjort slik at det er bare filen som blir grønn. Og ikke hele stien (gif er ikke oppdatert)
-- Lage TUI for søkingen (Veldig basic, men det er noe, kan ikke åpne i editor)
+- Lage TUI for søkingen (Veldig basic, men det er noe)
 - Skrive Treverseingsfunkjonen mer generelt
-- Du kan åpne det du har søkt på i vim igjennom TUI-en 
+- Du kan åpne det du har søkt på i vim (din editor henter fra env var) igjennom TUI-en 
 
 
 ### Mangler.
