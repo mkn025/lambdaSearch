@@ -44,12 +44,12 @@ import Data.Maybe             (mapMaybe)
 data Mode = Browsing   | Searching deriving (Eq)
 data Name = MyViewport | SearchBox deriving (Eq, Ord, Show)
 
-data TuiState = TuiState
-  { paths        :: [FilePath]
+data TuiState = TuiState {
+    paths        :: [FilePath]
   , selected     :: Int
   , searchEditor :: Editor String Name
   , mode         :: Mode
-  , startEditor :: Bool
+  , startEditor  :: Bool
   }
 
 
@@ -62,8 +62,7 @@ drawItem isFocused p =
     widget = border $ padLeftRight 1 $ str p
 
 drawUI :: TuiState -> [Widget Name]
-drawUI st =
-    [ 
+drawUI st = [ 
       padAll 1 $
       searchBox
       <=>
@@ -110,7 +109,7 @@ handleEvent (VtyEvent (V.EvKey  V.KEsc       []))        = modify (\st -> st { m
 handleEvent (VtyEvent (V.EvKey  V.KEnter     []))        = do
     st <- get
     let query = concat (getEditContents (searchEditor st))  
-    results <- liftIO $ runSearch query --løfter elegeant ut 
+    results <- liftIO $ runSearch query 
     modify (\s -> s { paths    = results
                     , selected = 0
                     , mode     = Browsing })
@@ -120,9 +119,9 @@ handleEvent ev = do
       Searching -> zoom searchEditorL (handleEditorEvent ev)
       Browsing  -> pure ()
 
+
 searchEditorL :: Lens' TuiState (Editor String Name)
 searchEditorL f st = (\e -> st { searchEditor = e }) <$> f (searchEditor st)
-
 
 runSearch :: String -> IO [FilePath]
 runSearch (null -> True ) = pure []
@@ -165,7 +164,6 @@ openInEditor st = do
                      $ zip (paths st) [0..]
                 let cmd = (e, [PathToSubs])
                 executeOnFile cmd selectedPath 
-
 
 mainTUI :: IO ()
 mainTUI = do
