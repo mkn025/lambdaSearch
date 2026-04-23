@@ -1,4 +1,5 @@
 
+
 module TraversalSettings (
       Arguments         (..)
     , SearchSetting     (..)
@@ -13,7 +14,6 @@ module TraversalSettings (
     , substituePath
     , convertString 
     , convertToString 
-
 ) where
 
 import System.Posix.ByteString               (RawFilePath)

@@ -150,9 +150,8 @@ app = App
       [ (selectedAttr, V.black `on` V.yellow) ]
   }
 
-
 -- litt shady, men men
-openInEditor ::  TuiState ->  IO()
+openInEditor :: TuiState -> IO ()
 openInEditor (startEditor -> False) = pure ()
 openInEditor st = do
     ed <- lookupEnv "EDITOR"

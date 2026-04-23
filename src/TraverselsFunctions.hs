@@ -7,7 +7,6 @@ module TraverselsFunctions (
     )
 where
 
-
 import System.Posix.Directory.Foreign               (DirType(..), dtDir )
 import System.Posix.ByteString.FilePath             (RawFilePath, peekFilePath )
 import Foreign.C.Error                              (Errno  (..), eINTR,  getErrno, resetErrno,eOK, eACCES, ePERM )
@@ -18,7 +17,6 @@ import Control.Monad.IO.Class                       (MonadIO(liftIO) )
 
 import System.Posix.Directory.ByteString as PosixBS (openDirStream, closeDirStream, DirStream, getWorkingDirectory)
 
-import qualified Data.ByteString.Char8   as BS      (unpack, pack)
 import System.Posix.FilePath                        ((</>))
 import Foreign.Ptr as PTR                           (Ptr, nullPtr)
 import System.Process                               (createProcess, proc, waitForProcess)
@@ -41,6 +39,8 @@ import TraversalSettings (
     , executeFunction
     , ConstrucedCommand
     , substituePath
+    , convertToString 
+    , convertString 
     )
 
 import Control.Monad.Except (
@@ -247,9 +247,6 @@ executeOnFile c@(prog, args) rfd = do
                                         <> " (exit " ++ show n ++ ")"    )
 
 
-
-
-
 -- | Treveser med søkinstillinger
 treverseDirWithSettings  :: SearchSetting -> IO [FileInfomation]
 treverseDirWithSettings ss = treveseManyPathsWithArgs  (arguments ss) (searchPaths ss)
@@ -258,16 +255,16 @@ treverseDirWithSettings ss = treveseManyPathsWithArgs  (arguments ss) (searchPat
 -- | Treverser med argumter, standardsti velges når ingen søkestier er oppgitt.
 -- | Treverser med mange stier
 treveseManyPathsWithArgs  :: Arguments ->  Maybe [FilePath]  -> IO [FileInfomation]
-treveseManyPathsWithArgs ff Nothing   = getWorkingDirectory  >>= treverseOnPathWithArgs ff . BS.unpack
+treveseManyPathsWithArgs ff Nothing   = getWorkingDirectory  >>= treverseOnPathWithArgs ff . convertToString 
 treveseManyPathsWithArgs ff (Just fp) = concat <$> mapM (treverseOnPathWithArgs ff) fp
 
 -- | Treveser en filsti
 treverseOnPathWithArgs :: Arguments -> FilePath -> IO [FileInfomation]
-treverseOnPathWithArgs ff sp = treversRecursively_ ff [] $ BS.pack sp
-
+treverseOnPathWithArgs ff sp = treversRecursively_ ff [] $ convertString sp
 
 -- Hjelpemeothde som lager helefilstien dersom, dersom det er en sti
 constructFilePath :: FileInfomation -> Maybe String
 constructFilePath fi = case dirContent fi of
                         Nothing     -> Nothing
-                        Just (_ ,b) ->  Just $ BS.unpack $ filePath fi </>  b
+                        Just (_ ,b) ->  Just $ convertToString $ filePath fi </>  b
+
