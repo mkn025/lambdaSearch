@@ -88,32 +88,33 @@ drawUI st =
       Searching -> str "Enter: run search   Esc: cancel"
 
 
+stopInputWhileBrowing :: EventM Name TuiState () -> EventM Name TuiState ()
+stopInputWhileBrowing action  = get >>= checkBrowsing 
+    where 
+        checkBrowsing (mode -> Searching) = pure ()
+        checkBrowsing (mode -> Browsing)  = action 
+
+
 handleEvent :: BrickEvent Name e -> EventM Name TuiState ()
-handleEvent (VtyEvent (V.EvKey V.KUp [] ))        = modify  moveUp
-handleEvent (VtyEvent (V.EvKey V.KDown [] ))      = modify moveDown
-handleEvent (VtyEvent (V.EvKey (V.KChar 'q') [])) = do
-    st <- get
-    case mode st of
-        Searching -> pure ()
-        Browsing  -> halt
-
+handleEvent (VtyEvent (V.EvKey (V.KChar 'k') [])) = stopInputWhileBrowing . modify $ moveDown
+handleEvent (VtyEvent (V.EvKey (V.KChar 'j') [])) = stopInputWhileBrowing . modify $ moveUp
+handleEvent (VtyEvent (V.EvKey (V.KChar 'q') [])) = stopInputWhileBrowing halt
+handleEvent (VtyEvent (V.EvKey (V.KChar 'e') [])) = stopInputWhileBrowing halt
 handleEvent (VtyEvent (V.EvKey (V.KChar '/') [])) = modify (\st -> st { mode = Searching })
-handleEvent (VtyEvent (V.EvKey V.KEsc []))        = modify (\st -> st { mode = Browsing })
-handleEvent (VtyEvent (V.EvKey V.KEnter []))      = do
+handleEvent (VtyEvent (V.EvKey V.KEsc        [])) = modify (\st -> st { mode = Browsing })
 
+handleEvent (VtyEvent (V.EvKey V.KEnter      [])) = do
     st <- get
     let query = concat (getEditContents (searchEditor st))  
     results <- liftIO $ runSearch query --løfter elegeant ut 
     modify (\s -> s { paths    = results
                     , selected = 0
                     , mode     = Browsing })
-
 handleEvent ev = do
     st <- get
     case mode st of
       Searching -> zoom searchEditorL (handleEditorEvent ev)
       Browsing  -> pure ()
-
 
 searchEditorL :: Lens' TuiState (Editor String Name)
 searchEditorL f st = (\e -> st { searchEditor = e }) <$> f (searchEditor st)
@@ -147,11 +148,13 @@ app = App
 mainTUI :: IO ()
 mainTUI = do
   initialPaths <- runSearch ""          
+
   let initialState = TuiState
         { paths        = initialPaths
         , selected     = 0
         , searchEditor = editor SearchBox (Just 1) "" 
         , mode         = Browsing
         }
+
   finalState <- defaultMain app initialState
   putStrLn $ "Du valgte: " ++ (paths finalState !! selected finalState)
