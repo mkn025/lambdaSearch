@@ -49,6 +49,7 @@ data TuiState = TuiState
   , selected     :: Int
   , searchEditor :: Editor String Name
   , mode         :: Mode
+  , startEditor :: Bool
   }
 
 
@@ -62,7 +63,8 @@ drawItem isFocused p =
 
 drawUI :: TuiState -> [Widget Name]
 drawUI st =
-  [ padAll 1 $
+    [ 
+      padAll 1 $
       searchBox
       <=>
       hBorder
@@ -74,27 +76,19 @@ drawUI st =
       <=>
       str " "
       <=>
-      helpLine ]
+      helpLine st
+      <=>
+      staringEditorText st 
+      ]
   where
     searchBox =
       str "Search: "
       <+> renderEditor (str . unlines) (mode st == Searching) (searchEditor st)
-    helpLine = case mode st of
-      Browsing  -> str "ctrl-n/ctrl-p: move /: search   ctrl-q: quit  ctrl-e: open in editor   |   search queries:  -p regex -e extenton ..."
-      Searching -> str "Enter: run search   Esc: cancel"
+    helpLine (mode  -> Browsing)  = str "ctrl-n/ctrl-p: move /: search   ctrl-q: quit  ctrl-e: open in editor (when cloing )   |   search queries:  -p regex -e extenton ..."
+    helpLine (mode -> Searching)  = str "Enter: run search   Esc: cancel"
+    staringEditorText (startEditor -> True)  = str "Staring editor when closing"
+    staringEditorText (startEditor -> False) = str "Not Staring editor when closing"
 
-
--- litt shady, men men
-openInEditor ::  EventM Name TuiState ()
-openInEditor = do
-    st <- get
-    let selectedPath = convertString 
-                     . fst
-                     . head
-                     . filter ((==selected st) . snd ) 
-                     $ zip (paths st) [0..]
-    let cmd = ("vim", [PathToSubs])
-    liftIO $ executeOnFile cmd selectedPath 
 
 
 
@@ -109,7 +103,8 @@ handleEvent :: BrickEvent Name e -> EventM Name TuiState ()
 handleEvent (VtyEvent (V.EvKey (V.KChar 'n') [V.MCtrl])) = stopInputWhileBrowing . modify $ moveDown
 handleEvent (VtyEvent (V.EvKey (V.KChar 'p') [V.MCtrl])) = stopInputWhileBrowing . modify $ moveUp
 handleEvent (VtyEvent (V.EvKey (V.KChar 'q') [V.MCtrl])) = stopInputWhileBrowing halt
-handleEvent (VtyEvent (V.EvKey (V.KChar 'e') [V.MCtrl])) = stopInputWhileBrowing openInEditor 
+handleEvent (VtyEvent (V.EvKey (V.KChar 'c') [V.MCtrl])) = stopInputWhileBrowing halt
+handleEvent (VtyEvent (V.EvKey (V.KChar 'e') [V.MCtrl])) = stopInputWhileBrowing . modify $ (\st -> st {startEditor  = True})
 handleEvent (VtyEvent (V.EvKey (V.KChar '/') []))        = modify (\st -> st { mode = Searching })
 handleEvent (VtyEvent (V.EvKey  V.KEsc       []))        = modify (\st -> st { mode = Browsing })
 handleEvent (VtyEvent (V.EvKey  V.KEnter     []))        = do
@@ -154,6 +149,20 @@ app = App
       [ (selectedAttr, V.black `on` V.yellow) ]
   }
 
+
+-- litt shady, men men
+openInEditor ::  TuiState ->  IO()
+openInEditor (startEditor -> False) = pure ()
+openInEditor st = do
+    let selectedPath = convertString 
+                     . fst
+                     . head
+                     . filter ((==selected st) . snd ) 
+                     $ zip (paths st) [0..]
+    let cmd = ("vim", [PathToSubs])
+    executeOnFile cmd selectedPath 
+
+
 mainTUI :: IO ()
 mainTUI = do
   initialPaths <- runSearch ""          
@@ -161,9 +170,10 @@ mainTUI = do
   let initialState = TuiState
         { paths        = initialPaths
         , selected     = 0
-        , searchEditor = editor SearchBox (Just 1) "" 
+        , searchEditor = editor SearchBox (Just 1) ""
         , mode         = Browsing
+        , startEditor  = False
         }
-
   finalState <- defaultMain app initialState
   putStrLn $ "Du valgte: " ++ (paths finalState !! selected finalState)
+  openInEditor finalState 
