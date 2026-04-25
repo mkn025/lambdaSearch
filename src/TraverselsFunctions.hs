@@ -179,7 +179,7 @@ traverseDirectoryContents f s0 p = do
 -- Sjekker om @rootPath@ er en dir, så bruker @foldFunc@ på hvert element
 -- (unntatt @.@ og @..@). Er elementet en en dir treveserer den rekusrsivt
 --
--- * Er @rootPath@ ikkje ein katalog, returneras @acc@ uendra.
+-- * Er @rootPath@ ikke en direrctory da er  @acc@ uendra.
 foldDirectoryTree
     :: (a -> RawFilePath -> DirContent -> IO a) -- Foldfunction
     -> a -- 
