@@ -101,7 +101,6 @@ getExtentionFilter (extention -> Nothing) _                                = Tru
 getExtentionFilter (extention -> Just _ )  (getFileExtention -> Nothing)   = False
 getExtentionFilter (extention -> Just ext) (getFileExtention -> Just curr) = curr == ext
 
-
 -- | Kompilerer regex-mønsteret. 
 -- | Git nothing dersom brukeren ikke har spesifisert noe
 compileRegexFilter :: Arguments -> Maybe Regex
@@ -124,6 +123,7 @@ executeFunction (applyedCommand -> Nothing)  _  _ = pure ()
 executeFunction (applyedCommand -> Just cmd) fp f = f cmd fp
 
 
+
 -- | Bytter alle @{}@ med en git filepath
 substituePath :: [Command] -> RawFilePath -> [String]
 substituePath cmd rfp = map (inPathSubsitute rfp) cmd
@@ -135,14 +135,13 @@ getFileExtention :: RawFilePath -> Maybe Extention
 getFileExtention (BC.null -> True) = Nothing
 getFileExtention  fp               = safeTail . takeExtension $ fp
 
-
 safeTail :: ByteString -> Maybe ByteString
 safeTail (BC.null -> True) = Nothing
 safeTail xs                = Just . BC.tail  $ xs
 
 safeHead :: ByteString -> Maybe Char
 safeHead (BC.null -> True) = Nothing
-safeHead xs                = Just $ BC.head xs
+safeHead xs                = Just . BC.head $ xs
 
 convertString :: String -> RawFilePath
 convertString = BC.pack
