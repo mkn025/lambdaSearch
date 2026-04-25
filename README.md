@@ -21,15 +21,14 @@
 - Skrive Treverseingsfunkjonen mer generelt
 - Du kan åpne det du har søkt på i vim (din editor henter fra env var) igjennom TUI-en 
 
-
 ### Mangler.
 - Tester
 - Treversere paralelt med STM monaden
 - Fuzzy search funksjonalitet.
 
-### Mangler.
+### Kjente feil.
 - excute flagget er litt buggy noen ganger
-- IgnoreFlag fungere ikke helt som den skal
+
 
 ### Clone and install
 ```bash
@@ -37,7 +36,6 @@ git clone https://git.app.uib.no/martin.e.knutsen/inf221-Semesteroppgave.git && 
 
 # Om du allerde har innstallert, men vil ha nye edringer
 cabal install --overwrite-policy=always
-
 ```
 
 ### Eksempelbruk
