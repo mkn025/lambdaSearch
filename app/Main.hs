@@ -19,7 +19,7 @@ runTUI = mainTUI
 
 runCLi :: [String] -> IO ()
 runCLi args = do
-     let inpString =  concatMap ( ' ' :) args
+     let inpString =   unwords args
      ss     <- runParserIO inpString
      output <- treverseDirWithSettings ss
      printResults output
