@@ -6,12 +6,9 @@ import System.Environment  (getArgs )
 
 import TraverselsFunctions (treverseDirWithSettings)
 import PrintFunctions      (printResults)
-import System.IO           (stdout, BufferMode(LineBuffering), hSetBuffering )
-
 
 main :: IO ()
 main = do
-     hSetBuffering stdout LineBuffering
      input  <- getArgs
      actOnInput input
 
@@ -26,6 +23,7 @@ runCLi args = do
      ss     <- runParserIO inpString
      output <- treverseDirWithSettings ss
      printResults output
+
 
 actOnInput :: [String] ->  IO()
 actOnInput []                           = runCLi []
