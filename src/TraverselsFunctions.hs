@@ -1,8 +1,10 @@
+
+
 module TraverselsFunctions (
       DirContent
     , FileInfomation(..)
     , treverseDirWithSettings
-    , constructFilePath 
+    , constructFilePath
     , executeOnFile
     )
 where
@@ -39,10 +41,9 @@ import TraversalSettings (
     , executeFunction
     , ConstrucedCommand
     , substituePath
-    , convertToString 
-    , convertString 
+    , convertToString
+    , convertString
     )
-
 import Control.Monad.Except (
       runExceptT
     , ExceptT(..)
@@ -55,7 +56,7 @@ type DirContent = (DirType, RawFilePath)
 -- | TODO: Dokumenter informasjonen som lagres per fil eller mappe.
 data FileInfomation = FileInfomation{
       filePath         :: RawFilePath
-    , dirContent       :: Maybe DirContent -- Nothing dersom det er en mappe som i
+    , fileNameInfo       :: Maybe DirContent -- Nothing dersom det er en mappe som i
 } deriving (Eq,Show)
 
 
@@ -158,8 +159,8 @@ traverseDirectoryContents f s0 p = do
     openDirStreamPermissive path =
         (Just <$> PosixBS.openDirStream path)
         `catch`
-        \errMsg -> if isPermissionError errMsg 
-                   then pure Nothing 
+        \errMsg -> if isPermissionError errMsg
+                   then pure Nothing
                    else throwIO errMsg
 
     loop run acc dirp = do
@@ -172,6 +173,7 @@ traverseDirectoryContents f s0 p = do
                                               else do
                                                   acc' <- run (f acc content)
                                                   loop run acc' dirp
+
 
 
 -- | Traverserer katalogtreet rekursivt og putter det og har en fold funksjon bestemmer hvordan den skal legge inn helemeter
@@ -197,43 +199,45 @@ foldDirectoryTree foldFunc acc rootPath  = do
             let filePath = rootPath  </> filename
             let isDir = typ == dtDir
 
-            -- legge funskjonen på  
+            -- legge funskjonen på 
             nextAcc <- foldFunc currentAcc rootPath dc
             if not isDir
                 then pure nextAcc
                 else foldDirectoryTree foldFunc nextAcc filePath
 
 
-
--- | rekkursiv traversering med aktive filter
--- TODO: skriv mer
+-- | Rekkursiv traversering med aktive filter
+-- | Går igjennom alle filene og rekusrsivt. Og akkumlerer ønskete filer i acc listen vår
 treversRecursively_ :: Arguments -> [FileInfomation] -> RawFilePath -> IO [FileInfomation]
-treversRecursively_ args = foldDirectoryTree foldFunc 
+treversRecursively_ args = foldDirectoryTree foldFunc
     where
     regexCompiled = compileRegexFilter args
+
     foldFunc :: [FileInfomation] -> RawFilePath -> DirContent -> IO [FileInfomation]
     foldFunc acc parentPath dc@(typ,file)  = do
 
         let fullPath = parentPath  </> file
         let isDir = typ == dtDir
         if isDir
-            then pure $ FileInfomation {filePath = fullPath, dirContent = Nothing}:acc -- om den er nothign så er det bare en mappe
+            then pure $ FileInfomation {filePath = fullPath, fileNameInfo = Nothing} : acc -- om den er nothign så er det bare en mappe
             else do
-                let rg = getRexPattern      regexCompiled file
-                let hf = getHiddenFilter    args file
-                let df = getDisallowFilter  args parentPath
-                let ef = getExtentionFilter args file
-                if and [rg, df, ef, hf]
+
+                let rg  = getRexPattern      regexCompiled file
+                let hf  = getHiddenFilter    args file
+                let ef  = getExtentionFilter args file
+                let df  = getDisallowFilter  args parentPath 
+
+                if and [rg, ef, hf, df]
                 then do
                     executeFunction args fullPath executeOnFile
-                    pure $ FileInfomation {filePath = parentPath, dirContent = Just dc} : acc
-                -- Om et av filter blir False, da går den her og legg ikke i noe
-                else pure acc
+                    pure $ FileInfomation {filePath = parentPath, fileNameInfo = Just dc} : acc
+
+                else do
+                    pure acc
 
 
-
--- | kjøree 
--- TODO: skriv mer
+-- | Kjører en kommando på på en filen vår 
+-- | Vente på om den. Gir tom tupel om good. Eller gir ioError  ellers
 executeOnFile :: ConstrucedCommand -> RawFilePath ->  IO ()
 executeOnFile c@(prog, args) rfd = do
                                 let argsWithPath = substituePath args rfd
@@ -247,24 +251,26 @@ executeOnFile c@(prog, args) rfd = do
                                         <> " (exit " ++ show n ++ ")"    )
 
 
+
 -- | Treveser med søkinstillinger
 treverseDirWithSettings  :: SearchSetting -> IO [FileInfomation]
 treverseDirWithSettings ss = treveseManyPathsWithArgs  (arguments ss) (searchPaths ss)
 
 
 -- | Treverser med argumter, standardsti velges når ingen søkestier er oppgitt.
--- | Treverser med mange stier
+-- | Treverser med mange i cwd dersom du ikke gir noe dir
 treveseManyPathsWithArgs  :: Arguments ->  Maybe [FilePath]  -> IO [FileInfomation]
-treveseManyPathsWithArgs ff Nothing   = getWorkingDirectory  >>= treverseOnPathWithArgs ff . convertToString 
+treveseManyPathsWithArgs ff Nothing   = getWorkingDirectory  >>= treverseOnPathWithArgs ff . convertToString
 treveseManyPathsWithArgs ff (Just fp) = concat <$> mapM (treverseOnPathWithArgs ff) fp
 
 -- | Treveser en filsti
+-- | difinere hvordan vi skal jobbe på en filepath. Slik at vi etterpå kan mapM på en liste med filepath
 treverseOnPathWithArgs :: Arguments -> FilePath -> IO [FileInfomation]
 treverseOnPathWithArgs ff sp = treversRecursively_ ff [] $ convertString sp
 
 -- Hjelpemeothde som lager helefilstien dersom, dersom det er en sti
 constructFilePath :: FileInfomation -> Maybe String
-constructFilePath fi = case dirContent fi of
+constructFilePath fi = case fileNameInfo fi of
                         Nothing     -> Nothing
                         Just (_ ,b) ->  Just $ convertToString $ filePath fi </>  b
 
