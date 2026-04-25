@@ -61,8 +61,11 @@ data FileInfomation = FileInfomation{
 
 
 
-foreign import ccall unsafe "readdir"
-  c_readdir_new :: Ptr CDir -> IO (Ptr CDirent) --Leser fra allerede åpenet dirStream
+
+-- hehe viktig at vi burker safe call for alt som gjør IO
+--  https://github.com/haskell/unix/issues/34
+foreign import ccall safe "readdir"
+  c_readdir :: Ptr CDir -> IO (Ptr CDirent) --Leser fra allerede åpenet dirStream -- Byttet fra readDir-R
 
 foreign import ccall unsafe "__hscore_d_name"
   c_name :: Ptr CDirent -> IO CString
@@ -84,7 +87,7 @@ instance Show DirError where
     show UnexpectedErrnoZero    = "UnexpectedErrnoZero"
 
 instance Exception DirError
-type DirContentT = ExceptT DirError IO (Maybe DirContent)
+
 
 
 -- | Leser neste element fra en åpen 'DirStream' med @readdir@.
@@ -95,6 +98,9 @@ type DirContentT = ExceptT DirError IO (Maybe DirContent)
 -- - Leser fra en allerede åpen strøm.
 -- - Returnerer @Nothing@ ved slutten av katalogen.
 -- - Kaster bare feil når systemkallet faktisk feiler.
+
+type DirContentT = ExceptT DirError IO (Maybe DirContent)
+
 readDirEnt :: DirStream ->  DirContentT
 readDirEnt dir = ExceptT readContent
     where
@@ -104,7 +110,7 @@ readDirEnt dir = ExceptT readContent
       resetErrno
 
       -- c_readdir_new :: Ptr CDir -> IO (Ptr CDirent)
-      dEnt <- c_readdir_new dirp
+      dEnt <- c_readdir dirp
       if dEnt == PTR.nullPtr
         then do
           err <- getErrno
@@ -188,8 +194,8 @@ foldDirectoryTree
     -> RawFilePath
     -> IO a
 foldDirectoryTree foldFunc acc rootPath  = do
-
     isDir <- isDirectory <$> getFileStatus  rootPath
+
     if not isDir
         then pure acc
         else traverseDirectoryContents innerloop acc rootPath
