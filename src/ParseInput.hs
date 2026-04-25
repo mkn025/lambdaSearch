@@ -83,11 +83,11 @@ data DataFlags =
 pFlags :: Parser DataFlags
 pFlags = choice
     [
-       SearchPatternFlag <$> ((string "-p" <|> string  "--pattern"   ) *> sc *> parseWord)
-     , HiddenFilesFlag   <$  ( string "-a" <|> string  "--show--dots")
-     , ExtentionFlag     <$> ((string "-e" <|> string  "--extention" ) *> sc *> parseWord)
-     , IgnoreFlag        <$> ((string "-i" <|> string  "--ignore"    ) *> sc *> pathsUntilFlag )
-     , ExecuteFlag       <$> ((string "-x" <|> string  "--execute"   ) *> sc *> parseConstrucedCommand) 
+       SearchPatternFlag <$> ((string "-p" <|> string "-P" <|> string  "--pattern"   ) *> sc *> parseWord)
+     , HiddenFilesFlag   <$  ( string "-a" <|> string "-A" <|> string  "--show--dots")
+     , ExtentionFlag     <$> ((string "-e" <|> string "-E" <|> string  "--extention" ) *> sc *> parseWord)
+     , IgnoreFlag        <$> ((string "-i" <|> string "-I" <|> string  "--ignore"    ) *> sc *> pathsUntilFlag )
+     , ExecuteFlag       <$> ((string "-x" <|> string "-X" <|> string  "--execute"   ) *> sc *> parseConstrucedCommand) 
     ]
 
 
