@@ -27,6 +27,9 @@
 - Treversere paralelt med STM monaden
 - Fuzzy search funksjonalitet.
 
+### Mangler.
+- excute flagget er litt buggy noen ganger
+- IgnoreFlag fungere ikke helt som den skal
 
 ### Clone and install
 ```bash
