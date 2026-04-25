@@ -12,15 +12,15 @@ module TraversalSettings (
     , getRexPattern
     , executeFunction
     , substituePath
-    , convertString 
-    , convertToString 
+    , convertString
+    , convertToString
 ) where
 
 import System.Posix.ByteString               (RawFilePath)
-import qualified Data.ByteString.Char8 as BC (head,pack,unpack,tail)
-import qualified Data.ByteString as BS       (null)
+import qualified Data.ByteString.Char8 as BC (head, pack, unpack, tail, null, isPrefixOf)
 import System.FilePath.ByteString            (takeExtension)
 import Data.ByteString                       (ByteString)
+
 
 import Text.Regex.TDFA(
     Regex
@@ -42,7 +42,7 @@ type SearchFilters = [RawFilePath]
 type ConstrucedCommand = (String, [Command])
 
 -- | datatype som blir brukt i  @--execute@. for å substite path
-data Command = Text String | PathToSubs 
+data Command = Text String | PathToSubs
     deriving (Eq,Show)
 
 -- | TODO: Dokumenter globale søkeinnstillinger.
@@ -82,15 +82,17 @@ getRexPattern (Just regex) fp = matchTest regex fp
 -- | Tar med all dersom ikke noe spesifisert
 getDisallowFilter :: Arguments -> RawFilePath -> Bool
 getDisallowFilter (exclude -> Nothing)  _ = True
-getDisallowFilter (exclude -> Just sf) fp = fp `notElem ` sf
+getDisallowFilter (exclude -> Just sf) fp = not $ any (`BC.isPrefixOf` fp) sf
 
 
 -- | Filterlogikk for skjulte filer.
 -- | Sjekker om head til filen @.@
 -- | Tar med alle dersom ikke noe spesifiser
 getHiddenFilter :: Arguments -> RawFilePath -> Bool
-getHiddenFilter (hideHidden  -> False) _ = True
-getHiddenFilter (hideHidden  -> True) fp = BC.head fp /= '.'
+getHiddenFilter (hideHidden  -> False) _                    = True
+getHiddenFilter (hideHidden  -> True) (safeHead -> Nothing) = True
+getHiddenFilter (hideHidden  -> True) (safeHead -> Just h)  = h /= '.'
+
 
 -- | Filter som filterer for de rikgte extentionene 
 -- | Tar med alle dersom ikke noe spesifiser
@@ -98,7 +100,6 @@ getExtentionFilter :: Arguments -> RawFilePath -> Bool
 getExtentionFilter (extention -> Nothing) _                                = True
 getExtentionFilter (extention -> Just _ )  (getFileExtention -> Nothing)   = False
 getExtentionFilter (extention -> Just ext) (getFileExtention -> Just curr) = curr == ext
-
 
 -- | Kompilerer regex-mønsteret. 
 -- | Git nothing dersom brukeren ikke har spesifisert noe
@@ -110,9 +111,14 @@ compileRegexFilter (regxPattern  -> (Just pat)) = Just $ makeRegexOpts comp exec
     exec = defaultExecOpt { captureGroups = False }
 
 
--- | litt mer fifi
+-- | Litt mer fifi
 -- | Bruker en funksjon f på på en RawFilePath dersom har sagt at vi skal exeute en kommando
-executeFunction :: Arguments -> RawFilePath -> (ConstrucedCommand -> RawFilePath -> IO ())  -> IO ()
+-- | Generaliserer bare den slik at vi ikke trenger og importere masse BS (ikke byteString) i denne modulen
+executeFunction ::
+    Arguments                                   ->
+    RawFilePath                                 ->
+    (ConstrucedCommand -> RawFilePath -> IO ()) -> 
+    IO ()
 executeFunction (applyedCommand -> Nothing)  _  _ = pure ()
 executeFunction (applyedCommand -> Just cmd) fp f = f cmd fp
 
@@ -121,19 +127,21 @@ executeFunction (applyedCommand -> Just cmd) fp f = f cmd fp
 -- | Bytter alle @{}@ med en git filepath
 substituePath :: [Command] -> RawFilePath -> [String]
 substituePath cmd rfp = map (inPathSubsitute rfp) cmd
-    where 
+    where
         inPathSubsitute fp PathToSubs = convertToString fp
         inPathSubsitute _  (Text a)   = a
 
-
-
 getFileExtention :: RawFilePath -> Maybe Extention
-getFileExtention (BS.null -> True) = Nothing
-getFileExtention  fp               = safeHead . takeExtension $ fp
+getFileExtention (BC.null -> True) = Nothing
+getFileExtention  fp               = safeTail . takeExtension $ fp
 
-safeHead :: ByteString -> Maybe ByteString
-safeHead (BS.null -> True) = Nothing
-safeHead xs                = Just $ BC.tail xs
+safeTail :: ByteString -> Maybe ByteString
+safeTail (BC.null -> True) = Nothing
+safeTail xs                = Just . BC.tail  $ xs
+
+safeHead :: ByteString -> Maybe Char
+safeHead (BC.null -> True) = Nothing
+safeHead xs                = Just . BC.head $ xs
 
 convertString :: String -> RawFilePath
 convertString = BC.pack
