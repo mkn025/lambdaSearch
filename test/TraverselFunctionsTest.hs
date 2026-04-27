@@ -1,10 +1,10 @@
-
 module TraverselFunctionsTest (mainTraverselFunctionsTest)  where
 
 import Test.Tasty
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
 
+import Data.Char                             (isAscii)
 import System.IO.Temp                        (withSystemTempDirectory)
 import System.Directory                      (createDirectory, createDirectoryIfMissing)
 import System.Posix.Directory.Foreign        (dtReg)
@@ -12,16 +12,20 @@ import qualified Data.ByteString.Char8 as BC
 
 import TraverselsFunctions
 import TraversalSettings
-import Data.Char (isAscii)
 
-mainTraverselFunctionsTest :: [TestTree]
-mainTraverselFunctionsTest = [testsConstructFilePath, testsTraversal]   
+mainTraverselFunctionsTest :: TestTree
+mainTraverselFunctionsTest = testGroup "TraverselFunctionsTest" [
+      testsConstructFilePath
+    , testsTraversal
+    ]   
 
 
-newtype AsciiString = AsciiString String deriving Show
+newtype AsciiString = AsciiString String
+    deriving Show
 
 instance Arbitrary AsciiString where
   arbitrary = AsciiString <$> listOf (arbitrary `suchThat` isAscii )
+
 
 
 bs :: String -> BC.ByteString
@@ -91,6 +95,13 @@ testsConstructFilePath = testGroup "constructFilePath"
 
 
 
+
+-- type Assertion = IO ()
+-- When an assertion is evaluated, it will output a message if and only if the assertion fails.
+-- Test cases are composed of a sequence of one or more assertions.
+-- https://hackage.haskell.org/package/HUnit-1.6.2.0/docs/Test-HUnit-Base.html#t:Assertion
+-- så det jo ikke så stress å teste ting som er i IO
+
 testsTraversal :: TestTree
 testsTraversal = testGroup "treverseDirWithSettings"
     [ testCase "tom mappe gir ingen resultater" $
@@ -113,10 +124,15 @@ testsTraversal = testGroup "treverseDirWithSettings"
 
     , testCase "skjulte filer inkluderes når hideHidden=False" $
 
+
+
+
         withSystemTempDirectory "lambdaSearch" $ \tmp -> do
             writeFile (tmp <> "/.skjult") "hemmelig"
             result <- treverseDirWithSettings (defaultSettings [tmp])
             let paths = [constructFilePath fi | fi <- result]
+
+
             assertBool "fant ikke .skjult" $
                 elem (Just (tmp <> "/.skjult")) paths
 
@@ -169,15 +185,15 @@ testsTraversal = testGroup "treverseDirWithSettings"
             assertBool "Main.hs skal være med" $
                 elem (Just (tmp <> "/Main.hs")) paths
 
-    , testCase "traverserer rekursivt" $
-        withSystemTempDirectory "lambdaSearch" $ \tmp -> do
 
+    , testCase "traverserer rekursivt" $
+
+        withSystemTempDirectory "lambdaSearch" $ \tmp -> do
             createDirectoryIfMissing True (tmp <> "/a/b")
             writeFile (tmp <> "/a/b/dyp.txt") ""
             result <- treverseDirWithSettings (defaultSettings [tmp])
             let paths = [constructFilePath fi | fi <- result]
             assertBool "fant ikke dyp.txt" $
-
                 elem (Just (tmp <> "/a/b/dyp.txt")) paths
     ]
 

@@ -1,5 +1,3 @@
-
-
 module TraversalSettings (
       Arguments         (..)
     , SearchSetting     (..)
@@ -16,7 +14,6 @@ module TraversalSettings (
     , convertToString
     , safeHead  -- vil egt ikke eksponere -- spørre aria
     , safeTail  -- vil egt ikke eksponerei
- 
 
 ) where
 

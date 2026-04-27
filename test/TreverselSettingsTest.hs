@@ -1,8 +1,6 @@
 module TreverselSettingsTest (mainTreverselSettingsTest) where
 
 
-
-
 import Test.Tasty
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
@@ -12,9 +10,8 @@ import TraversalSettings
 import Data.Char (isAscii)
 
 
-
-mainTreverselSettingsTest :: [TestTree]
-mainTreverselSettingsTest = [
+mainTreverselSettingsTest :: TestTree 
+mainTreverselSettingsTest =  testGroup "Parser teste" [
        testConvertions 
      , testsSafeHead 
      , testsSafeTail 
@@ -23,8 +20,6 @@ mainTreverselSettingsTest = [
      , testsExtentionFilter 
      , testsGetRexPattern ]
  
-
-
 
 
 defaultArgs :: Arguments
@@ -86,7 +81,7 @@ testsSafeTail = testGroup "safeTail"
     , adjustOption (const (QuickCheckTests 1_000)) $
       testProperty "ikke-tom: lengde redusert med 1" $
         \(AsciiString s) -> not (null s) ==>
-            fmap BC.length (safeTail (bs s)) === Just (length s - 1)
+             (BC.length <$> safeTail (bs s) ) === Just (length s - 1)
     ]
 
 
