@@ -7,7 +7,8 @@ import Test.Tasty.QuickCheck
 import qualified Data.ByteString.Char8 as BC
 
 import TraversalSettings
-import Data.Char (isAscii)
+
+import Utils (AsciiString(AsciiString), bs, defaultArgs )
 
 
 mainTreverselSettingsTest :: TestTree 
@@ -22,20 +23,8 @@ mainTreverselSettingsTest =  testGroup "Parser teste" [
  
 
 
-defaultArgs :: Arguments
-defaultArgs = Arguments
-    { regxPattern    = Nothing
-    , exclude        = Nothing
-    , extention      = Nothing
-    , hideHidden     = False
-    , applyedCommand = Nothing
-    }
 
 
-newtype AsciiString = AsciiString String deriving Show
-
-instance Arbitrary AsciiString where
-  arbitrary = AsciiString <$> listOf (arbitrary `suchThat` isAscii)
 
 testConvertions :: TestTree
 testConvertions = adjustOption (const (QuickCheckTests 1_000)) $ testProperty
@@ -43,8 +32,6 @@ testConvertions = adjustOption (const (QuickCheckTests 1_000)) $ testProperty
   \(AsciiString s) -> s ===  convertToString (convertString s)
 
 
-bs :: String -> BC.ByteString
-bs = BC.pack
 
 --------------------------------------------------
 -- Tester head og tail --
@@ -81,7 +68,7 @@ testsSafeTail = testGroup "safeTail"
     , adjustOption (const (QuickCheckTests 1_000)) $
       testProperty "ikke-tom: lengde redusert med 1" $
         \(AsciiString s) -> not (null s) ==>
-             (BC.length <$> safeTail (bs s) ) === Just (length s - 1)
+             (BC.length <$> safeTail (bs s)) === Just (length s - 1)
     ]
 
 

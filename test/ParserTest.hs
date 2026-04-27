@@ -1,14 +1,15 @@
 module ParserTest (parserTests) where
 
 
-
 import Test.Tasty
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
-import qualified Data.ByteString.Char8 as BC
-import Data.Maybe (isNothing )
 
+import Data.Maybe        (isNothing)
 import ParseInput        (runMyParser, parseLamdaSearch)
+
+import Utils ( bs, defaultArgs )
+
 import TraversalSettings
 
 
@@ -18,24 +19,6 @@ mustParse input = case runMyParser parseLamdaSearch input of
     Right ss  -> pure ss
     Left  err -> assertFailure ("Parse feilet uventet:\n" <> err)
 
--- Asserter at parseren feiler
--- sksal nok bruke
-mustFail :: String -> IO ()
-mustFail input = case runMyParser parseLamdaSearch input of
-    Left  _  -> pure ()
-    Right ss -> assertFailure ("Forventet feil, men fikk: " <> show ss)
-
-bs :: String -> BC.ByteString
-bs = BC.pack
-
-emptyArgs :: Arguments
-emptyArgs = Arguments
-    { regxPattern    = Nothing
-    , exclude        = Nothing
-    , extention      = Nothing
-    , hideHidden     = False
-    , applyedCommand = Nothing
-    }
 
 
 parserTests :: TestTree
@@ -57,17 +40,17 @@ testsNoFlags = testGroup "ingen flagg"
     [ testCase "punktum gir ingen sti og tomme args" $ do
         ss <- mustParse "."
         searchPaths ss @?= Nothing
-        arguments   ss @?= emptyArgs
+        arguments   ss @?= defaultArgs
 
     , testCase "tom streng gir ingen sti og tomme args" $ do
         ss <- mustParse ""
         searchPaths ss @?= Nothing
-        arguments   ss @?= emptyArgs
+        arguments   ss @?= defaultArgs
 
     , testCase "bare whitespace" $ do
         ss <- mustParse "   "
         searchPaths ss @?= Nothing
-        arguments   ss @?= emptyArgs
+        arguments   ss @?= defaultArgs
     ]
 
 -- ── Stier ─────────────────────────────────────────────────────────────────────
@@ -115,8 +98,8 @@ testsPatternFlag = testGroup "-p / --pattern"
         regxPattern (arguments ss) @?= Just (bs "foo")
 
     , testCase "-p med regex-tegn" $ do
-        ss <- mustParse ". -p \\.hs$"
-        regxPattern (arguments ss) @?= Just (bs "\\.hs$")
+        ss <- mustParse ". -p \\hs$"
+        regxPattern (arguments ss) @?= Just (bs "\\hs$")
 
     , testCase "uten -p: Nothing" $ do
         ss <- mustParse "."
@@ -150,11 +133,11 @@ testsExtentionFlag :: TestTree
 testsExtentionFlag = testGroup "-e / --extention"
     [ testCase "-e setter extention" $ do
         ss <- mustParse ". -e hs"
-        extention (arguments ss) @?= Just (bs ".hs")
+        extention (arguments ss) @?= Just (bs "hs")
 
     , testCase "--extention lang form" $ do
         ss <- mustParse ". --extention py"
-        extention (arguments ss) @?= Just (bs ".py")
+        extention (arguments ss) @?= Just (bs "py")
 
     , testCase "uten -e: Nothing" $ do
         ss <- mustParse "."
@@ -222,7 +205,7 @@ testsCombined = testGroup "kombinerte flagg"
         hideHidden  (arguments ss) @?= True
 
     , testCase "alle flagg sammen" $ do
-        ss <- mustParse ". -p foo -a -e .hs -i /dist -x echo {}"
+        ss <- mustParse ". -p foo -a -e hs -i /dist -x echo {}"
         let args = arguments ss
         regxPattern    args @?= Just (bs "foo")
         hideHidden     args @?= True
@@ -234,11 +217,11 @@ testsCombined = testGroup "kombinerte flagg"
         ss1 <- mustParse ". -a -e .hs"
         ss2 <- mustParse ". -e .hs -a"
         arguments ss1 @?= arguments ss2
-
     , testCase "duplikate flagg: siste vinner (foldl)" $ do
-        -- foldl' betyr siste -e overskriver første
-        ss <- mustParse ". -e .hs -e .py"
-        extention (arguments ss) @?= Just (bs ".py")
+
+        -- skal bare ha det siste
+        ss <- mustParse ". -e hs -e py"
+        extention (arguments ss) @?= Just (bs "py")
 
     , adjustOption (const (QuickCheckTests 500)) $
       testProperty "punktum gir alltid Nothing searchPaths" $
@@ -247,6 +230,7 @@ testsCombined = testGroup "kombinerte flagg"
             case runMyParser parseLamdaSearch (". " <> flags) of
                 Left  _  -> True          -- parse-feil er ok her
                 Right ss -> isNothing (searchPaths ss)
+
     ]
 
 

@@ -4,14 +4,13 @@ import Test.Tasty
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
 
-import Data.Char                             (isAscii)
 import System.IO.Temp                        (withSystemTempDirectory)
 import System.Directory                      (createDirectory, createDirectoryIfMissing)
 import System.Posix.Directory.Foreign        (dtReg)
-import qualified Data.ByteString.Char8 as BC
 
 import TraverselsFunctions
-import TraversalSettings
+import Utils ( bs, defaultArgs, defaultSettings )
+import TraversalSettings ( SearchSetting(..), Arguments(..) )
 
 mainTraverselFunctionsTest :: TestTree
 mainTraverselFunctionsTest = testGroup "TraverselFunctionsTest" [
@@ -20,31 +19,6 @@ mainTraverselFunctionsTest = testGroup "TraverselFunctionsTest" [
     ]   
 
 
-newtype AsciiString = AsciiString String
-    deriving Show
-
-instance Arbitrary AsciiString where
-  arbitrary = AsciiString <$> listOf (arbitrary `suchThat` isAscii )
-
-
-
-bs :: String -> BC.ByteString
-bs = BC.pack
-
-defaultArgs :: Arguments
-defaultArgs = Arguments
-    { regxPattern    = Nothing
-    , exclude        = Nothing
-    , extention      = Nothing
-    , hideHidden     = False
-    , applyedCommand = Nothing
-    }
-
-defaultSettings :: [FilePath] -> SearchSetting
-defaultSettings paths = SearchSetting
-    { searchPaths = Just paths
-    , arguments   = defaultArgs
-    }
 
 -- lager en feilinformasjonhjelepr
 mkFileInfo :: FilePath -> String -> FileInfomation
