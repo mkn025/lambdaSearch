@@ -113,7 +113,7 @@ testsHiddenFilter = testGroup "getHiddenFilter"
 
     , adjustOption (const (QuickCheckTests 1_000)) $
       testProperty "hideHidden=False filtrerer aldri bort" $
-        \(PrintableString s) ->
+        \(ASCIIString s) ->
             getHiddenFilter defaultArgs (bs s) === True
     ]
   where
@@ -164,12 +164,11 @@ testsExtentionFilter = testGroup "getExtentionFilter"
 
     , adjustOption (const (QuickCheckTests 1_000)) $
       testProperty "ingen extention filtrerer aldri bort" $
-        \(PrintableString s) ->
+        \(ASCIIString s) ->
             getExtentionFilter defaultArgs (bs s) === True
     ]
   where
     withExt e = defaultArgs { extention = Just (bs e) }
-
 
 
 
@@ -187,10 +186,9 @@ testsGetRexPattern = testGroup "getRexPattern"
 
     , adjustOption (const (QuickCheckTests 1_000)) $
       testProperty "Nothing matcher alltid uansett input" $
-        \(PrintableString s) ->
+        \(ASCIIString s) ->
             getRexPattern Nothing (bs s) === True
     ]
-
   where
     args = defaultArgs { regxPattern = Just (bs "\\.hs$") }
 
