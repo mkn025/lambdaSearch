@@ -14,6 +14,10 @@ module TraversalSettings (
     , substituePath
     , convertString
     , convertToString
+    , safeHead  -- vil egt ikke eksponere -- spørre aria
+    , safeTail  -- vil egt ikke eksponerei
+ 
+
 ) where
 
 import System.Posix.ByteString               (RawFilePath)

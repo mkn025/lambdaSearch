@@ -1,4 +1,10 @@
 module Main (main) where
+import TreverselSettingsTest(mainTreverselSettingsTest )
 
-main :: IO ()
-main = putStrLn "Test suite not yet implemented."
+main :: IO()
+main = do 
+    mainTreverselSettingsTest 
+     
+
+
+
