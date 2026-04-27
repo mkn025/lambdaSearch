@@ -15,12 +15,7 @@ import TraversalSettings
 import Data.Char (isAscii)
 
 mainTraverselFunctionsTest :: [TestTree]
-mainTraverselFunctionsTest = [
-      testsConstructFilePath
-    , testsTraversal     ]   
-
-
-
+mainTraverselFunctionsTest = [testsConstructFilePath, testsTraversal]   
 
 
 newtype AsciiString = AsciiString String deriving Show
@@ -93,7 +88,6 @@ testsConstructFilePath = testGroup "constructFilePath"
     ]
   where
     isSuffixOf suffix str = suffix == reverse (take (length suffix) (reverse str))
-
 
 
 

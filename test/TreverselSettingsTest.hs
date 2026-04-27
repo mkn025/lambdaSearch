@@ -146,7 +146,7 @@ testsExtentionFilter = testGroup "getExtentionFilter"
         getExtentionFilter defaultArgs (bs "foo.hs")        @?= True
 
     , testCase "riktig extention: tas med" $
-        getExtentionFilter (withExt "hs") (bs "Main.hs")   @?= True
+        getExtentionFilter (withExt "hs") (bs "Main.hs")    @?= True
 
     , testCase "feil extention: filtreres bort" $
         getExtentionFilter (withExt ".hs") (bs "Main.agda") @?= False
