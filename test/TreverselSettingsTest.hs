@@ -3,7 +3,6 @@ module TreverselSettingsTest (mainTreverselSettingsTest) where
 
 
 
-
 import Test.Tasty
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
@@ -14,21 +13,17 @@ import Data.Char (isAscii)
 
 
 
-mainTreverselSettingsTest :: IO ()
-mainTreverselSettingsTest = defaultMain (
-
-    testGroup 
-    "LambdaSearch test"
-    [
+mainTreverselSettingsTest :: [TestTree]
+mainTreverselSettingsTest = [
        testConvertions 
      , testsSafeHead 
      , testsSafeTail 
      , testsHiddenFilter
      , testsDisallowFilter 
      , testsExtentionFilter 
-     , testsGetRexPattern 
-    ]
-    )
+     , testsGetRexPattern ]
+ 
+
 
 
 

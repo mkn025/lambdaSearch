@@ -1,10 +1,13 @@
 module Main (main) where
-import TreverselSettingsTest(mainTreverselSettingsTest )
+import TreverselSettingsTest(mainTreverselSettingsTest)
+import TraverselFunctionsTest (mainTraverselFunctionsTest)
+import Test.Tasty (defaultMain, testGroup)
 
-main :: IO()
-main = do 
-    mainTreverselSettingsTest 
+main :: IO ()
+main = defaultMain $ testGroup 
+    "Running all tests" $
+       mainTreverselSettingsTest 
+    <> mainTraverselFunctionsTest
      
-
 
 

@@ -80,15 +80,21 @@ test-suite lambdaSearch-test
     hs-source-dirs:   test
 
     main-is:          Main.hs
-    other-modules: TreverselSettingsTest
+    other-modules:
+          TreverselSettingsTest
+        , TraverselFunctionsTest
 
 
     build-depends:
-          base ^>=4.18.3.0
+          directory 
+        , unix
+        , posix-paths
+        , base 
         , lambdaSearch
         , tasty
         , tasty-hunit
         , tasty-quickcheck
         , bytestring
+        , temporary     
 
         

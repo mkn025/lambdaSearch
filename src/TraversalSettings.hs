@@ -147,6 +147,7 @@ safeHead :: ByteString -> Maybe Char
 safeHead (BC.null -> True) = Nothing
 safeHead xs                = Just . BC.head $ xs
 
+
 convertString :: String -> RawFilePath
 convertString = BC.pack
 
