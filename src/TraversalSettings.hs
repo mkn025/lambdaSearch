@@ -96,7 +96,7 @@ getHiddenFilter (hideHidden  -> True) (safeHead -> Just h)  = h /= '.'
 
 
 -- | Filter som filterer for de rikgte extentionene 
--- | Tar med alle dersom ikke noe spesifiser
+--  Tar med alle dersom ikke noe spesifiser
 getExtentionFilter :: Arguments -> RawFilePath -> Bool
 getExtentionFilter (extention -> Nothing) _                                = True
 getExtentionFilter (extention -> Just _ )  (getFileExtention -> Nothing)   = False
@@ -110,6 +110,7 @@ compileRegexFilter (regxPattern  -> (Just pat)) = Just $ makeRegexOpts comp exec
   where
     comp = defaultCompOpt
     exec = defaultExecOpt { captureGroups = False }
+
 
 
 -- | Litt mer fifi
