@@ -177,5 +177,4 @@ mainTUI = do
         , startEditor  = False
         }
   finalState <- defaultMain app initialState
-  putStrLn $ "Du valgte: " ++ (paths finalState !! selected finalState)
   openInEditor finalState 
