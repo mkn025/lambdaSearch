@@ -68,5 +68,4 @@ lambdaSearch . -e hs | cut -d / -f 10 | sort | uniq -c
 lambdaSearch -e hs -x cat {} 
 ```
 
-![nvim fzf tmux showcase](./pictures/lamdaSearchTmuxNvimshowcase.gif)
-![command execution](./pictures/showCaseProcessExecution.gif)
+![basic demo](./pictures/lambdaSearchDemo.gif)
