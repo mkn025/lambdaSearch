@@ -33,7 +33,6 @@ printFileInformation colorFunc fi = do
                 putStrLn path 
 
 
-
 -- Legger på ansi codes  på dersom du skal sende den til terminal. eller er det bare id
 coloriseFileIfTTY :: IO (String -> String)
 coloriseFileIfTTY = do
@@ -41,6 +40,7 @@ coloriseFileIfTTY = do
     pure $ if tty
            then coloriseFile
            else id
+
 
 coloriseFile :: String -> String
 coloriseFile = (<> setSGRCode [Reset]) . (setSGRCode [SetColor Foreground Vivid Green] <>)

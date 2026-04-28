@@ -1,5 +1,4 @@
 
-
 module TraversalSettings (
       Arguments         (..)
     , SearchSetting     (..)
@@ -14,6 +13,8 @@ module TraversalSettings (
     , substituePath
     , convertString
     , convertToString
+    , safeHead  -- vil egt ikke eksponere -- spørre aria
+    , safeTail  -- vil egt ikke eksponerei
 ) where
 
 import System.Posix.ByteString               (RawFilePath)
@@ -45,7 +46,7 @@ type ConstrucedCommand = (String, [Command])
 data Command = Text String | PathToSubs
     deriving (Eq,Show)
 
--- | TODO: Dokumenter globale søkeinnstillinger.
+--  Dokumenter globale søkeinnstillinger.
 data SearchSetting = SearchSetting {
       searchPaths    :: Maybe [FilePath]
     , arguments      :: Arguments
@@ -95,14 +96,14 @@ getHiddenFilter (hideHidden  -> True) (safeHead -> Just h)  = h /= '.'
 
 
 -- | Filter som filterer for de rikgte extentionene 
--- | Tar med alle dersom ikke noe spesifiser
+--  Tar med alle dersom ikke noe spesifiser
 getExtentionFilter :: Arguments -> RawFilePath -> Bool
 getExtentionFilter (extention -> Nothing) _                                = True
 getExtentionFilter (extention -> Just _ )  (getFileExtention -> Nothing)   = False
 getExtentionFilter (extention -> Just ext) (getFileExtention -> Just curr) = curr == ext
 
 -- | Kompilerer regex-mønsteret. 
--- | Git nothing dersom brukeren ikke har spesifisert noe
+--  Git nothing dersom brukeren ikke har spesifisert noe
 compileRegexFilter :: Arguments -> Maybe Regex
 compileRegexFilter (regxPattern  -> Nothing)    = Nothing
 compileRegexFilter (regxPattern  -> (Just pat)) = Just $ makeRegexOpts comp exec pat
@@ -111,9 +112,10 @@ compileRegexFilter (regxPattern  -> (Just pat)) = Just $ makeRegexOpts comp exec
     exec = defaultExecOpt { captureGroups = False }
 
 
+
 -- | Litt mer fifi
--- | Bruker en funksjon f på på en RawFilePath dersom har sagt at vi skal exeute en kommando
--- | Generaliserer bare den slik at vi ikke trenger og importere masse BS (ikke byteString) i denne modulen
+--  Bruker en funksjon f på på en RawFilePath dersom har sagt at vi skal exeute en kommando
+--  Generaliserer bare den slik at vi ikke trenger og importere masse BS (ikke byteString) i denne modulen
 executeFunction ::
     Arguments                                   ->
     RawFilePath                                 ->
@@ -142,6 +144,7 @@ safeTail xs                = Just . BC.tail  $ xs
 safeHead :: ByteString -> Maybe Char
 safeHead (BC.null -> True) = Nothing
 safeHead xs                = Just . BC.head $ xs
+
 
 convertString :: String -> RawFilePath
 convertString = BC.pack

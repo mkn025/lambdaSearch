@@ -1,6 +1,6 @@
 
-
 module TraverselsFunctions (
+
       DirContent
     , FileInfomation(..)
     , treverseDirWithSettings
@@ -31,7 +31,7 @@ import Control.Exception.Base                       (catch)
 import System.IO.Error                              (isPermissionError)
 
 import TraversalSettings (
-      Arguments   (..)
+      Arguments     (..)
     , SearchSetting (..)
     , getDisallowFilter
     , getHiddenFilter
@@ -43,6 +43,7 @@ import TraversalSettings (
     , substituePath
     , convertToString
     , convertString
+
     )
 import Control.Monad.Except (
       runExceptT
@@ -231,7 +232,7 @@ treversRecursively_ args = foldDirectoryTree foldFunc
                 let rg  = getRexPattern      regexCompiled file
                 let hf  = getHiddenFilter    args file
                 let ef  = getExtentionFilter args file
-                let df  = getDisallowFilter  args parentPath 
+                let df  = getDisallowFilter  args parentPath
 
                 if and [rg, ef, hf, df]
                 then do
@@ -257,7 +258,6 @@ executeOnFile c@(prog, args) rfd = do
                                         <> " (exit " ++ show n ++ ")"    )
 
 
-
 -- | Treveser med søkinstillinger
 treverseDirWithSettings  :: SearchSetting -> IO [FileInfomation]
 treverseDirWithSettings ss = treveseManyPathsWithArgs  (arguments ss) (searchPaths ss)
@@ -277,6 +277,6 @@ treverseOnPathWithArgs ff sp = treversRecursively_ ff [] $ convertString sp
 -- Hjelpemeothde som lager helefilstien dersom, dersom det er en sti
 constructFilePath :: FileInfomation -> Maybe String
 constructFilePath fi = case fileNameInfo fi of
-                        Nothing     -> Nothing
-                        Just (_ ,b) ->  Just $ convertToString $ filePath fi </>  b
+                        Nothing               -> Nothing
+                        Just (_ ,b)           -> Just $ convertToString $ filePath fi </>  b
 

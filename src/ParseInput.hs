@@ -1,8 +1,7 @@
 {- HLINT ignore "Use <$>" -}
 
 
--- | TODO: Dokumenter parseren for CLI-søkestrenger og flagg.
-module ParseInput (runParserIO) where
+module ParseInput (runParserIO, runMyParser, parseLamdaSearch) where
 
 import Data.Void            (Void)
 import Control.Applicative  ((<|>))
@@ -180,6 +179,8 @@ parsePathOrDot = choice
           NoPath     <$ (sc *> char '.' <* sc )
         , ManyPaths  <$> pathsUntilFlag
      ]
+
+
 
 --- HOVEDPARSER ---
 
