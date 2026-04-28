@@ -30,6 +30,7 @@ import Brick (
       , zoom
       , get )
 
+
 import qualified Graphics.Vty as V
 import Brick.Widgets.Border   (border, hBorder)
 import Brick.Widgets.Edit     (Editor, editor, renderEditor,
@@ -99,8 +100,6 @@ stopInputWhileBrowing action  = get >>= checkBrowsing
 
 
 
-stopInputWhileBrowing_ :: EventM Name TuiState ()
-stopInputWhileBrowing_   = undefined 
     
 
 
@@ -170,6 +169,7 @@ openInEditor st = do
                      $ zip (paths st) [0..]
                 let cmd = (e, [PathToSubs])
                 executeOnFile cmd selectedPath 
+
 
 mainTUI :: IO ()
 mainTUI = do

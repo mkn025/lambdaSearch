@@ -30,29 +30,62 @@
 
 // --- START PÅ RAPPORTEN ---
 
-= Prosjektbeskrivelse
+= Prosjekt description
 
-== Bakgrunn for prosjektet
-// What was the initial idea / background of the project?
+== What was the initial idea / background of the project?
 
-== Prosjektets mål
-// What were the goals of the project?
+The reason I wanted to make this project is that I really like CLI tools. I use them a lot every day. But I think some of them have unnecessary, bad, and unintuitive syntax. That's why I wanted to make my own tool where I had complete control over the syntax. I also wanted to build a TUI around it, mostly because brick sounded like a fun library to try out. So the idea was to use FFI, MegaParsec, and brick to make a CLI tool for searching for files on my PC. I Also wanted to try to use STM an concurrency to search through the files faster.
 
-== Resultat
-// How did the project turn out?
+== Project goals
+  - Make the searching program fast, efficient and safe.
+  - Call C functions to retrieve file metadata, with a little as possible overhead.
+  - Use the Either monad for error handling. 
+  - Use the STM monad for concurrency. 
+  - Parse CLI input with MegaParsec.
+  - Parse a configuration file. 
+  - Write good readable code
 
-== Fremtidig arbeid
-// What future extensions can you imagine for the project?
+== Result
+  - I managed to make the CLI with the syntax that I wanted. But I did not implement concurrency, because it was already faster than the built-in find command and I wanted to prioritise testing and the TUI.
+
+  === Implemented
+    - Core directory traversal (filter by regex, extension, hidden, ignored).
+    - Command execution (`-x` flag substituting `{}`).
+    - TUI with `brick` (live search, vim-bindings, open in `$EDITOR`).
+    - C FFI bindings (`readdir`, etc.) for fast metadata retrieval.
+    - CLI parsing using `megaparsec`.
+    - Error handling with `Either`/`ExceptT` for permission issues. 
+    - test suite (Tasty, QuickCheck, HUnit).
+
+  === Not Implemented
+    - Concurrency (STM / parallel traversal).
+    - Configuration file parsing.
+
+== Future extensions
+    - Implement concurrent searching
+
+#pagebreak()
+
+= Description of the functional programming techniques
 
 
-= Brukerveiledning
-// Instructions for how to use your project.
 
+#pagebreak()
+= Instructions 
+Check the README on gitlab for more info
 ```bash
-# Bygging av prosjektet
 cabal build
 
-# Kjøring av søk
-cabal run lambdaSearch -- "søketerm"
+# eks.
+cabal run lambdaSearch -- . -e hs
+cabal run lambdaSearch -- -e hs
+
+# For å kjøre testene
+cabal test 
 ```
-l
+= Repo URL
+
+#link("https://git.app.uib.no/martin.e.knutsen/inf221-Semesteroppgave")
+
+
+
