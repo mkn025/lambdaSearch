@@ -68,6 +68,25 @@ The reason I wanted to make this project is that I really like CLI tools. I use 
 
 = Description of the functional programming techniques
 
+== Monadic Parsing Combinators 
+- When parsing the for the cli i use of lot these Combinators.  Making it very readable and elagant. 
+- Eksample:
+
+```hs
+pFlags :: Parser DataFlags
+pFlags = choice
+    [ SearchPatternFlag <$> ((string' "-p" <|> string  "--pattern"   ) *> sc *> parseWord)
+     , HiddenFilesFlag  <$  ( string' "-a" <|> string  "--show--dots")
+       ...
+```
+- Here i first use the fmap infix operator. And the fmap allows me to lift whatever that is parsed into Dataflags contex without a thinking about it. Then i parse for the flags. To things to notice here is use `sting'` this just parsers non case sensitive so both `-p` and `-P` will work. Then i use The `<|>` operator with i think of like an or operator. You either parse `-p` and if that fails you parse `--pattern`. And beacuse the type of the function is ` f a -> f a -> f a` you can treet it like on parser so everywhere you parse one thing you can easily try to parser otherThings without any hassel. Of course `a` has to be the same type, but it is still super elegant
+
+== Monad Transformers and Monadic Error Handling
+== Higher-Order Functions and Folds
+== View Patterns
+== 
+== 
+
 
 
 #pagebreak()

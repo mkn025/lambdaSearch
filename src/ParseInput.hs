@@ -38,17 +38,14 @@ import Data.List             (foldl')
 type Parser = Parsec Void String
 
 
---tester :: IO ()
---tester = do
-    --parseTest parseLamdaSearch 
 
 
--- | parser til whitespace-parseren. 
+-- | Parser til whitespace-parseren. 
 sc :: Parser ()
 sc = skipMany (char ' ' <|> char '\t')
 
 
--- | parser for ett  ord.
+-- | Parser for ett  ord.
 parseWord :: Parser String
 parseWord = many (satisfy (\c -> c /= ' ' && c /= '\t'))
 
@@ -63,7 +60,7 @@ emptyFilterFlags = Arguments {
     , applyedCommand = Nothing
     }
 
---  representasjon av om søkestier er oppgitt.
+-- |  Representasjon av om søkestier er oppgitt.
 data Paths =
       NoPath
     | ManyPaths [String]

@@ -174,7 +174,6 @@ openInEditor st = do
 mainTUI :: IO ()
 mainTUI = do
   initialPaths <- runSearch ""          
-
   let initialState = TuiState
         { paths        = initialPaths
         , selected     = 0
