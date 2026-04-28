@@ -5,10 +5,10 @@ import Test.Tasty
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
 
-import Data.Maybe        (isNothing)
-import ParseInput        (runMyParser, parseLamdaSearch)
+import Data.Maybe   (isNothing)
+import ParseInput   (runMyParser, parseLamdaSearch)
 
-import Utils ( bs, defaultArgs )
+import Utils        ( bs, defaultArgs )
 
 import TraversalSettings
 
@@ -18,7 +18,6 @@ mustParse :: String -> IO SearchSetting
 mustParse input = case runMyParser parseLamdaSearch input of
     Right ss  -> pure ss
     Left  err -> assertFailure ("Parse feilet uventet:\n" <> err)
-
 
 
 parserTests :: TestTree
@@ -60,6 +59,7 @@ testsPaths = testGroup "stier"
     [ testCase "absolutt sti" $ do
         ss <- mustParse "/home/foo"
         searchPaths ss @?= Just ["/home/foo"]
+
 
     , testCase "to stier med mellomrom" $ do
         ss <- mustParse "/home/foo /var/bar"
@@ -224,6 +224,8 @@ testsCombined = testGroup "kombinerte flagg"
         extention (arguments ss) @?= Just (bs "py")
 
     , adjustOption (const (QuickCheckTests 500)) $
+
+    -- ikke en bug, men en feature
       testProperty "punktum gir alltid Nothing searchPaths" $
         \(PrintableString flags) ->
             -- punktum låser sti-parsingen uansett hva som kommer etter

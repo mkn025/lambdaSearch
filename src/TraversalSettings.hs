@@ -1,3 +1,4 @@
+
 module TraversalSettings (
       Arguments         (..)
     , SearchSetting     (..)
@@ -14,7 +15,6 @@ module TraversalSettings (
     , convertToString
     , safeHead  -- vil egt ikke eksponere -- spørre aria
     , safeTail  -- vil egt ikke eksponerei
-
 ) where
 
 import System.Posix.ByteString               (RawFilePath)
@@ -46,7 +46,7 @@ type ConstrucedCommand = (String, [Command])
 data Command = Text String | PathToSubs
     deriving (Eq,Show)
 
--- | TODO: Dokumenter globale søkeinnstillinger.
+--  Dokumenter globale søkeinnstillinger.
 data SearchSetting = SearchSetting {
       searchPaths    :: Maybe [FilePath]
     , arguments      :: Arguments
@@ -103,7 +103,7 @@ getExtentionFilter (extention -> Just _ )  (getFileExtention -> Nothing)   = Fal
 getExtentionFilter (extention -> Just ext) (getFileExtention -> Just curr) = curr == ext
 
 -- | Kompilerer regex-mønsteret. 
--- | Git nothing dersom brukeren ikke har spesifisert noe
+--  Git nothing dersom brukeren ikke har spesifisert noe
 compileRegexFilter :: Arguments -> Maybe Regex
 compileRegexFilter (regxPattern  -> Nothing)    = Nothing
 compileRegexFilter (regxPattern  -> (Just pat)) = Just $ makeRegexOpts comp exec pat
@@ -113,8 +113,8 @@ compileRegexFilter (regxPattern  -> (Just pat)) = Just $ makeRegexOpts comp exec
 
 
 -- | Litt mer fifi
--- | Bruker en funksjon f på på en RawFilePath dersom har sagt at vi skal exeute en kommando
--- | Generaliserer bare den slik at vi ikke trenger og importere masse BS (ikke byteString) i denne modulen
+--  Bruker en funksjon f på på en RawFilePath dersom har sagt at vi skal exeute en kommando
+--  Generaliserer bare den slik at vi ikke trenger og importere masse BS (ikke byteString) i denne modulen
 executeFunction ::
     Arguments                                   ->
     RawFilePath                                 ->
