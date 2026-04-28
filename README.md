@@ -69,4 +69,4 @@ lambdaSearch -e hs -x cat {}
 ```
 
 ![basic demo](./pictures/lambdaSearchDemo.gif)
-![fzf tmux demo ](.pictures/fzfLambdaSearch.gif)
+![fzf](./pictures/fzfLambdaSearch.gif)
