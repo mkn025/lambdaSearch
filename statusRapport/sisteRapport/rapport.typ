@@ -79,13 +79,23 @@ pFlags = choice
      , HiddenFilesFlag  <$  ( string' "-a" <|> string  "--show--dots")
        ...
 ```
-- Here i first use the fmap infix operator. And the fmap allows me to lift whatever that is parsed into Dataflags contex without a thinking about it. Then i parse for the flags. To things to notice here is use `sting'` this just parsers non case sensitive so both `-p` and `-P` will work. Then i use The `<|>` operator with i think of like an or operator. You either parse `-p` and if that fails you parse `--pattern`. And beacuse the type of the function is ` f a -> f a -> f a` you can treet it like on parser so everywhere you parse one thing you can easily try to parser otherThings without any hassel. Of course `a` has to be the same type, but it is still super elegant
+- Here, I first use the `fmap` infix operator (`<$>`). Using `fmap` allows me to lift the parsed result into the `DataFlags` context effortlessly. 
+
+- Next is the acctual parser. Three things to notice here:
+- first is the use of `string'`, which parses case-insensitively, meaning both `-p` and `-P` will work. 
+
+- Second, I use the `<|>` operator, which here sort of acts like a or. It tries to parse `-p`, and if that fails, it tries to parse `--pattern`. Because the type signature of this operator is `f a -> f a -> f a`, you can treat the combined expression as a single parser. This means anywhere you parse one thing, you can easily try to parse alternatives without any hassle. Of course, the inner type `a` must be the same for both parsers.
+
+- Third, after parsing the flag, I treat that portion of the string as having been "consumed." Since the next goal is to parse the actual argument and disregard the prefix, I use the `*>` operator, which sequences two actions and discards the result of the first. I sequence this with `sc` to handle whitespace, and finally, the parsed word is lifted into the `DataFlags` constructor using `fmap`.
+
+- And it just using this paring combinators that makes everything so effortlessly when i parsing the cli.
+
+- On line under we do the same. But we use `<$` because HiddenFilesFlag does not take any argument. When we parse parse we Just want it do be Parser HiddenFilesFlag. 
+
 
 == Monad Transformers and Monadic Error Handling
 == Higher-Order Functions and Folds
 == View Patterns
-== 
-== 
 
 
 
