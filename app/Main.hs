@@ -6,12 +6,9 @@ import System.Environment  (getArgs )
 
 import TraverselsFunctions (treverseDirWithSettings)
 import PrintFunctions      (printResults)
-import System.IO           (stdout, BufferMode(LineBuffering), hSetBuffering )
-
 
 main :: IO ()
 main = do
-     hSetBuffering stdout LineBuffering
      input  <- getArgs
      actOnInput input
 
@@ -22,10 +19,11 @@ runTUI = mainTUI
 
 runCLi :: [String] -> IO ()
 runCLi args = do
-     let inpString =  concatMap ( ' ' :) args
+     let inpString = unwords args
      ss     <- runParserIO inpString
      output <- treverseDirWithSettings ss
      printResults output
+
 
 actOnInput :: [String] ->  IO()
 actOnInput []                           = runCLi []

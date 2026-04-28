@@ -1,14 +1,13 @@
 {- HLINT ignore "Use <$>" -}
 
 
--- | TODO: Dokumenter parseren for CLI-søkestrenger og flagg.
-module ParseInput (runParserIO) where
+module ParseInput (runParserIO, runMyParser, parseLamdaSearch) where
 
 import Data.Void            (Void)
 import Control.Applicative  ((<|>))
 import Data.Functor         (($>))
 
-import Text.Megaparsec.Char (char, string)
+import Text.Megaparsec.Char (char, string, string')
 
 import Control.Exception.Base (throwIO)
 
@@ -83,11 +82,11 @@ data DataFlags =
 pFlags :: Parser DataFlags
 pFlags = choice
     [
-       SearchPatternFlag <$> ((string "-p" <|> string  "--pattern"   ) *> sc *> parseWord)
-     , HiddenFilesFlag   <$  ( string "-a" <|> string  "--show--dots")
-     , ExtentionFlag     <$> ((string "-e" <|> string  "--extention" ) *> sc *> parseWord)
-     , IgnoreFlag        <$> ((string "-i" <|> string  "--ignore"    ) *> sc *> pathsUntilFlag )
-     , ExecuteFlag       <$> ((string "-x" <|> string  "--execute"   ) *> sc *> parseConstrucedCommand) 
+       SearchPatternFlag <$> ((string' "-p" <|> string  "--pattern"   ) *> sc *> parseWord)
+     , HiddenFilesFlag   <$  ( string' "-a" <|> string  "--show--dots")
+     , ExtentionFlag     <$> ((string' "-e" <|> string  "--extention" ) *> sc *> parseWord)
+     , IgnoreFlag        <$> ((string' "-i" <|> string  "--ignore"    ) *> sc *> pathsUntilFlag )
+     , ExecuteFlag       <$> ((string' "-x" <|> string  "--execute"   ) *> sc *> parseConstrucedCommand) 
     ]
 
 
@@ -180,6 +179,8 @@ parsePathOrDot = choice
           NoPath     <$ (sc *> char '.' <* sc )
         , ManyPaths  <$> pathsUntilFlag
      ]
+
+
 
 --- HOVEDPARSER ---
 
