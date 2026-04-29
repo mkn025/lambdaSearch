@@ -134,7 +134,7 @@ parseFlags = do
 
 === In the travaveselfunction
 
-First, I just wanted to point out how perfect Haskell is for these kinds of traversal functions it makes so much sense to write these traversal functions recursively. Essentially, the only thing you want to do is apply the same logic to every directory while you search and accumulate the results.
+First, Haskell is perfect for these traversal functions because it makes so much sense to write them recursively. You simply apply the same logic to every directory, accumulating the results as you search.
 
 In the `main` function, where I do the traversals, I use higher-order functions and a generalized `fold` function.
 
@@ -234,7 +234,6 @@ type ConstrucedCommand = (String, [Args])
 ```
 - When you give the command to execute, you do it like this: `cat {}`. So here, it is very beneficial to create a datatype for this that says the argument is either a flag or a path where you substitute in the actual filepath. And a complete command is just a list of these. 
 
-
 == View Patterns
 I made  use of  `ViewPatterns` language extension to keep my pattern matching concise. It lets me evaluate a function directly inside the pattern match, saving me from writing nested `case` expressions. 
 
@@ -279,11 +278,16 @@ foreign import ccall unsafe "__posixdir_d_type"
 
 
 
+= Self evaluation:
+== What was positive about working on this project?
+- 
+== What would you have done differently if you were to do it again?
+
 
 #pagebreak()
 = Instructions 
 Check the README on gitlab for more info
-```bash
+```bash 
 cabal build
 
 # eks.
