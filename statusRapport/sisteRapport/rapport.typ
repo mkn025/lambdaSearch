@@ -30,9 +30,6 @@
 
 #pagebreak()
 
-
-// --- START PÅ RAPPORTEN ---
-
 = Prosjekt description
 
 == What was the initial idea / background of the project?
@@ -82,7 +79,7 @@ pFlags = choice
      , HiddenFilesFlag  <$  ( string' "-a" <|> string  "--show--dots")
        ...
 ```
-- Here, I first use the `fmap` infix operator (`<$>`). Using `fmap` allows me to lift the parsed result into the `DataFlags` context effortlessly. 
+- Here, I first use the `fmap` infix operator (`<$>`). Using `fmap` allows me to lift the parsed result into the `DataFlags` context. 
 
 - Next is the acctual parser. Three things to notice here:
 - first is the use of `string'`, which parses case-insensitively, meaning both `-p` and `-P` will work. 
@@ -91,10 +88,7 @@ pFlags = choice
 
 - Third, after parsing the flag, I treat that portion of the string as having been "consumed." Since the next goal is to parse the actual argument and disregard the prefix, I use the `*>` operator, which sequences two actions and discards the result of the first. I sequence this with `sc` to handle whitespace, and finally, the parsed word is lifted into the `DataFlags` constructor using `fmap`.
 
-- And it just using this paring combinators that makes everything so effortlessly when i parsing the cli.
-
 - On line under we do the same. But we use `<$` because HiddenFilesFlag does not take any argument. When we parse parse we Just want it do be Parser HiddenFilesFlag. 
-
 
 == Monad Transformers and Monadic Error Handling
  To make the directory traversal as fast as possible, I used the Foreign Function Interface (FFI) to bind directly to C POSIX functions. But to keep the Haskell side safe, I wrapped these impure calls in Monad Transformers to handle error and end of dir exeptions.
@@ -115,15 +109,13 @@ readDirEnt dir = ExceptT readContent
 
 - Inside `readContent`, I do the actual raw `IO` calls to the C function `c_readdir`. Depending on the `Errno` returned by C, I can return `pure . Right $ Nothing` (if we hit the end of the folder) or `pure . Left $ ReadDirErr err` if it actually failed.
 
-- By wrapping this `Either` result in the `ExceptT` constructor, the rest of my traversal code can just bind (`>>=`) through the directory reads. It handles the unsafe C errors, in a functional way without crashing the program.
-
 
 == Higher-Order Functions and Folds 
 
 === In the parser
-- To keep track of which flags the user passed in the CLI, I used a functional fold. This is a super clean way to build up the configuration state purely.
-- Example:
+- To keep track of which flags the user passed in the CLI, I used a functional fold. This is a clean way to build up the configuration state purely.
 
+- Example:
 ```hs
 parseFlags :: Parser Arguments
 parseFlags = do
@@ -145,6 +137,7 @@ First, I just wanted to point out how perfect Haskell is for these kinds of trav
 
 In the `main` function, where I do the traversals, I use higher-order functions and a generalized `fold` function.
 
+
 ```hs
 
 foldDirectoryTree
@@ -164,15 +157,15 @@ foldDirectoryTree foldFunc acc rootPath  = do
 
             let filePath = rootPath  </> filename
             let isDir = typ == dtDir
-
             -- legge funskjonen på 
             nextAcc <- foldFunc currentAcc rootPath dc
             if not isDir
                 then pure nextAcc
                 else foldDirectoryTree foldFunc nextAcc filePath
 ```
+
 - The first thing to notice is the type signature. It takes a higher-order function `(a -> RawFilePath -> DirContent -> IO a)` which acts as our step function, an initial accumulator of type `a`, and the starting path. 
-``
+
 - Because of this generic signature, `foldDirectoryTree` doesn't actually know what data it is collecting (it could be a list of files, a count, etc.). It just knows how to walk the tree and thread a state of type `a` through the execution. 
 
 - If the current path is a directory, it delegates to `traverseDirectoryContents` using a custom `innerloop` helper function to process each item inside that directory.
@@ -181,31 +174,54 @@ foldDirectoryTree foldFunc acc rootPath  = do
 
 - Then, if the current item happens to be another directory, it recursively calls `foldDirectoryTree` on that new path, passing in the `nextAcc`. This threads the accumulated state down into deeply nested subdirectories and back up. 
 
-So i can use the generalized function to accumulate FileInfomation
+So i can use the generalized function to accumulate fileinformation
+
 ```hs
 treversRecursively :: Arguments -> [FileInfomation] -> RawFilePath -> IO [FileInfomation]
 treversRecursively args = foldDirectoryTree foldFunc
     where
     regexCompiled = compileRegexFilter args
     foldFunc :: [FileInfomation] -> RawFilePath -> DirContent -> IO [FileInfomation]
-    foldFunc acc parentPath dc@(typ,file)  = ...s
+    foldFunc acc parentPath dc@(typ,file)  = ...
 ```
-Or i can use it to count the files
+Or i can use it to count the files 
+
 ```hs
 countFiles :: Integer -> RawFilePath -> IO Integer
 countFiles  = foldDirectoryTree foldFunc
-    where
+    where 
     foldFunc ::  Integer -> RawFilePath -> DirContent -> IO Integer
-    foldFunc s  _ ( (== dtDir) -> True ,_) = pure (1 +  s)
-    foldFunc s _ _                         = pure s
+    foldFunc s  _ ((== dtDir) -> True ,_) = pure (1 +  s)
+    foldFunc s _ _                        = pure s
 
 ```
 #linebreak()
 
+== Algebraic data types 
+For storing the config of my search logic i used records.
+- Eksampel:
+```hs
+data Arguments = Arguments {
+      regxPattern    :: Maybe SearchPattern
+    , exclude        :: Maybe SearchFilters
+    , extention      :: Maybe Extention
+    , hideHidden     :: Bool
+    , applyedCommand :: Maybe ConstrucedCommand
+}  deriving (Eq, Show)
+```
 
+- The key functional technique is using the `Maybe` type (like `Maybe SearchPattern`) to explicitly encode whether a filter is active directly in the type system.
 
+- Instead of relying on `null` pointers or empty strings, `Maybe` makes invalid states unrepresentable. An unused filter is simply `Nothing`.
 
+- This forces explicit pattern matching (`Just val` vs `Nothing`) in my filter functions, providing compile-time guarantees that I won't crash from null references or accidentally apply an empty filter.
 
+```hs
+getRexPattern :: Maybe Regex -> RawFilePath -> Bool
+getRexPattern Nothing      _  = True
+getRexPattern (Just regex) fp = matchTest regex fp
+```
+- If where to remove the pattern match on Nothing it will give me a compiler warning
 
 
 
@@ -214,7 +230,6 @@ countFiles  = foldDirectoryTree foldFunc
 I made  use of  `ViewPatterns` language extension to keep my pattern matching concise. It lets me evaluate a function directly inside the pattern match, saving me from writing nested `case` expressions or messy guard clauses.
 
 - Example:
-
 ```hs
 getExtentionFilter :: FilterFlags -> RawFilePath ->  Bool
 getExtentionFilter sf fp = case extention sf of
@@ -231,11 +246,15 @@ getExtentionFilter (extention -> Nothing) _                                = Tru
 getExtentionFilter (extention -> Just _ )  (getFileExtention -> Nothing)   = False
 getExtentionFilter (extention -> Just ext) (getFileExtention -> Just curr) = curr == ext
 ```
+
 - I think this reads a lot better than the case statment, because it immediatly tells what output you get on that spesifc input. However this is just my subjektiv opinion.
 
-== FFI and Monadic Error Handling
-Another thing i want to talk about i the calls done with FFI
 
+
+
+
+== A little note about FFI  
+Another thing i want to talk about i the calls done with FFI
 ```hs
 foreign import ccall safe "readdir"
   c_readdir :: Ptr CDir -> IO (Ptr CDirent) 
@@ -248,8 +267,6 @@ foreign import ccall unsafe "__posixdir_d_type"
 ```
 
 - As you can see, `c_readdir` uses a `safe` call, but the other two use `unsafe`. Why is this? Normally, when we make a `safe` call with the FFI, the runtime releases the capability before doing any C stuff. This allows any other Haskell thread to grab the capability (basically the "right to run Haskell code"). This, of course, results in a bit of overhead. When we do an `unsafe` call, it skips all of this. This can result in blocking the entire Haskell execution until C returns. So, if the C function takes a long time, or if it does not return, it can lead to a deadlock. It is also very important to use `safe` calls when the C code calls back into Haskell (not an issue here). So, it's important that we are selective with the functions we call `unsafe` with, and we should not use them for anything that can take a substantial amount of time (like networked file systems or slow spinning disks). #link("https://github.com/haskell/unix/issues/34", "Issue talking about this.") This is why, when we do the `readdir`, we do it as a `safe` call. The other two are safe to make `unsafe` because they just read a field of a struct, which is very fast, and they do not do anything I/O related no syscalls, so there is no waiting.
-
-
 
 
 
