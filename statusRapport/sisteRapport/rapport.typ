@@ -72,7 +72,7 @@ The reason I wanted to make this project is that I really like CLI tools. I use 
 = Description of the functional programming techniques
 
 == Monadic Parsing Combinators 
-- When parsing the for the cli i use of lot these Combinators.  Making it very readable and elagant. 
+When parsing the for the cli i use of lot these Combinators.  Making it very readable and elagant. 
 - Eksample:
 
 ```hs
@@ -97,14 +97,30 @@ pFlags = choice
 
 
 == Monad Transformers and Monadic Error Handling
-#lorem(100)
+ To make the directory traversal as fast as possible, I used the Foreign Function Interface (FFI) to bind directly to C POSIX functions. But to keep the Haskell side safe, I wrapped these impure calls in Monad Transformers to handle error and end of dir exeptions.
+
+- Example:
+```hs
+type DirContentT = ExceptT DirError IO (Maybe DirContent)
+
+readDirEnt :: DirStream ->  DirContentT
+readDirEnt dir = ExceptT readContent
+    where
+    readContent :: IO (Either DirError (Maybe DirContent))
+    readContent = do
+      -- ... raw IO and FFI calls to c_readdir ...
+```
+
+- First, I define `DirContentT` using `ExceptT`. This layers an exception context (`DirError`) over the `IO` monad. This lets me sequence IO actions but still cleanly short-circuit if a specific directory error happens (like a permission denied error).
+
+- Inside `readContent`, I do the actual raw `IO` calls to the C function `c_readdir`. Depending on the `Errno` returned by C, I can return `pure . Right $ Nothing` (if we hit the end of the folder) or `pure . Left $ ReadDirErr err` if it actually failed.
+
+- By wrapping this `Either` result in the `ExceptT` constructor, the rest of my traversal code can just bind (`>>=`) through the directory reads. It handles the unsafe C errors, in a functional way without crashing the program.
+
 
 == Higher-Order Functions and Folds 
 
-#lorem(100)
-
-
-== In the parser
+=== In the parser
 - To keep track of which flags the user passed in the CLI, I used a functional fold. This is a super clean way to build up the configuration state purely.
 - Example:
 
@@ -123,8 +139,41 @@ parseFlags = do
 
 - So we start with `emptyFilterFlags` as our base state, fold over the list of parsed flags, and get our fully constructed configuration without a single mutable variable.
 
-== In the travaveselfunction
-#lorem(100)
+=== In the travaveselfunction
+
+In the main function there i do the traversels. I use a Higher-Order functions and a genealiset  fold func. I also want to point out how perfect haskell i for these kinds of travaveselfunctions it makes so mutch sence to write thease travaveselfunctions reclusively. Essentially the only thing you want to do is to apply the same logic to every directory while you search and acumulate the results. For me it was very helpfull to think of 
+
+```hs
+
+foldDirectoryTree
+    :: (a -> RawFilePath -> DirContent -> IO a) -- Foldfunction
+    -> a -- 
+    -> RawFilePath
+    -> IO a
+foldDirectoryTree foldFunc acc rootPath  = do
+
+    isDir <- isDirectory <$> getFileStatus  rootPath
+
+    if not isDir
+        then pure acc
+        else traverseDirectoryContents innerloop acc rootPath
+    where
+        innerloop currentAcc dc@(typ,filename) = do
+
+            let filePath = rootPath  </> filename
+            let isDir = typ == dtDir
+
+            -- legge funskjonen på 
+            nextAcc <- foldFunc currentAcc rootPath dc
+            if not isDir
+                then pure nextAcc
+                else foldDirectoryTree foldFunc nextAcc filePath
+```
+
+
+
+
+
 
 
 
@@ -149,29 +198,10 @@ getExtentionFilter (extention -> Nothing) _                                = Tru
 getExtentionFilter (extention -> Just _ )  (getFileExtention -> Nothing)   = False
 getExtentionFilter (extention -> Just ext) (getFileExtention -> Just curr) = curr == ext
 ```
-- I think this reads a lot better than the case switch statment, because it immediatly tells what output you get on that spesifc input
+- I think this reads a lot better than the case switch statment, because it immediatly tells what output you get on that spesifc input. However this is just my subjektiv opinion.
+
 
 == FFI and Monadic Error Handling
- To make the directory traversal as fast as possible, I used the Foreign Function Interface (FFI) to bind directly to C POSIX functions. But to keep the Haskell side safe, I wrapped these impure calls in Monad Transformers to handle error and end of dir exeptions.
-
-- Example:
-```hs
-type DirContentT = ExceptT DirError IO (Maybe DirContent)
-
-readDirEnt :: DirStream ->  DirContentT
-readDirEnt dir = ExceptT readContent
-    where
-    readContent :: IO (Either DirError (Maybe DirContent))
-    readContent = do
-      -- ... raw IO and FFI calls to c_readdir ...
-```
-
-
-- First, I define `DirContentT` using `ExceptT`. This layers an exception context (`DirError`) over the `IO` monad. This lets me sequence IO actions but still cleanly short-circuit if a specific directory error happens (like a permission denied error).
-
-- Inside `readContent`, I do the actual raw `IO` calls to the C function `c_readdir`. Depending on the `Errno` returned by C, I can return `pure . Right $ Nothing` (if we hit the end of the folder) or `pure . Left $ ReadDirErr err` if it actually failed.
-
-- By wrapping this `Either` result in the `ExceptT` constructor, the rest of my traversal code can just bind (`>>=`) through the directory reads. It handles the unsafe C errors, in a functional way without crashing the program.
 
 
 Another thing i want to talk about i the calls done with FFI
@@ -185,10 +215,13 @@ foreign import ccall unsafe "__hscore_d_name"
 foreign import ccall unsafe "__posixdir_d_type"
   c_type :: Ptr CDirent -> IO DirType
 ```
-- As you can see the `c_readdir ` uses a safe call but the other two uses `unsafe` Why is this? Normaly when we make `safe` call with the FFI the runtime releases the capabiliy before doing any C stuff. This allows any other Haskell thread to grab the capebility ("basically the right to run haskell code"). This of course results in a bit of overhead. When we do an unsafe call it skips all of this. This can result in blocking the entire haskell execution until `c` returns. So if the `c` function takes a long time, or it does not return it can lead to a deadlock. It is also very important to use safe calls when the calls call back to haskell(not an issue here). So its important that we are selective with the function we do an `unsafe` call with. And should not use them for anything that can take a substantial amount of time(networked file systems, or slow spinning disks). #link("https://github.com/haskell/unix/issues/34","Issue talking about this."). This is why, when we do the `readdir` we do it as a safe call.
 
 
-// spørre aria om hva capebility betyr
+- As you can see, c_readdir uses a safe call, but the other two use unsafe. Why is this? Normally, when we make a safe call with the FFI, the runtime releases the capability before doing any C stuff. This allows any other Haskell thread to grab the capability (basically the "right to run Haskell code"). This, of course, results in a bit of overhead. When we do an unsafe call, it skips all of this. This can result in blocking the entire Haskell execution until C returns. So, if the C function takes a long time, or if it does not return, it can lead to a deadlock. It is also very important to use safe calls when the C code calls back into Haskell (not an issue here). So, it's important that we are selective with the functions we call unsafe with, and we should not use them for anything that can take a substantial amount of time (like networked file systems or slow spinning disks). #link("https://github.com/haskell/unix/issues/34", "Issue talking about this.") This is why, when we do the readdir, we do it as a safe call. The other two are safe to make unsafe because they just read a field of a struct, which is very fast, and they do not do anything I/O related—no syscalls, so there is no waiting.
+
+
+
+
 
 
 #pagebreak()

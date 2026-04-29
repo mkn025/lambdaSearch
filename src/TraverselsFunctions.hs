@@ -146,6 +146,7 @@ readDirEnt dir = ExceptT readContent
 -- * Tillatelseskfeil  håndteres ved at den skipper den
 -- * Andre IO-feil kastes videre.
 -- * Katalogstrømmen lukkes alltid, også ved expetions ('bracketOnError' + 'finally').
+
 traverseDirectoryContents :: (MonadUnliftIO m)
                           => (a -> DirContent -> m a)
                           -> a
@@ -158,7 +159,7 @@ traverseDirectoryContents f s0 p = do
         (openDirStreamPermissive p)
         (mapM_ PosixBS.closeDirStream)   -- kjøre bare dersom den kaster feil. 
         (\case
-            Nothing   -> pure s0         -- access denied, skip silently
+            Nothing   -> pure s0         -- access denied, skipper
             Just dirp -> loop run s0 dirp `finally` PosixBS.closeDirStream dirp)
 
   where
@@ -169,7 +170,6 @@ traverseDirectoryContents f s0 p = do
         \errMsg -> if isPermissionError errMsg
                    then pure Nothing
                    else throwIO errMsg
-
     loop run acc dirp = do
         dirAnd <- runExceptT $ readDirEnt dirp
         case dirAnd of
@@ -178,7 +178,7 @@ traverseDirectoryContents f s0 p = do
             Right (Just content@(_typ, e)) -> if e == "." || e == ".."
                                               then loop run acc dirp
                                               else do
-                                                  acc' <- run (f acc content)
+                                                  acc' <- run $ f acc content
                                                   loop run acc' dirp
 
 
@@ -195,6 +195,7 @@ foldDirectoryTree
     -> RawFilePath
     -> IO a
 foldDirectoryTree foldFunc acc rootPath  = do
+
     isDir <- isDirectory <$> getFileStatus  rootPath
 
     if not isDir
@@ -205,7 +206,6 @@ foldDirectoryTree foldFunc acc rootPath  = do
 
             let filePath = rootPath  </> filename
             let isDir = typ == dtDir
-
             -- legge funskjonen på 
             nextAcc <- foldFunc currentAcc rootPath dc
             if not isDir
@@ -215,11 +215,10 @@ foldDirectoryTree foldFunc acc rootPath  = do
 
 -- | Rekkursiv traversering med aktive filter
 -- | Går igjennom alle filene og rekusrsivt. Og akkumlerer ønskete filer i acc listen vår
-treversRecursively_ :: Arguments -> [FileInfomation] -> RawFilePath -> IO [FileInfomation]
-treversRecursively_ args = foldDirectoryTree foldFunc
+treversRecursively :: Arguments -> [FileInfomation] -> RawFilePath -> IO [FileInfomation]
+treversRecursively args = foldDirectoryTree foldFunc
     where
     regexCompiled = compileRegexFilter args
-
     foldFunc :: [FileInfomation] -> RawFilePath -> DirContent -> IO [FileInfomation]
     foldFunc acc parentPath dc@(typ,file)  = do
 
@@ -238,9 +237,9 @@ treversRecursively_ args = foldDirectoryTree foldFunc
                 then do
                     executeFunction args fullPath executeOnFile
                     pure $ FileInfomation {filePath = parentPath, fileNameInfo = Just dc} : acc
-
                 else do
                     pure acc
+
 
 
 -- | Kjører en kommando på på en filen vår 
@@ -264,15 +263,15 @@ treverseDirWithSettings ss = treveseManyPathsWithArgs  (arguments ss) (searchPat
 
 
 -- | Treverser med argumter, standardsti velges når ingen søkestier er oppgitt.
--- | Treverser med mange i cwd dersom du ikke gir noe dir
+--  Treverser med mange i cwd dersom du ikke gir noe dir
 treveseManyPathsWithArgs  :: Arguments ->  Maybe [FilePath]  -> IO [FileInfomation]
 treveseManyPathsWithArgs ff Nothing   = getWorkingDirectory  >>= treverseOnPathWithArgs ff . convertToString
 treveseManyPathsWithArgs ff (Just fp) = concat <$> mapM (treverseOnPathWithArgs ff) fp
 
 -- | Treveser en filsti
--- | difinere hvordan vi skal jobbe på en filepath. Slik at vi etterpå kan mapM på en liste med filepath
+--  difinere hvordan vi skal jobbe på en filepath. Slik at vi etterpå kan mapM på en liste med filepath
 treverseOnPathWithArgs :: Arguments -> FilePath -> IO [FileInfomation]
-treverseOnPathWithArgs ff sp = treversRecursively_ ff [] $ convertString sp
+treverseOnPathWithArgs ff sp = treversRecursively ff [] $ convertString sp
 
 -- Hjelpemeothde som lager helefilstien dersom, dersom det er en sti
 constructFilePath :: FileInfomation -> Maybe String
