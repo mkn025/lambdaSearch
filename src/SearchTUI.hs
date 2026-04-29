@@ -2,7 +2,7 @@ module SearchTUI (mainTUI) where
 
 import TraverselsFunctions (treverseDirWithSettings, constructFilePath, executeOnFile)
 import ParseInput          (runParserIO)
-import TraversalSettings   (Command(PathToSubs), convertString)
+import TraversalSettings   (Args (..), convertString)
 
 import Brick (
         attrMap

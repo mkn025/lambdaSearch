@@ -69,9 +69,9 @@ The reason I wanted to make this project is that I really like CLI tools. I use 
 = Description of the functional programming techniques
 
 == Monadic Parsing Combinators 
-When parsing the for the cli i use of lot these Combinators.  Making it very readable and elagant. 
-- Eksample:
+When parsing the for the cli i use of lot of combinators.  Making it very readable and elagant . 
 
+- Eksample:
 ```hs
 pFlags :: Parser DataFlags
 pFlags = choice
@@ -79,16 +79,20 @@ pFlags = choice
      , HiddenFilesFlag  <$  ( string' "-a" <|> string  "--show--dots")
        ...
 ```
-- Here, I first use the `fmap` infix operator (`<$>`). Using `fmap` allows me to lift the parsed result into the `DataFlags` context. 
+- We use the `fmap` operator (`<$>`) to lift the parsed result into the `DataFlags` context.
 
 - Next is the acctual parser. Three things to notice here:
-- first is the use of `string'`, which parses case-insensitively, meaning both `-p` and `-P` will work. 
 
-- Second, I use the `<|>` operator, which here sort of acts like a or. It tries to parse `-p`, and if that fails, it tries to parse `--pattern`. Because the type signature of this operator is `f a -> f a -> f a`, you can treat the combined expression as a single parser. This means anywhere you parse one thing, you can easily try to parse alternatives without any hassle. Of course, the inner type `a` must be the same for both parsers.
+1.  The `string'` function enables case-insensitive parsing (e.g., both `-p` and `-P`).
 
-- Third, after parsing the flag, I treat that portion of the string as having been "consumed." Since the next goal is to parse the actual argument and disregard the prefix, I use the `*>` operator, which sequences two actions and discards the result of the first. I sequence this with `sc` to handle whitespace, and finally, the parsed word is lifted into the `DataFlags` constructor using `fmap`.
+2.  I use the <|> operator, which here sort of acts like a or. It tries to parse -p, and if that fails, it tries to parse --pattern. Because the type signature of this operator is f a -> f a -> f a, you can treat the combined expression as a single parser. This means anywhere you parse one thing, you can easily try to parse alternatives without any hassle. Of course, the inner type a must be the same for both parsers.
 
-- On line under we do the same. But we use `<$` because HiddenFilesFlag does not take any argument. When we parse parse we Just want it do be Parser HiddenFilesFlag. 
+3. The sequence operator (`*>`) consumes and discards the flag prefix. We chain this with `sc` to skip whitespace before capturing the actual argument.
+
+- For `HiddenFilesFlag`, we use `<$`. Since this flag takes no arguments, `<$` directly replaces the parsed string with the data constructor.
+
+- And its all wrapped in chose which act like a sequence of <|> 
+
 
 == Monad Transformers and Monadic Error Handling
  To make the directory traversal as fast as possible, I used the Foreign Function Interface (FFI) to bind directly to C POSIX functions. But to keep the Haskell side safe, I wrapped these impure calls in Monad Transformers to handle error and end of dir exeptions.
@@ -124,8 +128,7 @@ parseFlags = do
 ```
 - Here, `parseAllFlags` returns a list of parsed `DataFlags`. 
 
-- To process them, I use `foldl'` (the strict left fold) to iterate over this list. Why strict fold? Beacuse we want toavoid space leaks with accumulating expressions on the heap. It is probably not an issue on my program, but it is just good practice.
-
+- To process them, I use `foldl'` (the strict left fold) to iterate over this list. Why strict fold? Beacuse we want to avoid space leaks with accumulating expressions on the heap. It is probably not an issue on my program, but it is just good practice.
 
 - The magic happens with the `applyFlag` function, which has the type signature `Arguments -> DataFlags -> Arguments`. It basically acts as a state transition function. It takes the current `Arguments` state, looks at the new `DataFlags` we just parsed, and returns a newly updated `Arguments` record.
 
@@ -133,7 +136,7 @@ parseFlags = do
 
 === In the travaveselfunction
 
-First, I just wanted to point out how perfect Haskell is for these kinds of traversal functions it makes so much sense to write these traversal functions recursively. Essentially, the only thing you want to do is apply the same logic to every directory while you search and accumulate the results. For me, it was very helpful to think of it like a tree, and walking the tree was traversing through the filesystem. 
+First, I just wanted to point out how perfect Haskell is for these kinds of traversal functions it makes so much sense to write these traversal functions recursively. Essentially, the only thing you want to do is apply the same logic to every directory while you search and accumulate the results.
 
 In the `main` function, where I do the traversals, I use higher-order functions and a generalized `fold` function.
 
@@ -164,7 +167,7 @@ foldDirectoryTree foldFunc acc rootPath  = do
                 else foldDirectoryTree foldFunc nextAcc filePath
 ```
 
-- The first thing to notice is the type signature. It takes a higher-order function `(a -> RawFilePath -> DirContent -> IO a)` which acts as our step function, an initial accumulator of type `a`, and the starting path. 
+- The first thing to notice is the type signature. It takes a function `(a -> RawFilePath -> DirContent -> IO a)` which acts as our step function, an initial accumulator of type `a`, and the starting path. 
 
 - Because of this generic signature, `foldDirectoryTree` doesn't actually know what data it is collecting (it could be a list of files, a count, etc.). It just knows how to walk the tree and thread a state of type `a` through the execution. 
 
@@ -212,7 +215,7 @@ data Arguments = Arguments {
 
 - The key functional technique is using the `Maybe` type (like `Maybe SearchPattern`) to explicitly encode whether a filter is active directly in the type system.
 
-- Instead of relying on `null` pointers or empty strings, `Maybe` makes invalid states unrepresentable. An unused filter is simply `Nothing`.
+- Instead of relying on `null` pointers or empty strings, `Maybe` makes invalid states unrepresentable. An unused filter is `Nothing`.
 
 - This forces explicit pattern matching (`Just val` vs `Nothing`) in my filter functions, providing compile-time guarantees that I won't crash from null references or accidentally apply an empty filter.
 
@@ -223,6 +226,16 @@ getRexPattern (Just regex) fp = matchTest regex fp
 ```
 - If where to remove the pattern match on Nothing it will give me a compiler warning
 
+Another exampel when i needed to constuct the the command that i would execute
+```hs
+data Args = Text String | PathToSubs
+    deriving (Eq,Show)
+
+-- | alias som beskriver en kommaddo eksterne kommandoer og argumenter.
+--  String is just the name of the program, eks cat, sed, pandoc
+type ConstrucedCommand = (String, [Args])
+```
+- When you give the command to execute, you do it like this: `cat {}`. So here, it is very beneficial to create a datatype for this that says the argument is either a flag or a path where you substitute in the actual filepath. And a complete command is just a list of these. 
 
 
 

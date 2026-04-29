@@ -15,7 +15,7 @@ import TraversalSettings    (
       SearchSetting (..)
     , Arguments (..)
     , convertString
-    , Command(..)
+    , Args(..)
     , ConstrucedCommand
     )
 
@@ -96,7 +96,7 @@ parseConstrucedCommand  = do
     pure (cmd, args)
 
 -- | Dokumenter parser for mange execute-argumenter frem til neste flagg.
-parseManyArgs :: Parser [Command]
+parseManyArgs :: Parser [Args]
 parseManyArgs =
   manyTill
     (sc *> parseArgs)
@@ -104,7 +104,7 @@ parseManyArgs =
 
 
 -- | Parser for commando datatypen kan enten være en commando eller en sti
-parseArgs :: Parser Command
+parseArgs :: Parser Args
 parseArgs = do
         s <- sc *> (parseArgumentAndWord <|> parseWord) <* sc
         if s == "{}"
