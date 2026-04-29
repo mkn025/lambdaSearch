@@ -141,7 +141,9 @@ parseFlags = do
 
 === In the travaveselfunction
 
-In the main function there i do the traversels. I use a Higher-Order functions and a genealiset  fold func. I also want to point out how perfect haskell i for these kinds of travaveselfunctions it makes so mutch sence to write thease travaveselfunctions reclusively. Essentially the only thing you want to do is to apply the same logic to every directory while you search and acumulate the results. For me it was very helpfull to think of 
+First, I just wanted to point out how perfect Haskell is for these kinds of traversal functions it makes so much sense to write these traversal functions recursively. Essentially, the only thing you want to do is apply the same logic to every directory while you search and accumulate the results. For me, it was very helpful to think of it like a tree, and walking the tree was traversing through the filesystem. 
+
+In the `main` function, where I do the traversals, I use higher-order functions and a generalized `fold` function.
 
 ```hs
 
@@ -169,6 +171,37 @@ foldDirectoryTree foldFunc acc rootPath  = do
                 then pure nextAcc
                 else foldDirectoryTree foldFunc nextAcc filePath
 ```
+- The first thing to notice is the type signature. It takes a higher-order function `(a -> RawFilePath -> DirContent -> IO a)` which acts as our step function, an initial accumulator of type `a`, and the starting path. 
+``
+- Because of this generic signature, `foldDirectoryTree` doesn't actually know what data it is collecting (it could be a list of files, a count, etc.). It just knows how to walk the tree and thread a state of type `a` through the execution. 
+
+- If the current path is a directory, it delegates to `traverseDirectoryContents` using a custom `innerloop` helper function to process each item inside that directory.
+
+- The `innerloop` is where the recursive  happens. It applies the function `foldFunc` to the current item to compute the `nextAcc` (our updated state). 
+
+- Then, if the current item happens to be another directory, it recursively calls `foldDirectoryTree` on that new path, passing in the `nextAcc`. This threads the accumulated state down into deeply nested subdirectories and back up. 
+
+So i can use the generalized function to accumulate FileInfomation
+```hs
+treversRecursively :: Arguments -> [FileInfomation] -> RawFilePath -> IO [FileInfomation]
+treversRecursively args = foldDirectoryTree foldFunc
+    where
+    regexCompiled = compileRegexFilter args
+    foldFunc :: [FileInfomation] -> RawFilePath -> DirContent -> IO [FileInfomation]
+    foldFunc acc parentPath dc@(typ,file)  = ...s
+```
+Or i can use it to count the files
+```hs
+countFiles :: Integer -> RawFilePath -> IO Integer
+countFiles  = foldDirectoryTree foldFunc
+    where
+    foldFunc ::  Integer -> RawFilePath -> DirContent -> IO Integer
+    foldFunc s  _ ( (== dtDir) -> True ,_) = pure (1 +  s)
+    foldFunc s _ _                         = pure s
+
+```
+#linebreak()
+
 
 
 
@@ -198,13 +231,11 @@ getExtentionFilter (extention -> Nothing) _                                = Tru
 getExtentionFilter (extention -> Just _ )  (getFileExtention -> Nothing)   = False
 getExtentionFilter (extention -> Just ext) (getFileExtention -> Just curr) = curr == ext
 ```
-- I think this reads a lot better than the case switch statment, because it immediatly tells what output you get on that spesifc input. However this is just my subjektiv opinion.
-
+- I think this reads a lot better than the case statment, because it immediatly tells what output you get on that spesifc input. However this is just my subjektiv opinion.
 
 == FFI and Monadic Error Handling
-
-
 Another thing i want to talk about i the calls done with FFI
+
 ```hs
 foreign import ccall safe "readdir"
   c_readdir :: Ptr CDir -> IO (Ptr CDirent) 
@@ -216,8 +247,7 @@ foreign import ccall unsafe "__posixdir_d_type"
   c_type :: Ptr CDirent -> IO DirType
 ```
 
-
-- As you can see, c_readdir uses a safe call, but the other two use unsafe. Why is this? Normally, when we make a safe call with the FFI, the runtime releases the capability before doing any C stuff. This allows any other Haskell thread to grab the capability (basically the "right to run Haskell code"). This, of course, results in a bit of overhead. When we do an unsafe call, it skips all of this. This can result in blocking the entire Haskell execution until C returns. So, if the C function takes a long time, or if it does not return, it can lead to a deadlock. It is also very important to use safe calls when the C code calls back into Haskell (not an issue here). So, it's important that we are selective with the functions we call unsafe with, and we should not use them for anything that can take a substantial amount of time (like networked file systems or slow spinning disks). #link("https://github.com/haskell/unix/issues/34", "Issue talking about this.") This is why, when we do the readdir, we do it as a safe call. The other two are safe to make unsafe because they just read a field of a struct, which is very fast, and they do not do anything I/O related—no syscalls, so there is no waiting.
+- As you can see, `c_readdir` uses a `safe` call, but the other two use `unsafe`. Why is this? Normally, when we make a `safe` call with the FFI, the runtime releases the capability before doing any C stuff. This allows any other Haskell thread to grab the capability (basically the "right to run Haskell code"). This, of course, results in a bit of overhead. When we do an `unsafe` call, it skips all of this. This can result in blocking the entire Haskell execution until C returns. So, if the C function takes a long time, or if it does not return, it can lead to a deadlock. It is also very important to use `safe` calls when the C code calls back into Haskell (not an issue here). So, it's important that we are selective with the functions we call `unsafe` with, and we should not use them for anything that can take a substantial amount of time (like networked file systems or slow spinning disks). #link("https://github.com/haskell/unix/issues/34", "Issue talking about this.") This is why, when we do the `readdir`, we do it as a `safe` call. The other two are safe to make `unsafe` because they just read a field of a struct, which is very fast, and they do not do anything I/O related no syscalls, so there is no waiting.
 
 
 
