@@ -10,9 +10,7 @@
 
 #show link: underline
 
-// Kodeblokker
 
-// --- FORSIDE ---
 #align(center)[
   #v(5em)
   #text(size: 2.5em, weight: "bold")[lambdaSearch] \
@@ -132,7 +130,7 @@ parseFlags = do
 
 - The magic happens with the `applyFlag` function, which has the type signature `Arguments -> DataFlags -> Arguments`. It basically acts as a state transition function. It takes the current `Arguments` state, looks at the new `DataFlags` we just parsed, and returns a newly updated `Arguments` record.
 
-- So we start with `emptyFilterFlags` as our base state, fold over the list of parsed flags, and get our fully constructed configuration without a single mutable variable.
+- So we start with `emptyFilterFlags` as our base state, fold over the list of parsed flags, and get our fully constructed configuration.
 
 === In the travaveselfunction
 
@@ -196,7 +194,6 @@ countFiles  = foldDirectoryTree foldFunc
     foldFunc ::  Integer -> RawFilePath -> DirContent -> IO Integer
     foldFunc s  _ ((== dtDir) -> True ,_) = pure (1 +  s)
     foldFunc s _ _                        = pure s
-
 ```
 #linebreak()
 
@@ -238,9 +235,8 @@ type ConstrucedCommand = (String, [Args])
 - When you give the command to execute, you do it like this: `cat {}`. So here, it is very beneficial to create a datatype for this that says the argument is either a flag or a path where you substitute in the actual filepath. And a complete command is just a list of these. 
 
 
-
 == View Patterns
-I made  use of  `ViewPatterns` language extension to keep my pattern matching concise. It lets me evaluate a function directly inside the pattern match, saving me from writing nested `case` expressions or messy guard clauses.
+I made  use of  `ViewPatterns` language extension to keep my pattern matching concise. It lets me evaluate a function directly inside the pattern match, saving me from writing nested `case` expressions. 
 
 - Example:
 ```hs
