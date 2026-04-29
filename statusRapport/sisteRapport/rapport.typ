@@ -3,9 +3,12 @@
 #set text(font: "New Computer Modern", size: 11pt, lang: "no")
 #set par(justify: true, leading: 0.75em)
 
+
 #set heading(numbering: "1.1")
 
 #show raw.where(block: false): it => text(font: "New Computer Modern Mono", size: 10.5pt, it)
+
+#show link: underline
 
 // Kodeblokker
 
@@ -94,8 +97,11 @@ pFlags = choice
 
 
 == Monad Transformers and Monadic Error Handling
+#lorem(100)
 
 == Higher-Order Functions and Folds 
+
+#lorem(100)
 
 
 == In the parser
@@ -110,7 +116,7 @@ parseFlags = do
 ```
 - Here, `parseAllFlags` returns a list of parsed `DataFlags`. 
 
-- To process them, I use `foldl'` (the strict left fold) to iterate over this list. Why strict fold? Beacuse we avoid space leaks with accumulating expressions on the heap. It is probably not an issue on my program, but it is just good practice.
+- To process them, I use `foldl'` (the strict left fold) to iterate over this list. Why strict fold? Beacuse we want toavoid space leaks with accumulating expressions on the heap. It is probably not an issue on my program, but it is just good practice.
 
 
 - The magic happens with the `applyFlag` function, which has the type signature `Arguments -> DataFlags -> Arguments`. It basically acts as a state transition function. It takes the current `Arguments` state, looks at the new `DataFlags` we just parsed, and returns a newly updated `Arguments` record.
@@ -143,7 +149,7 @@ getExtentionFilter (extention -> Nothing) _                                = Tru
 getExtentionFilter (extention -> Just _ )  (getFileExtention -> Nothing)   = False
 getExtentionFilter (extention -> Just ext) (getFileExtention -> Just curr) = curr == ext
 ```
-- I think this reads a lot better than the case switch statment, because it immediatly tells what output you get on that spesifc imput
+- I think this reads a lot better than the case switch statment, because it immediatly tells what output you get on that spesifc input
 
 == FFI and Monadic Error Handling
  To make the directory traversal as fast as possible, I used the Foreign Function Interface (FFI) to bind directly to C POSIX functions. But to keep the Haskell side safe, I wrapped these impure calls in Monad Transformers to handle error and end of dir exeptions.
@@ -179,12 +185,10 @@ foreign import ccall unsafe "__hscore_d_name"
 foreign import ccall unsafe "__posixdir_d_type"
   c_type :: Ptr CDirent -> IO DirType
 ```
-- As you can see the `c_readdir ` uses a safe call but the other two uses `unsafe` Why is this? Normaly when we make `safe` call with the FFI the runtime releases its lock on the OS thread before doing any C stuff. This allows any other Haskell thread to grab the capebility ("basically the right to run haskell code"). This of course results in a bit of overhead. When we do an unsafe call it skips all of this, witch can block the entire haskell execution until `c` returns
+- As you can see the `c_readdir ` uses a safe call but the other two uses `unsafe` Why is this? Normaly when we make `safe` call with the FFI the runtime releases the capabiliy before doing any C stuff. This allows any other Haskell thread to grab the capebility ("basically the right to run haskell code"). This of course results in a bit of overhead. When we do an unsafe call it skips all of this. This can result in blocking the entire haskell execution until `c` returns. So if the `c` function takes a long time, or it does not return it can lead to a deadlock. It is also very important to use safe calls when the calls call back to haskell(not an issue here). So its important that we are selective with the function we do an `unsafe` call with. And should not use them for anything that can take a substantial amount of time(networked file systems, or slow spinning disks). #link("https://github.com/haskell/unix/issues/34","Issue talking about this."). This is why, when we do the `readdir` we do it as a safe call.
 
 
-
-
-
+// spørre aria om hva capebility betyr
 
 
 #pagebreak()
