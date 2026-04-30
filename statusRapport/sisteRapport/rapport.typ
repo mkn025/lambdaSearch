@@ -1,4 +1,4 @@
-#set document(title: "Prosjektrapport: lambdaSearch", author: "Martin Elde Knutse")
+
 #set page(paper: "a4", margin: 2cm, numbering: "1")
 #set text(font: "New Computer Modern", size: 11pt, lang: "no")
 #set par(justify: true, leading: 0.75em)
@@ -15,7 +15,7 @@
   #v(5em)
   #text(size: 2.5em, weight: "bold")[lambdaSearch] \
   #v(1em)
-  #text(size: 1.5em)[Prosjektrapport] \
+  #text(size: 1.5em)[Project report] \
   #v(3em)
   #text(size: 1.2em)[INF221 Avansert funksjonell programmering] \
   #v(4em)
@@ -274,17 +274,28 @@ foreign import ccall unsafe "__posixdir_d_type"
   c_type :: Ptr CDirent -> IO DirType
 ```
 
-- As you can see, `c_readdir` uses a `safe` call, but the other two use `unsafe`. Why is this? Normally, when we make a `safe` call with the FFI, the runtime releases the capability before doing any C stuff. This allows any other Haskell thread to grab the capability (basically the "right to run Haskell code"). This, of course, results in a bit of overhead. When we do an `unsafe` call, it skips all of this. This can result in blocking the entire Haskell execution until C returns. So, if the C function takes a long time, or if it does not return, it can lead to a deadlock. It is also very important to use `safe` calls when the C code calls back into Haskell (not an issue here). So, it's important that we are selective with the functions we call `unsafe` with, and we should not use them for anything that can take a substantial amount of time (like networked file systems or slow spinning disks). #link("https://github.com/haskell/unix/issues/34", "Issue talking about this.") This is why, when we do the `readdir`, we do it as a `safe` call. The other two are safe to make `unsafe` because they just read a field of a struct, which is very fast, and they do not do anything I/O related no syscalls, so there is no waiting.
+- As you can see, `c_readdir` uses a `safe` call, but the other two use `unsafe`. Why is this? Normally, when we make a `safe` call with the FFI, the runtime releases the capability before doing any C stuff. This allows any other Haskell thread to grab the capability (basically the "right to run Haskell code"). This, of course, results in a bit of overhead. When we do an `unsafe` call, it skips all of this. This can result in blocking the entire Haskell execution until C returns. So, if the C function takes a long time, or if it does not return, it can lead to a deadlock. It is also very important to use `safe` calls when the C co de calls back into Haskell (not an issue here). So, it's important that we are selective with the functions we call `unsafe` with, and we should not use them for anything that can take a substantial amount of time (like networked file systems or slow spinning disks). #link("https://github.com/haskell/unix/issues/34", "Issue talking about this.") This is why, when we do the `readdir`, we do it as a `safe` call. The other two are safe to make `unsafe` because they just read a field of a struct, which is very fast, and they do not do anything I/O related no syscalls, so there is no waiting.
 
 
 
 = Self evaluation:
 == What was positive about working on this project?
-  - 
+  - I think that using the things we learn in the lessons in practice is really useful. #link("https://www.youtube.com/watch?v=VzAk7IZs1jM","easter egg")
+  - I think it is hard to appreciate how good and useful Haskell’s type-system is before you write a bigger project like this. When you write more and more, Haskell's type-system that goes from being something that maybe restricts to something that guides you and holds your hand while you write code.
+
+- It is also very useful to think functionally about problems and appreciate how much shorter and more elegant solutions are when you just solve them with a composition of functions. Now after writing a fair bit of Haskell i found that i am always seeking filter, map, lambda etc. when i write code in java. It makes the code shorter, and in my opinion more readable.
+
+- I have also enjoyed gaining experience with the Haskell ecosystem, specifically Cabal, Hoogle, and Hackage. Hoogle has been particularly useful, the ability to search for functions by their type signatures is brilliant.
 
 == What would you have done differently if you were to do it again?
-  - 
 
+- I need to put a lot of thought into my record implementation and data types. In this workflow, you define your data structures first and work outward. Starting with a solid foundation here saves an immense amount of work later on.
+
+
+-  One example of this was when I wanted to print filenames in green text, but only the filename itself, not the full path. Since I had stored everything in a single string, I had to use messy string manipulation to extract the name. It would have been much better if I had stored the filename and the path in separate record fields or even just a tuple from the start.
+
+
+- Start earlier with the concurrency. I really wanted to implement concurrent searching
 
 #pagebreak()
 = Instructions 
