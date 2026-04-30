@@ -280,8 +280,10 @@ foreign import ccall unsafe "__posixdir_d_type"
 
 = Self evaluation:
 == What was positive about working on this project?
-- 
+  - 
+
 == What would you have done differently if you were to do it again?
+  - 
 
 
 #pagebreak()
