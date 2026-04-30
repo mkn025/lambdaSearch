@@ -188,16 +188,15 @@ traverseDirectoryContents f s0 p = do
 -- Sjekker om @rootPath@ er en dir, så bruker @foldFunc@ på hvert element
 -- (unntatt @.@ og @..@). Er elementet en en dir treveserer den rekusrsivt
 --
--- * Er @rootPath@ ikke en direrctory da er  @acc@ uendra.
+-- * Er @rootPath@ ikke en direrctory da er  @acc@ uendret.
 foldDirectoryTree
-    :: (a -> RawFilePath -> DirContent -> IO a) -- Foldfunction
+    :: (a -> RawFilePath -> DirContent -> IO a) 
     -> a -- 
     -> RawFilePath
     -> IO a
 foldDirectoryTree foldFunc acc rootPath  = do
 
     isDir <- isDirectory <$> getFileStatus  rootPath
-
     if not isDir
         then pure acc
         else traverseDirectoryContents innerloop acc rootPath
