@@ -2,7 +2,7 @@ module SearchTUI (mainTUI) where
 
 import TraverselsFunctions (treverseDirWithSettings, constructFilePath, executeOnFile)
 import ParseInput          (runParserIO)
-import TraversalSettings   (Command(PathToSubs), convertString)
+import TraversalSettings   (Args (..), convertString)
 
 import Brick (
         attrMap
@@ -29,6 +29,7 @@ import Brick (
       , Widget
       , zoom
       , get )
+
 
 import qualified Graphics.Vty as V
 import Brick.Widgets.Border   (border, hBorder)
@@ -98,12 +99,16 @@ stopInputWhileBrowing action  = get >>= checkBrowsing
         checkBrowsing (mode -> Browsing)  = action 
 
 
+
+    
+
+
 handleEvent :: BrickEvent Name e -> EventM Name TuiState ()
 handleEvent (VtyEvent (V.EvKey (V.KChar 'n') [V.MCtrl])) = stopInputWhileBrowing . modify $ moveDown
 handleEvent (VtyEvent (V.EvKey (V.KChar 'p') [V.MCtrl])) = stopInputWhileBrowing . modify $ moveUp
 handleEvent (VtyEvent (V.EvKey (V.KChar 'q') [V.MCtrl])) = stopInputWhileBrowing halt
 handleEvent (VtyEvent (V.EvKey (V.KChar 'c') [V.MCtrl])) = stopInputWhileBrowing halt
-handleEvent (VtyEvent (V.EvKey (V.KChar 'e') [V.MCtrl])) = stopInputWhileBrowing . modify $ (\st -> st {startEditor  = True})
+handleEvent (VtyEvent (V.EvKey (V.KChar 'e') [V.MCtrl])) = stopInputWhileBrowing $ get >>= (\ist -> modify (\st -> st {startEditor  = not . startEditor  $ ist }))
 handleEvent (VtyEvent (V.EvKey (V.KChar '/') []))        = modify (\st -> st { mode = Searching })
 handleEvent (VtyEvent (V.EvKey  V.KEsc       []))        = modify (\st -> st { mode = Browsing })
 handleEvent (VtyEvent (V.EvKey  V.KEnter     []))        = do
@@ -165,10 +170,10 @@ openInEditor st = do
                 let cmd = (e, [PathToSubs])
                 executeOnFile cmd selectedPath 
 
+
 mainTUI :: IO ()
 mainTUI = do
   initialPaths <- runSearch ""          
-
   let initialState = TuiState
         { paths        = initialPaths
         , selected     = 0

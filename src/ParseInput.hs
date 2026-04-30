@@ -15,7 +15,7 @@ import TraversalSettings    (
       SearchSetting (..)
     , Arguments (..)
     , convertString
-    , Command(..)
+    , Args(..)
     , ConstrucedCommand
     )
 
@@ -38,17 +38,14 @@ import Data.List             (foldl')
 type Parser = Parsec Void String
 
 
---tester :: IO ()
---tester = do
-    --parseTest parseLamdaSearch 
 
 
--- | parser til whitespace-parseren. 
+-- | Parser til whitespace-parseren. 
 sc :: Parser ()
 sc = skipMany (char ' ' <|> char '\t')
 
 
--- | parser for ett  ord.
+-- | Parser for ett  ord.
 parseWord :: Parser String
 parseWord = many (satisfy (\c -> c /= ' ' && c /= '\t'))
 
@@ -63,7 +60,7 @@ emptyFilterFlags = Arguments {
     , applyedCommand = Nothing
     }
 
---  representasjon av om søkestier er oppgitt.
+-- |  Representasjon av om søkestier er oppgitt.
 data Paths =
       NoPath
     | ManyPaths [String]
@@ -99,7 +96,7 @@ parseConstrucedCommand  = do
     pure (cmd, args)
 
 -- | Dokumenter parser for mange execute-argumenter frem til neste flagg.
-parseManyArgs :: Parser [Command]
+parseManyArgs :: Parser [Args]
 parseManyArgs =
   manyTill
     (sc *> parseArgs)
@@ -107,7 +104,7 @@ parseManyArgs =
 
 
 -- | Parser for commando datatypen kan enten være en commando eller en sti
-parseArgs :: Parser Command
+parseArgs :: Parser Args
 parseArgs = do
         s <- sc *> (parseArgumentAndWord <|> parseWord) <* sc
         if s == "{}"

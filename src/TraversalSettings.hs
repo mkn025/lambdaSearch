@@ -2,7 +2,7 @@
 module TraversalSettings (
       Arguments         (..)
     , SearchSetting     (..)
-    , Command           (..)
+    , Args           (..)
     , ConstrucedCommand
     , getDisallowFilter
     , getHiddenFilter
@@ -39,12 +39,13 @@ type SearchPattern = RawFilePath
 type SearchFilters = [RawFilePath]
 
 
--- | alias som beskriver en kommaddo eksterne kommandoer og argumenter.
-type ConstrucedCommand = (String, [Command])
 
 -- | datatype som blir brukt i  @--execute@. for å substite path
-data Command = Text String | PathToSubs
+data Args = Text String | PathToSubs
     deriving (Eq,Show)
+
+-- | alias som beskriver en kommaddo eksterne kommandoer og argumenter.
+type ConstrucedCommand = (String, [Args])
 
 --  Dokumenter globale søkeinnstillinger.
 data SearchSetting = SearchSetting {
@@ -127,7 +128,7 @@ executeFunction (applyedCommand -> Just cmd) fp f = f cmd fp
 
 
 -- | Bytter alle @{}@ med en git filepath
-substituePath :: [Command] -> RawFilePath -> [String]
+substituePath :: [Args] -> RawFilePath -> [String]
 substituePath cmd rfp = map (inPathSubsitute rfp) cmd
     where
         inPathSubsitute fp PathToSubs = convertToString fp
