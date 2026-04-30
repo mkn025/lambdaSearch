@@ -292,8 +292,7 @@ foreign import ccall unsafe "__posixdir_d_type"
 - I need to put a lot of thought into my record implementation and data types. In this workflow, you define your data structures first and work outward. Starting with a solid foundation here saves an immense amount of work later on.
 
 
--  One example of this was when I wanted to print filenames in green text, but only the filename itself, not the full path. Since I had stored everything in a single string, I had to use messy string manipulation to extract the name. It would have been much better if I had stored the filename and the path in separate record fields or even just a tuple from the start.
-
+  -  One example of this was when I wanted to print filenames in green text, but only the filename itself, not the full path. Since I had stored everything in a single string, I had to use messy string manipulation to extract the name. It would have been much better if I had stored the filename and the path in separate record fields or even just a tuple from the start.
 
 - Start earlier with the concurrency. I really wanted to implement concurrent searching
 
