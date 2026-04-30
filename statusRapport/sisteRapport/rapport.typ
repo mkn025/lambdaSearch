@@ -91,7 +91,6 @@ pFlags = choice
 
 - And it's all wrapped in choice which acts like a sequence of <|> 
 
-
 == Monad Transformers and Monadic Error Handling
  To make the directory traversal as fast as possible, I used the Foreign Function Interface (FFI) to bind directly to C POSIX functions. But to keep the Haskell side safe, I wrapped these impure calls in Monad Transformers to handle error and end of dir exceptions.
 
@@ -106,11 +105,9 @@ readDirEnt dir = ExceptT readContent
     readContent = do
       -- ... raw IO and FFI calls to c_readdir ...
 ```
-
 - First, I define `DirContentT` using `ExceptT`. This layers an exception context (`DirError`) over the `IO` monad. This lets me sequence IO actions but still cleanly short-circuit if a specific directory error happens (like a permission denied error).
 
 - Inside `readContent`, I do the actual raw `IO` calls to the C function `c_readdir`. Depending on the `Errno` returned by C, I can return `pure . Right $ Nothing` (if we hit the end of the folder) or `pure . Left $ ReadDirErr err` if it actually failed.
-
 
 == Higher-Order Functions and Folds 
 
@@ -124,21 +121,19 @@ parseFlags = do
   fs <- parseAllFlags 
   pure $ foldl' applyFlag emptyFilterFlags fs  
 ```
+- Essentially what a fold is is a canonical way consume a recusiv datastructure by replacing the constructor with a function. In the example above we the replace `:` in `[DataFlags]` with `applyFlag`.
 
-- Essentially what a fold is is a canonical way consume a recusiv datastructure by replacing its constructor with a function. In the example above we the replace `:` in `[DataFlags]` with `applyFlag`.
-
-- I use `foldl'` (the strict left fold) to consume list. Why strict fold? Because we want to avoid space leaks with accumulating expressions on the heap. It is probably not an issue on my program, but it is just good practice.
+-  Why strict fold? Because we want to avoid space leaks with accumulating expressions on the heap. It is probably not an issue on my program, but it is just good practice.
 
 - The magic happens with the `applyFlag` function, which has the type signature `Arguments -> DataFlags -> Arguments`. It basically acts as a state transition function. It takes the current `Arguments` state, looks at the new `DataFlags` we just parsed, and returns a newly updated `Arguments` record.
 
-- So we start with `emptyFilterFlags` as our base state, fold over the list of parsed flags, and get our fully constructed configuration.
+- So we start with `emptyFilterFlags` as our base state, consume the list of parsed flags, and get our fully constructed configuration. Quite a nite solution i think
 
 === In the traversal function
 
 First, Haskell is perfect for these traversal functions because it makes so much sense to write them recursively. You simply apply the same logic to every directory, accumulating the results as you search.
 
 In the `main` function, where I do the traversals, I use higher-order functions and a generalized `fold` function.
-
 
 ```hs
 
@@ -210,7 +205,11 @@ data Arguments = Arguments {
 }  deriving (Eq, Show)
 ```
 
+- The reason why haskell datatypes are Algebraic it that they are built from to opperators sums and products. In this case argumnents is a product type and Maybe is a sum type of `data Maybe a =  Nothing | Just a` and can hold $1 + |a|$  values. Using `Maybe` instead of a `null` or `""`.
+
+
 - The key functional technique is using the `Maybe` type (like `Maybe SearchPattern`) to explicitly encode whether a filter is active directly in the type system.
+
 
 - Instead of relying on `null` pointers or empty strings, `Maybe` makes invalid states unrepresentable. An unused filter is `Nothing`.
 
