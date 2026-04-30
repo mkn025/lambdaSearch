@@ -28,7 +28,7 @@
 
 #pagebreak()
 
-= Prosjekt description
+= Project description
 
 == What was the initial idea / background of the project?
 
@@ -36,7 +36,7 @@ The reason I wanted to make this project is that I really like CLI tools. I use 
 
 == Project goals
   - Make the searching program fast, efficient and safe.
-  - Call C functions to retrieve file metadata, with a little as possible overhead.
+  - Call C functions to retrieve file metadata, with as little as possible overhead.
   - Use the Either monad for error handling. 
   - Use the STM monad for concurrency. 
   - Parse CLI input with MegaParsec.
@@ -67,9 +67,9 @@ The reason I wanted to make this project is that I really like CLI tools. I use 
 = Description of the functional programming techniques
 
 == Monadic Parsing Combinators 
-When parsing the for the cli i use of lot of combinators.  Making it very readable and elagant . 
+When parsing for the CLI I use a lot of combinators. Making it very readable and elegant. 
 
-- Eksample:
+- Example:
 ```hs
 pFlags :: Parser DataFlags
 pFlags = choice
@@ -79,7 +79,7 @@ pFlags = choice
 ```
 - We use the `fmap` operator (`<$>`) to lift the parsed result into the `DataFlags` context.
 
-- Next is the acctual parser. Three things to notice here:
+- Next is the actual parser. Three things to notice here:
 
 1.  The `string'` function enables case-insensitive parsing (e.g., both `-p` and `-P`).
 
@@ -89,11 +89,11 @@ pFlags = choice
 
 - For `HiddenFilesFlag`, we use `<$`. Since this flag takes no arguments, `<$` directly replaces the parsed string with the data constructor.
 
-- And its all wrapped in chose which act like a sequence of <|> 
+- And it's all wrapped in choice which acts like a sequence of <|> 
 
 
 == Monad Transformers and Monadic Error Handling
- To make the directory traversal as fast as possible, I used the Foreign Function Interface (FFI) to bind directly to C POSIX functions. But to keep the Haskell side safe, I wrapped these impure calls in Monad Transformers to handle error and end of dir exeptions.
+ To make the directory traversal as fast as possible, I used the Foreign Function Interface (FFI) to bind directly to C POSIX functions. But to keep the Haskell side safe, I wrapped these impure calls in Monad Transformers to handle error and end of dir exceptions.
 
 - Example:
 ```hs
@@ -126,13 +126,13 @@ parseFlags = do
 ```
 - Here, `parseAllFlags` returns a list of parsed `DataFlags`. 
 
-- To process them, I use `foldl'` (the strict left fold) to iterate over this list. Why strict fold? Beacuse we want to avoid space leaks with accumulating expressions on the heap. It is probably not an issue on my program, but it is just good practice.
+- To process them, I use `foldl'` (the strict left fold) to iterate over this list. Why strict fold? Because we want to avoid space leaks with accumulating expressions on the heap. It is probably not an issue on my program, but it is just good practice.
 
 - The magic happens with the `applyFlag` function, which has the type signature `Arguments -> DataFlags -> Arguments`. It basically acts as a state transition function. It takes the current `Arguments` state, looks at the new `DataFlags` we just parsed, and returns a newly updated `Arguments` record.
 
 - So we start with `emptyFilterFlags` as our base state, fold over the list of parsed flags, and get our fully constructed configuration.
 
-=== In the travaveselfunction
+=== In the traversal function
 
 First, Haskell is perfect for these traversal functions because it makes so much sense to write them recursively. You simply apply the same logic to every directory, accumulating the results as you search.
 
@@ -171,18 +171,18 @@ foldDirectoryTree foldFunc acc rootPath  = do
 
 - If the current path is a directory, it delegates to `traverseDirectoryContents` using a custom `innerloop` helper function to process each item inside that directory.
 
-- The `innerloop` is where the recursive  happens. It applies the function `foldFunc` to the current item to compute the `nextAcc` (our updated state). 
+- The `innerloop` is where the recursion happens. It applies the function `foldFunc` to the current item to compute the `nextAcc` (our updated state). 
 
 - Then, if the current item happens to be another directory, it recursively calls `foldDirectoryTree` on that new path, passing in the `nextAcc`. This threads the accumulated state down into deeply nested subdirectories and back up. 
 
-So i can use the generalized function to accumulate fileinformation
+So I can use the generalized function to accumulate file information
 
 ```hs
-treversRecursively :: Arguments -> [FileInfomation] -> RawFilePath -> IO [FileInfomation]
-treversRecursively args = foldDirectoryTree foldFunc
+traverseRecursively :: Arguments -> [FileInformation] -> RawFilePath -> IO [FileInformation]
+traverseRecursively args = foldDirectoryTree foldFunc
     where
     regexCompiled = compileRegexFilter args
-    foldFunc :: [FileInfomation] -> RawFilePath -> DirContent -> IO [FileInfomation]
+    foldFunc :: [FileInformation] -> RawFilePath -> DirContent -> IO [FileInformation]
     foldFunc acc parentPath dc@(typ,file)  = ...
 ```
 Or i can use it to count the files 
@@ -199,14 +199,14 @@ countFiles  = foldDirectoryTree foldFunc
 
 == Algebraic data types 
 For storing the config of my search logic i used records.
-- Eksampel:
+- Example:
 ```hs
 data Arguments = Arguments {
       regxPattern    :: Maybe SearchPattern
     , exclude        :: Maybe SearchFilters
-    , extention      :: Maybe Extention
+    , extension      :: Maybe Extention
     , hideHidden     :: Bool
-    , applyedCommand :: Maybe ConstrucedCommand
+    , appliedCommand :: Maybe ConstructedCommand
 }  deriving (Eq, Show)
 ```
 
@@ -221,16 +221,16 @@ getRexPattern :: Maybe Regex -> RawFilePath -> Bool
 getRexPattern Nothing      _  = True
 getRexPattern (Just regex) fp = matchTest regex fp
 ```
-- If where to remove the pattern match on Nothing it will give me a compiler warning
+- If I were to remove the pattern match on Nothing it will give me a compiler warning
 
-Another exampel when i needed to constuct the the command that i would execute
+Another example when i needed to construct the command that i would execute
 ```hs
 data Args = Text String | PathToSubs
     deriving (Eq,Show)
 
--- | alias som beskriver en kommaddo eksterne kommandoer og argumenter.
+-- | alias som beskriver en kommando eksterne kommandoer og argumenter.
 --  String is just the name of the program, eks cat, sed, pandoc
-type ConstrucedCommand = (String, [Args])
+type ConstructedCommand = (String, [Args])
 ```
 - When you give the command to execute, you do it like this: `cat {}`. So here, it is very beneficial to create a datatype for this that says the argument is either a flag or a path where you substitute in the actual filepath. And a complete command is just a list of these. 
 
@@ -240,7 +240,7 @@ I made  use of  `ViewPatterns` language extension to keep my pattern matching co
 - Example:
 ```hs
 getExtentionFilter :: FilterFlags -> RawFilePath ->  Bool
-getExtentionFilter sf fp = case extention sf of
+getExtentionFilter sf fp = case extension sf of
                         Nothing    ->  True
                         (Just ext) -> case getFileExtention fp of
                                         Nothing     -> False
@@ -250,12 +250,12 @@ getExtentionFilter sf fp = case extention sf of
 
 ```hs
 getExtentionFilter :: Arguments -> RawFilePath -> Bool
-getExtentionFilter (extention -> Nothing) _                                = True
-getExtentionFilter (extention -> Just _ )  (getFileExtention -> Nothing)   = False
-getExtentionFilter (extention -> Just ext) (getFileExtention -> Just curr) = curr == ext
+getExtentionFilter (extension -> Nothing) _                                = True
+getExtentionFilter (extension -> Just _ )  (getFileExtention -> Nothing)   = False
+getExtentionFilter (extension -> Just ext) (getFileExtention -> Just curr) = curr == ext
 ```
 
-- I think this reads a lot better than the case statment, because it immediatly tells what output you get on that spesifc input. However this is just my subjektiv opinion.
+- I think this reads a lot better than the case statement, because it immediately tells what output you get on that specific input. However this is just my subjective opinion.
 
 
 
@@ -274,7 +274,7 @@ foreign import ccall unsafe "__posixdir_d_type"
   c_type :: Ptr CDirent -> IO DirType
 ```
 
-- As you can see, `c_readdir` uses a `safe` call, but the other two use `unsafe`. Why is this? Normally, when we make a `safe` call with the FFI, the runtime releases the capability before doing any C stuff. This allows any other Haskell thread to grab the capability (basically the "right to run Haskell code"). This, of course, results in a bit of overhead. When we do an `unsafe` call, it skips all of this. This can result in blocking the entire Haskell execution until C returns. So, if the C function takes a long time, or if it does not return, it can lead to a deadlock. It is also very important to use `safe` calls when the C co de calls back into Haskell (not an issue here). So, it's important that we are selective with the functions we call `unsafe` with, and we should not use them for anything that can take a substantial amount of time (like networked file systems or slow spinning disks). #link("https://github.com/haskell/unix/issues/34", "Issue talking about this.") This is why, when we do the `readdir`, we do it as a `safe` call. The other two are safe to make `unsafe` because they just read a field of a struct, which is very fast, and they do not do anything I/O related no syscalls, so there is no waiting.
+- As you can see, `c_readdir` uses a `safe` call, but the other two use `unsafe`. Why is this? Normally, when we make a `safe` call with the FFI, the runtime releases the capability before doing any C stuff. This allows any other Haskell thread to grab the capability (basically the "right to run Haskell code"). This, of course, results in a bit of overhead. When we do an `unsafe` call, it skips all of this. This can result in blocking the entire Haskell execution until C returns. So, if the C function takes a long time, or if it does not return, it can lead to a deadlock. It is also very important to use `safe` calls when the C code calls back into Haskell (not an issue here). So, it's important that we are selective with the functions we call `unsafe` with, and we should not use them for anything that can take a substantial amount of time (like networked file systems or slow spinning disks). #link("https://github.com/haskell/unix/issues/34", "Issue talking about this.") This is why, when we do the `readdir`, we do it as a `safe` call. The other two are safe to make `unsafe` because they just read a field of a struct, which is very fast, and they do not do anything I/O related no syscalls, so there is no waiting.
 
 
 
