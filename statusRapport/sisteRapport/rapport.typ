@@ -124,9 +124,10 @@ parseFlags = do
   fs <- parseAllFlags 
   pure $ foldl' applyFlag emptyFilterFlags fs  
 ```
-- Here, `parseAllFlags` returns a list of parsed `DataFlags`. 
 
-- To process them, I use `foldl'` (the strict left fold) to iterate over this list. Why strict fold? Because we want to avoid space leaks with accumulating expressions on the heap. It is probably not an issue on my program, but it is just good practice.
+- Essentially what a fold is is a canonical way consume a recusiv datastructure by replacing its constructor with a function. In the example above we the replace `:` in `[DataFlags]` with `applyFlag`.
+
+- I use `foldl'` (the strict left fold) to consume list. Why strict fold? Because we want to avoid space leaks with accumulating expressions on the heap. It is probably not an issue on my program, but it is just good practice.
 
 - The magic happens with the `applyFlag` function, which has the type signature `Arguments -> DataFlags -> Arguments`. It basically acts as a state transition function. It takes the current `Arguments` state, looks at the new `DataFlags` we just parsed, and returns a newly updated `Arguments` record.
 
@@ -175,7 +176,6 @@ foldDirectoryTree foldFunc acc rootPath  = do
 
 - Then, if the current item happens to be another directory, it recursively calls `foldDirectoryTree` on that new path, passing in the `nextAcc`. This threads the accumulated state down into deeply nested subdirectories and back up. 
 
-So I can use the generalized function to accumulate file information
 
 ```hs
 traverseRecursively :: Arguments -> [FileInformation] -> RawFilePath -> IO [FileInformation]
