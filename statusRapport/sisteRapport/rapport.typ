@@ -32,7 +32,7 @@
 
 == What was the initial idea / background of the project?
 
-The reason I wanted to make this project is that I really like CLI tools. I use them a lot every day. But I think some of them have unnecessary, bad, and unintuitive syntax. That's why I wanted to make my own tool where I had complete control over the syntax. I also wanted to build a TUI around it, mostly because brick sounded like a fun library to try out. So the idea was to use FFI, MegaParsec, and brick to make a CLI tool for searching for files on my PC. I Also wanted to try to use STM an concurrency to search through the files faster.
+The reason I wanted to make this project is that I really like CLI tools. I use them a lot every day. But I think some of them have unnecessary, bad, and unintuitive syntax. That's why I wanted to make my own tool where I had complete control over the syntax. I also wanted to build a TUI around it, mostly because brick sounded like a fun library to try out. So the idea was to use FFI, MegaParsec, and brick to make a CLI tool for searching for files on my PC. I also wanted to try to use STM and concurrency to search through the files faster.
 
 == Project goals
   - Make the searching program fast, efficient and safe.
@@ -75,7 +75,7 @@ A `Parser a` is basically implemented like this under the hood
 newtype Parser a = Parser { runParser :: String -> Maybe (a, String) }
   deriving (Functor)
 ```
-- The parser either fails or it returns a parsed value, this is good model because then the parser is just a regular function that you pass around and combine. And from this structure we can derive a hirahierarchy of typeclasses. 
+- The parser either fails or it returns a parsed value, this is good model because then the parser is just a regular function that you pass around and combine. And from this structure we can derive a hierarchy of typeclasses. 
 
 - Functor: gives us `<$>`. It lets us transform the result of a parser with a pure function, without touching the input-consuming logic underneath. I use this specifically in the example below to lift parsed results into the `DataFlags` context.
 
@@ -124,13 +124,13 @@ parseFlags = do
   fs <- parseAllFlags 
   pure $ foldl' applyFlag emptyFilterFlags fs  
 ```
-- Essentially what a fold is is a way consume a recusiv datastructure by replacing the constructor with a function. In the example above we the replace `:` in `[DataFlags]` with `applyFlag`.
+- Essentially what a fold is is a way consume a recursive datastructure by replacing the constructor with a function. In the example above we the replace `:` in `[DataFlags]` with `applyFlag`.
 
 -  Why strict fold? Because we want to avoid space leaks with accumulating expressions on the heap. It is probably not an issue on my program, but it is just good practice.
 
 - The magic happens with the `applyFlag` function, which has the type signature `Arguments -> DataFlags -> Arguments`. It basically acts as a state transition function. It takes the current `Arguments` state, looks at the new `DataFlags` we just parsed, and returns a newly updated `Arguments` record.
 
-- So we start with `emptyFilterFlags` as our base state, consume the list of parsed flags, and get our fully constructed configuration. Quite a nite solution i think
+- So we start with `emptyFilterFlags` as our base state, consume the list of parsed flags, and get our fully constructed configuration. quite a neat solution I think
 
 === In the traversal function
 
@@ -160,7 +160,7 @@ foldDirectoryTree foldFunc acc rootPath  = do
                 then pure nextAcc
                 else foldDirectoryTree foldFunc nextAcc filePath
 ```
-- `foldDirectoryTree` extends the folding to a rose three. Here it defines canonical way to consume the structure. In this case the stucture is our filesystem and we have a function that telles how to accumulate the values.
+- `foldDirectoryTree` extends the folding to a rose tree. Here it defines canonical way to consume the structure. In this case the structure is our filesystem and we have a function that tells how to accumulate the values.
 
 - The cool thing is that it guarantees correct threading of the accumulator. `a` is just a polymorphic type variable the compiler has no information about what it is. Because of this, the only way `foldDirectoryTree` can ever produce a new `a` for the next recursive call is by calling `foldFunc`. It literally cannot do anything else with it not inspect it, not drop it, not make one from thin air. The compiler simply does not have enough information to express any of those operations. This property is called Parametric Polymorphism, and it gives us a guarantee that the fold does no funky business with our state.
 
@@ -177,7 +177,7 @@ traverseRecursively args = foldDirectoryTree foldFunc
     foldFunc :: [FileInformation] -> RawFilePath -> DirContent -> IO [FileInformation]
     foldFunc acc parentPath dc@(typ,file)  = ...
 ```
-Or i can use it to count the files 
+Or I can use it to count the files 
 
 ```hs
 countFiles :: Integer -> RawFilePath -> IO Integer
@@ -192,7 +192,7 @@ countFiles  = foldDirectoryTree foldFunc
 
 == Algebraic data types 
 
-For storing the config of my search logic i used records.
+For storing the config of my search logic I used records.
 - Example:
 ```hs
 data Arguments = Arguments {
@@ -204,7 +204,7 @@ data Arguments = Arguments {
 }  deriving (Eq, Show)
 ```
 
-- The reason why Haskell datatypes are algebraic is that they are built from two operators sums and products. In this case, arguments form a product type, and `Maybe` from a sum type defined as `data Maybe a = Nothing | Just a`, which can hold $1 + |a|$ values. By using `Maybe` instead of f.eks.  `""`, we encode optionality into the type. And now, it is structurally impossible to have an invalid state.
+- The reason why Haskell datatypes are algebraic is that they are built from two operators sums and products. In this case, arguments form a product type, and `Maybe` from a sum type defined as `data Maybe a = Nothing | Just a`, which can hold $1 + |a|$ values. By using `Maybe` instead of e.g.  `""`, we encode optionality into the type. And now, it is structurally impossible to have an invalid state.
 
 - The compiler then enforces via pattern matching exhaustiveness checking if every call site handles both the present and absent case.
 
@@ -243,7 +243,7 @@ getExtentionFilter (extension -> Just ext) (getFileExtention -> Just curr) = cur
 
 
 == A little note about FFI  
-Another thing i want to talk about i the calls done with FFI
+Another thing I want to talk about is the calls done with FFI
 ```hs
 foreign import ccall safe "readdir"
   c_readdir :: Ptr CDir -> IO (Ptr CDirent) 
@@ -262,7 +262,7 @@ foreign import ccall unsafe "__posixdir_d_type"
   - I think that using the things we learn in the lessons in practice is really useful. #link("https://www.youtube.com/watch?v=VzAk7IZs1jM","easter egg")
   - I think it is hard to appreciate how good and useful Haskell’s type-system is before you write a bigger project like this. When you write more and more, Haskell's type-system that goes from being something that maybe restricts to something that guides you and holds your hand while you write code.
 
-- It is also very useful to think functionally about problems and appreciate how much shorter and more elegant solutions are when you just solve them with a composition of functions. Now after writing a fair bit of Haskell i found that i am always seeking filter, map, lambda etc. when i write code in java. It makes the code shorter, and in my opinion more readable.
+- It is also very useful to think functionally about problems and appreciate how much shorter and more elegant solutions are when you just solve them with a composition of functions. Now after writing a fair bit of Haskell I found that I am always seeking filter, map, lambda etc. when i write code in java. It makes the code shorter, and in my opinion more readable.
 
 - I have also enjoyed gaining experience with the Haskell ecosystem, specifically Cabal, Hoogle, and Hackage. Hoogle has been particularly useful, the ability to search for functions by their type signatures is brilliant.
 
@@ -281,11 +281,11 @@ Check the README on gitlab for more info
 ```bash 
 cabal build
 
-# eks.
+# ex.
 cabal run lambdaSearch -- . -e hs
 cabal run lambdaSearch -- -e hs
 
-# For å kjøre testene
+# To run the tests
 cabal test 
 ```
 = Repo URL
