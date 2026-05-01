@@ -121,7 +121,7 @@ parseFlags = do
   fs <- parseAllFlags 
   pure $ foldl' applyFlag emptyFilterFlags fs  
 ```
-- Essentially what a fold is is a canonical way consume a recusiv datastructure by replacing the constructor with a function. In the example above we the replace `:` in `[DataFlags]` with `applyFlag`.
+- Essentially what a fold is is a way consume a recusiv datastructure by replacing the constructor with a function. In the example above we the replace `:` in `[DataFlags]` with `applyFlag`.
 
 -  Why strict fold? Because we want to avoid space leaks with accumulating expressions on the heap. It is probably not an issue on my program, but it is just good practice.
 
@@ -138,40 +138,35 @@ In the `main` function, where I do the traversals, I use higher-order functions 
 ```hs
 
 foldDirectoryTree
-    :: (a -> RawFilePath -> DirContent -> IO a) -- Foldfunction
+    :: (a -> RawFilePath -> DirContent -> IO a) 
     -> a -- 
     -> RawFilePath
     -> IO a
 foldDirectoryTree foldFunc acc rootPath  = do
-
     isDir <- isDirectory <$> getFileStatus  rootPath
-
     if not isDir
         then pure acc
-        else traverseDirectoryContents innerloop acc rootPath
+        --  look at code for traverseDirectoryContents implementation
+        else traverseDirectoryContents innerloop acc rootPath 
     where
         innerloop currentAcc dc@(typ,filename) = do
-
             let filePath = rootPath  </> filename
             let isDir = typ == dtDir
-            -- legge funskjonen på 
             nextAcc <- foldFunc currentAcc rootPath dc
+
             if not isDir
                 then pure nextAcc
                 else foldDirectoryTree foldFunc nextAcc filePath
 ```
+- `foldDirectoryTree` extends the folding to a rose three. Here it defines canonical way to consume the structure. In this case the stucture is our filesystem and we have a function that telles how to accumulate the values.
 
-- The first thing to notice is the type signature. It takes a function `(a -> RawFilePath -> DirContent -> IO a)` which acts as our step function, an initial accumulator of type `a`, and the starting path. 
+- The cool thing is that it guarantees correct threading of the accumulator. `a` is just a polymorphic type variable the compiler has no information about what it is. Because of this, the only way `foldDirectoryTree` can ever produce a new `a` for the next recursive call is by calling `foldFunc`. It literally cannot do anything else with it not inspect it, not drop it, not make one from thin air. The compiler simply does not have enough information to express any of those operations. This property is called Parametric Polymorphism, and it gives us a guarantee that the fold does no funky business with our state.
 
-- Because of this generic signature, `foldDirectoryTree` doesn't actually know what data it is collecting (it could be a list of files, a count, etc.). It just knows how to walk the tree and thread a state of type `a` through the execution. 
+- I would argue this is much safer than typing `a` as something concrete like `[RawFilePath]`. The moment you do that, you suddenly open up a whole world of possible manipulation the function could reorder the list, drop entries etc.. 
 
-- If the current path is a directory, it delegates to `traverseDirectoryContents` using a custom `innerloop` helper function to process each item inside that directory.
+- However. Sadly we are still inside the `IO` monad though, so the guarantee is not airtight. But we are still sure that it does folds correctly and that is does not do anything bad with `a`. And as long as we write the `foldFunc` we are good.
 
-- The `innerloop` is where the recursion happens. It applies the function `foldFunc` to the current item to compute the `nextAcc` (our updated state). 
-
-- Then, if the current item happens to be another directory, it recursively calls `foldDirectoryTree` on that new path, passing in the `nextAcc`. This threads the accumulated state down into deeply nested subdirectories and back up. 
-
-
+I also want to mention that having this generic signature is very useful, we can reuse the same traversal logic for completely different purposes just by swapping  `a`:
 ```hs
 traverseRecursively :: Arguments -> [FileInformation] -> RawFilePath -> IO [FileInformation]
 traverseRecursively args = foldDirectoryTree foldFunc
@@ -190,9 +185,11 @@ countFiles  = foldDirectoryTree foldFunc
     foldFunc s  _ ((== dtDir) -> True ,_) = pure (1 +  s)
     foldFunc s _ _                        = pure s
 ```
+
 #linebreak()
 
 == Algebraic data types 
+
 For storing the config of my search logic i used records.
 - Example:
 ```hs
@@ -205,33 +202,18 @@ data Arguments = Arguments {
 }  deriving (Eq, Show)
 ```
 
-- The reason why haskell datatypes are Algebraic it that they are built from to opperators sums and products. In this case argumnents is a product type and Maybe is a sum type of `data Maybe a =  Nothing | Just a` and can hold $1 + |a|$  values. Using `Maybe` instead of a `null` or `""`.
+- The reason why Haskell datatypes are algebraic is that they are built from two operators sums and products. In this case, arguments form a product type, and `Maybe` from a sum type defined as `data Maybe a = Nothing | Just a`, which can hold $1 + |a|$ values. By using `Maybe` instead of f.eks.  `""`, we encode optionality into the type. And now, it is structurally impossible to have an invalid state.
 
+- The compiler then enforces via pattern matching exhaustiveness checking if every call site handles both the present and absent case.
 
-- The key functional technique is using the `Maybe` type (like `Maybe SearchPattern`) to explicitly encode whether a filter is active directly in the type system.
-
-
-- Instead of relying on `null` pointers or empty strings, `Maybe` makes invalid states unrepresentable. An unused filter is `Nothing`.
-
-- This forces explicit pattern matching (`Just val` vs `Nothing`) in my filter functions, providing compile-time guarantees that I won't crash from null references or accidentally apply an empty filter.
-
-```hs
-getRexPattern :: Maybe Regex -> RawFilePath -> Bool
-getRexPattern Nothing      _  = True
-getRexPattern (Just regex) fp = matchTest regex fp
-```
-- If I were to remove the pattern match on Nothing it will give me a compiler warning
-
-Another example when i needed to construct the command that i would execute
 ```hs
 data Args = Text String | PathToSubs
     deriving (Eq,Show)
 
--- | alias som beskriver en kommando eksterne kommandoer og argumenter.
---  String is just the name of the program, eks cat, sed, pandoc
 type ConstructedCommand = (String, [Args])
 ```
 - When you give the command to execute, you do it like this: `cat {}`. So here, it is very beneficial to create a datatype for this that says the argument is either a flag or a path where you substitute in the actual filepath. And a complete command is just a list of these. 
+
 
 == View Patterns
 I made  use of  `ViewPatterns` language extension to keep my pattern matching concise. It lets me evaluate a function directly inside the pattern match, saving me from writing nested `case` expressions. 
@@ -255,8 +237,6 @@ getExtentionFilter (extension -> Just ext) (getFileExtention -> Just curr) = cur
 ```
 
 - I think this reads a lot better than the case statement, because it immediately tells what output you get on that specific input. However this is just my subjective opinion.
-
-
 
 
 
