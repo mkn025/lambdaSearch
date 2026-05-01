@@ -67,25 +67,25 @@ The reason I wanted to make this project is that I really like CLI tools. I use 
 = Description of the functional programming techniques
 
 == Monadic Parsing Combinators 
-When parsing for the CLI I use a lot of combinators. Making it very readable and elegant. But first, it is worth understanding what a parser combinator actually is. 
+When parsing for the CLI I use a lot of combinators. Making it very readable and elegant. 
 
 A `Parser a` is basically implemented like this under the hood
-
 ```hs
 newtype Parser a = Parser { runParser :: String -> Maybe (a, String) }
   deriving (Functor)
 ```
 - The parser either fails or it returns a parsed value, this is good model because then the parser is just a regular function that you pass around and combine. And from this structure we can derive a hierarchy of typeclasses. 
 
-- Functor: gives us `<$>`. It lets us transform the result of a parser with a pure function, without touching the input-consuming logic underneath. I use this specifically in the example below to lift parsed results into the `DataFlags` context.
+- Functor: gives us `<$>`. It lets us transform the result of a parser with a pure function, without touching the input consuming logic underneath. I use this specifically in the example below to lift parsed results into the `DataFlags` context. 
 
-- Applicative: builds on Functor and gives us `*>`. It lets us sequence two parsers one after the other — run the first, then run the second on whatever input is left over. The `*>` variant specifically discards the result of the left parser and keeps only the right. I use this to consume and throw away the flag prefix before capturing the actual argument.
+- Applicative: builds on Functor and gives us `*>, <*> <*`. It lets us sequence two parsers one after the other run the first, then run the second on whatever input is left over. The `*>` variant specifically discards the result of the left parser and keeps only the right. I use this to consume and throw away the flag prefix before capturing the actual argument.
 
-- Alternative: builds on Applicative and gives us `<|>` — try the left parser, and if it fails, try the right one. Because the type signature is `f a -> f a -> f a`, you can chain as many alternatives as you want and treat the whole thing as a single parser. I use this to accept both short flags like `-p` and long flags like `--pattern` interchangeably.
+- Alternative: builds on Applicative and gives us `<|>` try the left parser, and if it fails, try the right one. Because the type signature is `f a -> f a -> f a`, you can chain as many alternatives as you want and treat the whole thing as a single parser. I use this to accept both short flags like `-p` and long flags like `--pattern` interchangeably.
 
-- Monad: builds on Applicative and gives us `>>=`. It lets us make parsing decisions based on what we have already parsed — the result of one parser can determine what we parse next. 
+- Monad: builds on Applicative and gives us `>>=`. It lets us make parsing decisions based on what we have already parsed the result of one parser can determine what we parse next. From a syntax standpoint it is also really good because you can just parse ting parse thing sequentially downward in a do block. 
 
-- Example:
+
+Example combinators:
 ```hs
 pFlags :: Parser DataFlags
 pFlags = choice
@@ -93,10 +93,26 @@ pFlags = choice
      , HiddenFilesFlag  <$  ( string' "-a" <|> string  "--show--dots")
        ...
 ```
+Example monad:
+
+```hs
+parseLamdaSearch :: Parser SearchSetting
+parseLamdaSearch = do
+    paths <- sc *> parsePathOrDot
+    args  <- parseFlags
+    let ss = SearchSetting {
+           searchPaths  = Nothing
+         , arguments    = args }
+    case paths of
+        NoPath           -> pure ss
+        (ManyPaths [])   -> pure ss
+        (ManyPaths p)    -> pure ss {searchPaths = Just p}
+
+```
 == Monad Transformers and Monadic Error Handling
  To make the directory traversal as fast as possible, I used the Foreign Function Interface (FFI) to bind directly to C POSIX functions. But to keep the Haskell side safe, I wrapped these impure calls in Monad Transformers to handle error and end of dir exceptions.
 
-- Example:
+Example:
 ```hs
 type DirContentT = ExceptT DirError IO (Maybe DirContent)
 
@@ -166,7 +182,7 @@ foldDirectoryTree foldFunc acc rootPath  = do
 
 - I would argue this is much safer than typing `a` as something concrete like `[RawFilePath]`. The moment you do that, you suddenly open up a whole world of possible manipulation the function could reorder the list, drop entries etc.. 
 
-- However. Sadly we are still inside the `IO` monad though, so the guarantee is not airtight. But we are still sure that it does folds correctly and that is does not do anything bad with `a`. And as long as we write the `foldFunc` we are good.
+- However, sadly we are still inside the `IO` monad though, so the guarantee is not airtight(it can have any side effect, launch nuclear missiles for instance). But we are still sure that it does folds correctly and that is does not do anything bad with `a`. And as long as we write the `foldFunc` we are good.
 
 I also want to mention that having this generic signature is very useful, we can reuse the same traversal logic for completely different purposes just by swapping  `a`:
 ```hs
