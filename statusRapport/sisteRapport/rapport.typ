@@ -77,9 +77,13 @@ newtype Parser a = Parser { runParser :: String -> Maybe (a, String) }
 ```
 - The parser either fails or it returns a parsed value, this is good model because then the parser is just a regular function that you pass around and combine. And from this structure we can derive a hirahierarchy of typeclasses. 
 
-- Functor: This allows you to lift anything into the Parser context. I use this specifically in the example bellow. 
+- Functor: gives us `<$>`. It lets us transform the result of a parser with a pure function, without touching the input-consuming logic underneath. I use this specifically in the example below to lift parsed results into the `DataFlags` context.
 
-- And from the functor you can derive the applicative class. Witch basically lets use a in this case use a funtcion that is wraped in the parser with another function value or function that is wrapped in a parser. When then allows to sequence thease parsing functions together. I also do this in the example bellow when i use `*>` is sequences the actions, but is discards the result of the first
+- Applicative: builds on Functor and gives us `*>`. It lets us sequence two parsers one after the other — run the first, then run the second on whatever input is left over. The `*>` variant specifically discards the result of the left parser and keeps only the right. I use this to consume and throw away the flag prefix before capturing the actual argument.
+
+- Alternative: builds on Applicative and gives us `<|>` — try the left parser, and if it fails, try the right one. Because the type signature is `f a -> f a -> f a`, you can chain as many alternatives as you want and treat the whole thing as a single parser. I use this to accept both short flags like `-p` and long flags like `--pattern` interchangeably.
+
+- Monad: builds on Applicative and gives us `>>=`. It lets us make parsing decisions based on what we have already parsed — the result of one parser can determine what we parse next. 
 
 - Example:
 ```hs
@@ -89,19 +93,6 @@ pFlags = choice
      , HiddenFilesFlag  <$  ( string' "-a" <|> string  "--show--dots")
        ...
 ```
-- We use the `fmap` operator (`<$>`) to lift the parsed result into the `DataFlags` context.
-- Next is the actual parser. Three things to notice here:
-1.  The `string'` function enables case-insensitive parsing (e.g., both `-p` and `-P`).
-
-2.  I use the <|> operator, which here sort of acts like a or. It tries to parse -p, and if that fails, it tries to parse --pattern. Because the type signature of this operator is f a -> f a -> f a, you can treat the combined expression as a single parser. This means anywhere you parse one thing, you can easily try to parse alternatives without any hassle. Of course, the inner type a must be the same for both parsers.
-
-3. The sequence operator (`*>`) consumes and discards the flag prefix. We chain this with `sc` to skip whitespace before capturing the actual argument.
-
-- For `HiddenFilesFlag`, we use `<$`. Since this flag takes no arguments, `<$` directly replaces the parsed string with the data constructor.
-
-- And it's all wrapped in choice which acts like a sequence of <|> 
-
-
 == Monad Transformers and Monadic Error Handling
  To make the directory traversal as fast as possible, I used the Foreign Function Interface (FFI) to bind directly to C POSIX functions. But to keep the Haskell side safe, I wrapped these impure calls in Monad Transformers to handle error and end of dir exceptions.
 
@@ -148,7 +139,6 @@ First, Haskell is perfect for these traversal functions because it makes so much
 In the `main` function, where I do the traversals, I use higher-order functions and a generalized `fold` function.
 
 ```hs
-
 foldDirectoryTree
     :: (a -> RawFilePath -> DirContent -> IO a) 
     -> a -- 
