@@ -108,9 +108,12 @@ readDirEnt dir = ExceptT readContent
     readContent :: IO (Either DirError (Maybe DirContent))
     readContent = do
       let dirp = unpackDirStream dir
-      resetErrno
 
-      -- c_readdir_new :: Ptr CDir -> IO (Ptr CDirent)
+
+    -- fra docs : set errno to zero before calling readdir()
+
+      resetErrno 
+
       dEnt <- c_readdir dirp
       if dEnt == PTR.nullPtr
         then do
@@ -153,7 +156,6 @@ traverseDirectoryContents :: (MonadUnliftIO m)
                           -> RawFilePath
                           -> m a
 traverseDirectoryContents f s0 p = do
-
     run <- askRunInIO
     liftIO $ bracketOnError
         (openDirStreamPermissive p)
@@ -185,6 +187,7 @@ traverseDirectoryContents f s0 p = do
 
 -- | Traverserer katalogtreet rekursivt og putter det og har en fold funksjon bestemmer hvordan den skal legge inn helemeter
 --
+-- Se rapport for mer informasjon
 -- Sjekker om @rootPath@ er en dir, så bruker @foldFunc@ på hvert element
 -- (unntatt @.@ og @..@). Er elementet en en dir treveserer den rekusrsivt
 --

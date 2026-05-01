@@ -67,7 +67,19 @@ The reason I wanted to make this project is that I really like CLI tools. I use 
 = Description of the functional programming techniques
 
 == Monadic Parsing Combinators 
-When parsing for the CLI I use a lot of combinators. Making it very readable and elegant. 
+When parsing for the CLI I use a lot of combinators. Making it very readable and elegant. But first, it is worth understanding what a parser combinator actually is. 
+
+A `Parser a` is basically implemented like this under the hood
+
+```hs
+newtype Parser a = Parser { runParser :: String -> Maybe (a, String) }
+  deriving (Functor)
+```
+- The parser either fails or it returns a parsed value, this is good model because then the parser is just a regular function that you pass around and combine. And from this structure we can derive a hirahierarchy of typeclasses. 
+
+- Functor: This allows you to lift anything into the Parser context. I use this specifically in the example bellow. 
+
+- And from the functor you can derive the applicative class. Witch basically lets use a in this case use a funtcion that is wraped in the parser with another function value or function that is wrapped in a parser. When then allows to sequence thease parsing functions together. I also do this in the example bellow when i use `*>` is sequences the actions, but is discards the result of the first
 
 - Example:
 ```hs
@@ -78,9 +90,7 @@ pFlags = choice
        ...
 ```
 - We use the `fmap` operator (`<$>`) to lift the parsed result into the `DataFlags` context.
-
 - Next is the actual parser. Three things to notice here:
-
 1.  The `string'` function enables case-insensitive parsing (e.g., both `-p` and `-P`).
 
 2.  I use the <|> operator, which here sort of acts like a or. It tries to parse -p, and if that fails, it tries to parse --pattern. Because the type signature of this operator is f a -> f a -> f a, you can treat the combined expression as a single parser. This means anywhere you parse one thing, you can easily try to parse alternatives without any hassle. Of course, the inner type a must be the same for both parsers.
@@ -90,6 +100,7 @@ pFlags = choice
 - For `HiddenFilesFlag`, we use `<$`. Since this flag takes no arguments, `<$` directly replaces the parsed string with the data constructor.
 
 - And it's all wrapped in choice which acts like a sequence of <|> 
+
 
 == Monad Transformers and Monadic Error Handling
  To make the directory traversal as fast as possible, I used the Foreign Function Interface (FFI) to bind directly to C POSIX functions. But to keep the Haskell side safe, I wrapped these impure calls in Monad Transformers to handle error and end of dir exceptions.
@@ -108,6 +119,7 @@ readDirEnt dir = ExceptT readContent
 - First, I define `DirContentT` using `ExceptT`. This layers an exception context (`DirError`) over the `IO` monad. This lets me sequence IO actions but still cleanly short-circuit if a specific directory error happens (like a permission denied error).
 
 - Inside `readContent`, I do the actual raw `IO` calls to the C function `c_readdir`. Depending on the `Errno` returned by C, I can return `pure . Right $ Nothing` (if we hit the end of the folder) or `pure . Left $ ReadDirErr err` if it actually failed.
+
 
 == Higher-Order Functions and Folds 
 
@@ -255,8 +267,6 @@ foreign import ccall unsafe "__posixdir_d_type"
 
 - As you can see, `c_readdir` uses a `safe` call, but the other two use `unsafe`. Why is this? Normally, when we make a `safe` call with the FFI, the runtime releases the capability before doing any C stuff. This allows any other Haskell thread to grab the capability (basically the "right to run Haskell code"). This, of course, results in a bit of overhead. When we do an `unsafe` call, it skips all of this. This can result in blocking the entire Haskell execution until C returns. So, if the C function takes a long time, or if it does not return, it can lead to a deadlock. It is also very important to use `safe` calls when the C code calls back into Haskell (not an issue here). So, it's important that we are selective with the functions we call `unsafe` with, and we should not use them for anything that can take a substantial amount of time (like networked file systems or slow spinning disks). #link("https://github.com/haskell/unix/issues/34", "Issue talking about this.") This is why, when we do the `readdir`, we do it as a `safe` call. The other two are safe to make `unsafe` because they just read a field of a struct, which is very fast, and they do not do anything I/O related no syscalls, so there is no waiting.
 
-
-
 = Self evaluation:
 == What was positive about working on this project?
   - I think that using the things we learn in the lessons in practice is really useful. #link("https://www.youtube.com/watch?v=VzAk7IZs1jM","easter egg")
@@ -268,7 +278,7 @@ foreign import ccall unsafe "__posixdir_d_type"
 
 == What would you have done differently if you were to do it again?
 
-- I need to put a lot of thought into my record implementation and data types. In this workflow, you define your data structures first and work outward. Starting with a solid foundation here saves an immense amount of work later on.
+- I would put a lot of thought into the implementation of my datatypes. In this workflow, you define your data structures first and work outward. Starting with a solid foundation here saves an immense amount of work later on.
 
 
   -  One example of this was when I wanted to print filenames in green text, but only the filename itself, not the full path. Since I had stored everything in a single string, I had to use messy string manipulation to extract the name. It would have been much better if I had stored the filename and the path in separate record fields or even just a tuple from the start.
