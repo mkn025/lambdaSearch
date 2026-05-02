@@ -186,7 +186,6 @@ traverseDirectoryContents f s0 p = do
                                                   loop run acc' dirp
 
 
-
 -- | Traverserer katalogtreet rekursivt og putter det og har en fold funksjon bestemmer hvordan den skal legge inn helemeter
 --
 -- Se rapport for mer informasjon
@@ -218,9 +217,8 @@ foldDirectoryTree foldFunc acc rootPath  = do
 
 
 
-
 -- | Rekkursiv traversering med aktive filter
--- | Går igjennom alle filene og rekusrsivt. Og akkumlerer ønskete filer i acc listen vår
+--  Går igjennom alle filene og rekusrsivt. Og akkumlerer ønskete filer i acc listen vår
 treversRecursively :: Arguments -> [FileInfomation] -> RawFilePath -> IO [FileInfomation]
 treversRecursively args = foldDirectoryTree foldFunc
     where

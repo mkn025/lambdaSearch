@@ -123,6 +123,7 @@ readDirEnt dir = ExceptT readContent
     readContent = do
       -- ... raw IO and FFI calls to c_readdir ...
 ```
+
 - First, I define `DirContentT` using `ExceptT`. This layers an exception context (`DirError`) over the `IO` monad. This lets me sequence IO actions but still cleanly short-circuit if a specific directory error happens (like a permission denied error).
 
 - Inside `readContent`, I do the actual raw `IO` calls to the C function `c_readdir`. Depending on the `Errno` returned by C, I can return `pure . Right $ Nothing` (if we hit the end of the folder) or `pure . Left $ ReadDirErr err` if it actually failed.
@@ -131,7 +132,7 @@ readDirEnt dir = ExceptT readContent
 == Higher-Order Functions and Folds 
 
 === In the parser
-- To keep track of which flags the user passed in the CLI, I used a functional fold. This is a clean way to build up the configuration state purely.
+- To parse the CLI flags, I used a functional fold. This is a clean way to build up the configuration state purely.
 
 - Example:
 ```hs
@@ -140,6 +141,7 @@ parseFlags = do
   fs <- parseAllFlags 
   pure $ foldl' applyFlag emptyFilterFlags fs  
 ```
+
 - Essentially what a fold is is a way consume a recursive datastructure by replacing the constructor with a function. In the example above we the replace `:` in `[DataFlags]` with `applyFlag`.
 
 -  Why strict fold? Because we want to avoid space leaks with accumulating expressions on the heap. It is probably not an issue on my program, but it is just good practice.
@@ -148,10 +150,9 @@ parseFlags = do
 
 - So we start with `emptyFilterFlags` as our base state, consume the list of parsed flags, and get our fully constructed configuration. quite a neat solution I think
 
+
+
 === In the traversal function
-
-First, Haskell is perfect for these traversal functions because it makes so much sense to write them recursively. You simply apply the same logic to every directory, accumulating the results as you search.
-
 In the `main` function, where I do the traversals, I use higher-order functions and a generalized `fold` function.
 
 ```hs
@@ -180,11 +181,12 @@ foldDirectoryTree foldFunc acc rootPath  = do
 
 - The cool thing is that it guarantees correct threading of the accumulator. `a` is just a polymorphic type variable the compiler has no information about what it is. Because of this, the only way `foldDirectoryTree` can ever produce a new `a` for the next recursive call is by calling `foldFunc`. It literally cannot do anything else with it not inspect it, not drop it, not make one from thin air. The compiler simply does not have enough information to express any of those operations. This property is called Parametric Polymorphism, and it gives us a guarantee that the fold does no funky business with our state.
 
-- I would argue this is much safer than typing `a` as something concrete like `[RawFilePath]`. The moment you do that, you suddenly open up a whole world of possible manipulation the function could reorder the list, drop entries etc.. 
+- I would argue this is much safer than typing `a` as something concrete like `[RawFilePath]`. The moment you do that, you suddenly open up a whole world of possible manipulation the function could reorder the list, drop entries etc..
 
 - However, sadly we are still inside the `IO` monad though, so the guarantee is not airtight(it can have any side effect, launch nuclear missiles for instance). But we are still sure that it does folds correctly and that is does not do anything bad with `a`. And as long as we write the `foldFunc` we are good.
 
 I also want to mention that having this generic signature is very useful, we can reuse the same traversal logic for completely different purposes just by swapping  `a`:
+
 ```hs
 traverseRecursively :: Arguments -> [FileInformation] -> RawFilePath -> IO [FileInformation]
 traverseRecursively args = foldDirectoryTree foldFunc
@@ -193,11 +195,10 @@ traverseRecursively args = foldDirectoryTree foldFunc
     foldFunc :: [FileInformation] -> RawFilePath -> DirContent -> IO [FileInformation]
     foldFunc acc parentPath dc@(typ,file)  = ...
 ```
-Or I can use it to count the files 
-
+Or I can use it for counting
 ```hs
-countFiles :: Integer -> RawFilePath -> IO Integer
-countFiles  = foldDirectoryTree foldFunc
+count :: Integer -> RawFilePath -> IO Integer
+count  = foldDirectoryTree foldFunc
     where 
     foldFunc ::  Integer -> RawFilePath -> DirContent -> IO Integer
     foldFunc s  _ ((== dtDir) -> True ,_) = pure (1 +  s)
