@@ -1,4 +1,6 @@
 
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module TraverselsFunctions (
 
       DirContent
@@ -193,19 +195,18 @@ traverseDirectoryContents f s0 p = do
 --
 -- * Er @rootPath@ ikke en direrctory da er  @acc@ uendret.
 foldDirectoryTree
-    :: (a -> RawFilePath -> DirContent -> IO a) 
+    :: forall a . (a -> RawFilePath -> DirContent -> IO a)  --  forall scoopes a in hele func function
     -> a -- 
     -> RawFilePath
     -> IO a
 foldDirectoryTree foldFunc acc rootPath  = do
-
     isDir <- isDirectory <$> getFileStatus  rootPath
     if not isDir
         then pure acc
         else traverseDirectoryContents innerloop acc rootPath
     where
+        innerloop  :: a -> DirContent -> IO a
         innerloop currentAcc dc@(typ,filename) = do
-
             let filePath = rootPath  </> filename
             let isDir = typ == dtDir
             -- legge funskjonen på 
@@ -213,6 +214,9 @@ foldDirectoryTree foldFunc acc rootPath  = do
             if not isDir
                 then pure nextAcc
                 else foldDirectoryTree foldFunc nextAcc filePath
+
+
+
 
 
 -- | Rekkursiv traversering med aktive filter
