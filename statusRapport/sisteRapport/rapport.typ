@@ -111,7 +111,9 @@ parseLamdaSearch = do
 
 ```
 == Monad Transformers and Monadic Error Handling
- To make the directory traversal as fast as possible, I used the Foreign Function Interface (FFI) to bind directly to C POSIX functions. But to keep the Haskell side safe, I wrapped these impure calls in Monad Transformers to handle error and end of dir exceptions.
+To make the directory traversal as fast as possible, I used the Foreign Function Interface (FFI) to bind directly to C POSIX functions. But to keep the Haskell side safe, I wrapped these impure calls in Monad Transformers to handle error and end of dir exceptions.
+
+The reason why we need a monad transformer is because monads do not compose natively.
 
 Example:
 ```hs
@@ -124,7 +126,7 @@ readDirEnt dir = ExceptT readContent
     readContent = do
       -- ... raw IO and FFI calls to c_readdir ...
 ```
-- The reason why we need a monad transformer is because we can not 
+
 
 - First, I define `DirContentT` using `ExceptT`. This layers an exception context (`DirError`) over the `IO` monad. This lets me sequence IO actions but still cleanly short-circuit if a specific directory error happens (like a permission denied error).
 
@@ -279,9 +281,9 @@ foreign import ccall unsafe "__posixdir_d_type"
 - As you can see, `c_readdir` uses a `safe` call, but the other two use `unsafe`. Why is this? Normally, when we make a `safe` call with the FFI, the runtime releases the capability before doing any C stuff. This allows any other Haskell thread to grab the capability (basically the "right to run Haskell code"). This, of course, results in a bit of overhead. When we do an `unsafe` call, it skips all of this. This can result in blocking the entire Haskell execution until C returns. So, if the C function takes a long time, or if it does not return, it can lead to a deadlock. It is also very important to use `safe` calls when the C code calls back into Haskell (not an issue here). So, it's important that we are selective with the functions we call `unsafe` with, and we should not use them for anything that can take a substantial amount of time (like networked file systems or slow spinning disks). #link("https://github.com/haskell/unix/issues/34", "Issue talking about this.") This is why, when we do the `readdir`, we do it as a `safe` call. The other two are safe to make `unsafe` because they just read a field of a struct, which is very fast, and they do not do anything I/O related no syscalls, so there is no waiting.
 
 == Honorable mentions
-- I used a lot of state in the TUI
-- Use bracket on error to close stream safely
-- I do a loot of property based testing
+- I used a lot of state in the TUI 
+- Use bracket on error to close stream safely 
+- Property-based testing in my testes
 
 
 = Self evaluation:
@@ -312,10 +314,10 @@ cabal run lambdaSearch -- -e hs
 
 # To run the tests
 cabal test 
+
 ```
 = Repo URL
 
 #link("https://git.app.uib.no/martin.e.knutsen/inf221-Semesteroppgave")
-
 
 

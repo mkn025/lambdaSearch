@@ -215,8 +215,6 @@ foldDirectoryTree foldFunc acc rootPath  = do
                 else foldDirectoryTree foldFunc nextAcc filePath
 
 
-
-
 -- | Rekkursiv traversering med aktive filter
 --  Går igjennom alle filene og rekusrsivt. Og akkumlerer ønskete filer i acc listen vår
 treversRecursively :: Arguments -> [FileInfomation] -> RawFilePath -> IO [FileInfomation]

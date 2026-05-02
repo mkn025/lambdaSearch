@@ -154,17 +154,14 @@ openInEditor :: TuiState -> IO ()
 openInEditor (startEditor -> False) = pure ()
 openInEditor st = do
     ed <- lookupEnv "EDITOR"
-    case ed of
-        Nothing   -> putStrLn "fant ikke noe editor i env var"
-        (Just e) -> do
-                let selectedPath =
-                       convertString 
+    let selectedPath = convertString 
                      . fst
                      . head
                      . filter ((==selected st) . snd ) 
                      $ zip (paths st) [0..]
-                let cmd = (e, [PathToSubs])
-                executeOnFile cmd selectedPath 
+    case ed of
+        Nothing  -> putStrLn "fant ikke noe editor i env var"
+        (Just e) -> executeOnFile (e, [PathToSubs]) selectedPath 
 
 mainTUI :: IO ()
 mainTUI = do

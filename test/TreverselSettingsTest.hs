@@ -39,10 +39,10 @@ testConvertions = adjustOption (const (QuickCheckTests 1_000)) $ testProperty
 testsSafeHead :: TestTree
 testsSafeHead = testGroup "safeHead"
     [ testCase "empty gir Nothing" $
-        safeHead BC.empty @?= Nothing
+        safeHead BC.empty   @?= Nothing
 
     , testCase "enkelt tegn gir Just tegnet" $
-        safeHead (bs "a") @?= Just 'a'
+        safeHead (bs "a")   @?= Just 'a'
 
     , testCase "tar kun første tegn" $
         safeHead (bs "abc") @?= Just 'a'
@@ -57,10 +57,10 @@ testsSafeHead = testGroup "safeHead"
 testsSafeTail :: TestTree
 testsSafeTail = testGroup "safeTail"
     [ testCase "empty gir Nothing" $
-        safeTail BC.empty @?= Nothing
+        safeTail BC.empty   @?= Nothing
 
     , testCase "enkelt tegn gir Just empty" $
-        safeTail (bs "a") @?= Just BC.empty
+        safeTail (bs "a")   @?= Just BC.empty
 
     , testCase "fjerner første tegn" $
         safeTail (bs "abc") @?= Just (bs "bc")
@@ -101,16 +101,16 @@ testsHiddenFilter = testGroup "getHiddenFilter"
 testsDisallowFilter :: TestTree
 testsDisallowFilter = testGroup "getDisallowFilter"
     [ testCase "ingen exclude: tar alltid med" $
-        getDisallowFilter defaultArgs (bs "/foo/bar") @?= True
+        getDisallowFilter defaultArgs (bs "/foo/bar")                              @?= True
 
     , testCase "filepath med ekskludert prefix: filtreres bort" $
         getDisallowFilter (withExclude ["/node_modules"]) (bs "/node_modules/foo") @?= False
 
     , testCase "filepath uten ekskludert prefix: tas med" $
-        getDisallowFilter (withExclude ["/node_modules"]) (bs "/src/foo") @?= True
+        getDisallowFilter (withExclude ["/node_modules"]) (bs "/src/foo")          @?= True
 
     , testCase "flere excludes: matcher riktig" $
-        getDisallowFilter (withExclude ["/a", "/b"]) (bs "/b/fil") @?= False
+        getDisallowFilter (withExclude ["/a", "/b"]) (bs "/b/fil")                 @?= False
 
     , adjustOption (const (QuickCheckTests 1_000)) $
       testProperty "ingen exclude filtrerer aldri bort" $
