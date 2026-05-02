@@ -74,6 +74,7 @@ A `Parser a` is basically implemented like this under the hood
 newtype Parser a = Parser { runParser :: String -> Maybe (a, String) }
   deriving (Functor)
 ```
+
 - The parser either fails or it returns a parsed value, this is good model because then the parser is just a regular function that you pass around and combine. And from this structure we can derive a hierarchy of typeclasses. 
 
 - Functor: gives us `<$>`. It lets us transform the result of a parser with a pure function, without touching the input consuming logic underneath. I use this specifically in the example below to lift parsed results into the `DataFlags` context. 
@@ -123,6 +124,7 @@ readDirEnt dir = ExceptT readContent
     readContent = do
       -- ... raw IO and FFI calls to c_readdir ...
 ```
+- The reason why we need a monad transformer is because we can not 
 
 - First, I define `DirContentT` using `ExceptT`. This layers an exception context (`DirError`) over the `IO` monad. This lets me sequence IO actions but still cleanly short-circuit if a specific directory error happens (like a permission denied error).
 
@@ -141,7 +143,7 @@ parseFlags = do
   fs <- parseAllFlags 
   pure $ foldl' applyFlag emptyFilterFlags fs  
 ```
-
+  
 - Essentially what a fold is is a way consume a recursive datastructure by replacing the constructor with a function. In the example above we the replace `:` in `[DataFlags]` with `applyFlag`.
 
 -  Why strict fold? Because we want to avoid space leaks with accumulating expressions on the heap. It is probably not an issue on my program, but it is just good practice.
@@ -187,6 +189,7 @@ foldDirectoryTree foldFunc acc rootPath  = do
 - However, sadly we are still inside the `IO` monad though, so the guarantee is not airtight(it can have any side effect, launch nuclear missiles for instance). But we are still sure that it does folds correctly and that is does not do anything bad with `a`. And as long as we write the `foldFunc` we are good.
 
 I also want to mention that having this generic signature is very useful, we can reuse the same traversal logic for completely different purposes just by swapping  `a`:
+
 
 ```hs
 traverseRecursively :: Arguments -> [FileInformation] -> RawFilePath -> IO [FileInformation]
@@ -274,6 +277,12 @@ foreign import ccall unsafe "__posixdir_d_type"
 ```
 
 - As you can see, `c_readdir` uses a `safe` call, but the other two use `unsafe`. Why is this? Normally, when we make a `safe` call with the FFI, the runtime releases the capability before doing any C stuff. This allows any other Haskell thread to grab the capability (basically the "right to run Haskell code"). This, of course, results in a bit of overhead. When we do an `unsafe` call, it skips all of this. This can result in blocking the entire Haskell execution until C returns. So, if the C function takes a long time, or if it does not return, it can lead to a deadlock. It is also very important to use `safe` calls when the C code calls back into Haskell (not an issue here). So, it's important that we are selective with the functions we call `unsafe` with, and we should not use them for anything that can take a substantial amount of time (like networked file systems or slow spinning disks). #link("https://github.com/haskell/unix/issues/34", "Issue talking about this.") This is why, when we do the `readdir`, we do it as a `safe` call. The other two are safe to make `unsafe` because they just read a field of a struct, which is very fast, and they do not do anything I/O related no syscalls, so there is no waiting.
+
+== Honorable mentions
+- I used a state aswell as lenses in the TUI.
+- Use bracket on error to close stream safely
+- 
+
 
 = Self evaluation:
 == What was positive about working on this project?

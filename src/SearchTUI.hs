@@ -21,13 +21,13 @@ import Brick (
       , visible
       , withAttr
       , modify
+      , nestEventM
       , AttrName
       , App(..)
       , EventM
       , BrickEvent(VtyEvent)
       , ViewportType(Vertical)
       , Widget
-      , zoom
       , get )
 
 
@@ -37,7 +37,6 @@ import Brick.Widgets.Edit     (Editor, editor, renderEditor,
                                handleEditorEvent, getEditContents)
 import Graphics.Vty           (defAttr)
 import Control.Monad.IO.Class (liftIO)
-import Lens.Micro.Type        (Lens')
 import System.Environment     (lookupEnv )
 import Data.Maybe             (mapMaybe)
 
@@ -100,9 +99,6 @@ stopInputWhileBrowing action  = get >>= checkBrowsing
 
 
 
-    
-
-
 handleEvent :: BrickEvent Name e -> EventM Name TuiState ()
 handleEvent (VtyEvent (V.EvKey (V.KChar 'n') [V.MCtrl])) = stopInputWhileBrowing . modify $ moveDown
 handleEvent (VtyEvent (V.EvKey (V.KChar 'p') [V.MCtrl])) = stopInputWhileBrowing . modify $ moveUp
@@ -121,12 +117,12 @@ handleEvent (VtyEvent (V.EvKey  V.KEnter     []))        = do
 handleEvent ev = do
     st <- get
     case mode st of
-      Searching -> zoom searchEditorL (handleEditorEvent ev)
+      Searching -> do
+          -- Run the editor event handler on just the searchEditor state
+          newEditor <- nestEventM (searchEditor st) (handleEditorEvent ev)
+          modify (\s -> s { searchEditor = fst newEditor })
       Browsing  -> pure ()
 
-
-searchEditorL :: Lens' TuiState (Editor String Name)
-searchEditorL f st = (\e -> st { searchEditor = e }) <$> f (searchEditor st)
 
 runSearch :: String -> IO [FilePath]
 runSearch (null -> True ) = pure []
