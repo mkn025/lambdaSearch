@@ -88,7 +88,7 @@ pFlags = choice
 
 
 -- | Parser våres argrumenter @Brukes med execute falgget@
--- | Parser for ConstrucedCommand datatypen
+--  Parser for ConstrucedCommand datatypen
 parseConstrucedCommand :: Parser ConstrucedCommand
 parseConstrucedCommand  = do
     cmd <- sc *> parseWord
@@ -112,7 +112,7 @@ parseArgs = do
         else pure $ Text s
 
 -- | Parser argumener som starter med @-@ og tilhørende verdi.
--- | Brukes bare til parse commandoeen
+--  Brukes bare til parse commandoeen
 parseArgumentAndWord :: Parser String
 parseArgumentAndWord = do
     f <- char '-'
@@ -125,7 +125,7 @@ parseArgumentAndWord = do
 --- FLAG PARSER --- 
 
 -- | Tar argument datatypen og  og et flag og putter det i datastukruen våre
--- | Blir nesten som og oppdaterte en state
+--  Blir nesten som og oppdaterte en state
 applyFlag :: Arguments -> DataFlags -> Arguments
 applyFlag st df = case df of
      SearchPatternFlag s -> st {regxPattern    = Just (convertString s)}
@@ -141,7 +141,7 @@ parseAllFlags = many (sc *> pFlags <* sc) --
 
 
 -- | Parser alle flagg og folder dem inn i én 'Arguments'-verdi.
--- | Burker listen som av flagg som er parset og applyfalg og foldr over alle og lager Arguments datastukruen
+--  Burker listen som av flagg som er parset og applyfalg og foldr over alle og lager Arguments datastukruen
 parseFlags :: Parser Arguments
 parseFlags = do
   fs <- parseAllFlags                          --Løfter ut monaden

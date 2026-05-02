@@ -5,7 +5,9 @@ import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
 
 import System.IO.Temp                        (withSystemTempDirectory)
+
 import System.Directory                      (createDirectory, createDirectoryIfMissing)
+
 import System.Posix.Directory.Foreign        (dtReg)
 
 import TraverselsFunctions
@@ -17,7 +19,6 @@ mainTraverselFunctionsTest = testGroup "TraverselFunctionsTest" [
       testsConstructFilePath
     , testsTraversal
     ]   
-
 
 
 -- lager en feilinformasjonhjelepr
@@ -159,9 +160,7 @@ testsTraversal = testGroup "treverseDirWithSettings"
             assertBool "Main.hs skal være med" $
                 elem (Just (tmp <> "/Main.hs")) paths
 
-
     , testCase "traverserer rekursivt" $
-
         withSystemTempDirectory "lambdaSearch" $ \tmp -> do
             createDirectoryIfMissing True (tmp <> "/a/b")
             writeFile (tmp <> "/a/b/dyp.txt") ""

@@ -157,7 +157,7 @@ In the `main` function, where I do the traversals, I use higher-order functions 
 
 ```hs
 foldDirectoryTree
-    :: (a -> RawFilePath -> DirContent -> IO a) 
+    :: forall a . (a -> RawFilePath -> DirContent -> IO a)  --  forall scopes a to the enitre function
     -> a -- 
     -> RawFilePath
     -> IO a
@@ -165,14 +165,15 @@ foldDirectoryTree foldFunc acc rootPath  = do
     isDir <- isDirectory <$> getFileStatus  rootPath
     if not isDir
         then pure acc
-        --  look at code for traverseDirectoryContents implementation
-        else traverseDirectoryContents innerloop acc rootPath 
+        --  look at code for traverseDirectoryContents 
+        else traverseDirectoryContents innerloop acc rootPath
     where
+        innerloop  :: a -> DirContent -> IO a
         innerloop currentAcc dc@(typ,filename) = do
             let filePath = rootPath  </> filename
             let isDir = typ == dtDir
-            nextAcc <- foldFunc currentAcc rootPath dc
 
+            nextAcc <- foldFunc currentAcc rootPath dc
             if not isDir
                 then pure nextAcc
                 else foldDirectoryTree foldFunc nextAcc filePath
@@ -284,9 +285,7 @@ foreign import ccall unsafe "__posixdir_d_type"
 - I have also enjoyed gaining experience with the Haskell ecosystem, specifically Cabal, Hoogle, and Hackage. Hoogle has been particularly useful, the ability to search for functions by their type signatures is brilliant.
 
 == What would you have done differently if you were to do it again?
-
 - I would put a lot of thought into the implementation of my datatypes. In this workflow, you define your data structures first and work outward. Starting with a solid foundation here saves an immense amount of work later on.
-
 
   -  One example of this was when I wanted to print filenames in green text, but only the filename itself, not the full path. Since I had stored everything in a single string, I had to use messy string manipulation to extract the name. It would have been much better if I had stored the filename and the path in separate record fields or even just a tuple from the start.
 
