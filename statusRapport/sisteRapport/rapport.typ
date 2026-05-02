@@ -279,9 +279,9 @@ foreign import ccall unsafe "__posixdir_d_type"
 - As you can see, `c_readdir` uses a `safe` call, but the other two use `unsafe`. Why is this? Normally, when we make a `safe` call with the FFI, the runtime releases the capability before doing any C stuff. This allows any other Haskell thread to grab the capability (basically the "right to run Haskell code"). This, of course, results in a bit of overhead. When we do an `unsafe` call, it skips all of this. This can result in blocking the entire Haskell execution until C returns. So, if the C function takes a long time, or if it does not return, it can lead to a deadlock. It is also very important to use `safe` calls when the C code calls back into Haskell (not an issue here). So, it's important that we are selective with the functions we call `unsafe` with, and we should not use them for anything that can take a substantial amount of time (like networked file systems or slow spinning disks). #link("https://github.com/haskell/unix/issues/34", "Issue talking about this.") This is why, when we do the `readdir`, we do it as a `safe` call. The other two are safe to make `unsafe` because they just read a field of a struct, which is very fast, and they do not do anything I/O related no syscalls, so there is no waiting.
 
 == Honorable mentions
-- I used a state aswell as lenses in the TUI.
+- I used a lot of state in the TUI
 - Use bracket on error to close stream safely
-- 
+- I do a loot of property based testing
 
 
 = Self evaluation:

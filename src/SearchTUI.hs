@@ -118,7 +118,7 @@ handleEvent ev = do
     st <- get
     case mode st of
       Searching -> do
-          -- Run the editor event handler on just the searchEditor state
+          -- gjør slik at vi bare kan håndere searchEditor state
           newEditor <- nestEventM (searchEditor st) (handleEditorEvent ev)
           modify (\s -> s { searchEditor = fst newEditor })
       Browsing  -> pure ()
@@ -165,7 +165,6 @@ openInEditor st = do
                      $ zip (paths st) [0..]
                 let cmd = (e, [PathToSubs])
                 executeOnFile cmd selectedPath 
-
 
 mainTUI :: IO ()
 mainTUI = do
