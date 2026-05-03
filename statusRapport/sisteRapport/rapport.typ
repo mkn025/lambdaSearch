@@ -179,7 +179,7 @@ parseFlags = do
 
 - The magic happens with the `applyFlag` function, which has the type signature `Arguments -> DataFlags -> Arguments`. It basically acts as a state transition function. It takes the current `Arguments` state, looks at the new `DataFlags` we just parsed, and returns a newly updated `Arguments` record.
 
-- So we start with `emptyFilterFlags` as our base state, consume the list of parsed flags, and get our fully constructed configuration. Quite a neat solution I think, and very suitable for this purpose 
+- So we start with `emptyFilterFlags` as our base state, consume the list of parsed flags, and get our fully constructed configuration. Quite a neat solution I think.
 
 
 
