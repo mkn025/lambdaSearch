@@ -110,10 +110,7 @@ readDirEnt dir = ExceptT readContent
     readContent :: IO (Either DirError (Maybe DirContent))
     readContent = do
       let dirp = unpackDirStream dir
-
-
     -- fra docs : set errno to zero before calling readdir()
-
       resetErrno 
 
       dEnt <- c_readdir dirp
@@ -122,9 +119,9 @@ readDirEnt dir = ExceptT readContent
           err <- getErrno
           case err of
             e | e == eINTR  -> readContent                        -- Retry on interrupt
-            e | e == eOK    -> pure . Right $ Nothing             -- End of directory
-            e | e == eACCES -> pure . Right $ Nothing             -- Om du ikke har til tilgang til filen
-            e | e == ePERM  -> pure . Right $ Nothing             -- Om du ikke har lov å gjøre oppprasjonen
+              | e == eOK    -> pure . Right $ Nothing             -- End of directory
+              | e == eACCES -> pure . Right $ Nothing             -- Om du ikke har til tilgang til filen
+              | e == ePERM  -> pure . Right $ Nothing             -- Om du ikke har lov å gjøre oppprasjonen. 
               | otherwise   -> pure . Left  $ ReadDirErr err      -- Real error
 
               -- har mulihet å legge til flere type feil 
