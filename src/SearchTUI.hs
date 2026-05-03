@@ -53,6 +53,7 @@ data TuiState = TuiState {
   }
 
 
+-- | Tegner kun dersom den er fokusert 
 drawItem :: Bool -> FilePath -> Widget Name
 drawItem isFocused p =
     if not isFocused
@@ -61,6 +62,8 @@ drawItem isFocused p =
   where
     widget = border $ padLeftRight 1 $ str p
 
+
+-- | Tegner hovedTUI
 drawUI :: TuiState -> [Widget Name]
 drawUI st = [ 
       padAll 1 $
@@ -69,7 +72,7 @@ drawUI st = [
       hBorder
       <=>
       viewport MyViewport Vertical
-        (vBox (zipWith (\i p -> drawItem (i == selected st) p)
+        (vBox (zipWith (\i fp -> drawItem (i == selected st) fp)
         [0..]
         ((take 100 . paths) st)))
       <=>
@@ -81,16 +84,14 @@ drawUI st = [
       ]
   where
     searchBox =
-      str "Search: "
-      <+> renderEditor (str . unlines) (mode st == Searching) (searchEditor st)
+      str "Search: " <+> renderEditor (str . unlines) (mode st == Searching) (searchEditor st)
     helpLine (mode  -> Browsing)  = str "ctrl-n/ctrl-p: move /: search   ctrl-q: quit  ctrl-e: open in editor (when cloing )   |   search queries:  -p regex -e extenton ..."
     helpLine (mode -> Searching)  = str "Enter: run search   Esc: cancel"
     staringEditorText (startEditor -> True)  = str "Staring editor when closing"
     staringEditorText (startEditor -> False) = str "Not Staring editor when closing"
 
 
-
-
+-- | Gjør ingenting dersom vvi er i browsing searching mode 
 stopInputWhileBrowing :: EventM Name TuiState () -> EventM Name TuiState ()
 stopInputWhileBrowing action  = get >>= checkBrowsing 
     where 
@@ -98,7 +99,7 @@ stopInputWhileBrowing action  = get >>= checkBrowsing
         checkBrowsing (mode -> Browsing)  = action 
 
 
-
+-- | Oppdateret staten bassert på imput
 handleEvent :: BrickEvent Name e -> EventM Name TuiState ()
 handleEvent (VtyEvent (V.EvKey (V.KChar 'n') [V.MCtrl])) = stopInputWhileBrowing . modify $ moveDown
 handleEvent (VtyEvent (V.EvKey (V.KChar 'p') [V.MCtrl])) = stopInputWhileBrowing . modify $ moveUp
@@ -123,14 +124,13 @@ handleEvent ev = do
           modify (\s -> s { searchEditor = fst newEditor })
       Browsing  -> pure ()
 
-
+-- | Parser strengen og gjør søk
 runSearch :: String -> IO [FilePath]
-runSearch (null -> True ) = pure []
+runSearch (null -> True) = pure []
 runSearch query = do
     settings <- runParserIO query
     results  <- treverseDirWithSettings settings
     pure $ mapMaybe constructFilePath results
-
 
 moveUp, moveDown :: TuiState -> TuiState -- begge har samme type  så vi kan putte de her
 moveUp   st = st { selected = max 0 (selected st - 1) }
@@ -149,7 +149,7 @@ app = App
       [ (selectedAttr, V.black `on` V.yellow) ]
   }
 
--- litt shady, men men
+-- | Litt shady, men men, åpner bare slecred fil i editor 
 openInEditor :: TuiState -> IO ()
 openInEditor (startEditor -> False) = pure ()
 openInEditor st = do
@@ -163,6 +163,7 @@ openInEditor st = do
         Nothing  -> putStrLn "fant ikke noe editor i env var"
         (Just e) -> executeOnFile (e, [PathToSubs]) selectedPath 
 
+-- | Hoved funksjon kjører tui og åpnet editor dersom det er angitt en 
 mainTUI :: IO ()
 mainTUI = do
   initialPaths <- runSearch ""          

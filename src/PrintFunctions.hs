@@ -15,7 +15,7 @@ import System.Console.ANSI.Codes (
 
 
 -- | Printer all filene som er funnet 
--- | mapper og kaster output for hele listen
+--  mapper og kaster output for hele listen
 printResults :: [FileInfomation] -> IO ()
 printResults contents = do
     color <- coloriseFileIfTTY  
@@ -33,7 +33,7 @@ printFileInformation colorFunc fi = do
                 putStrLn path 
 
 
--- Legger på ansi codes  på dersom du skal sende den til terminal. eller er det bare id
+-- Legger på ansi codes på dersom du skal sende den til terminal. Ellers er det bare id
 coloriseFileIfTTY :: IO (String -> String)
 coloriseFileIfTTY = do
     tty <- queryTerminal stdOutput -- burkes til å finne ut om vi skal til terminal eller til en pipe

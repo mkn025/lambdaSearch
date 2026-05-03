@@ -39,7 +39,6 @@ type SearchPattern = RawFilePath
 type SearchFilters = [RawFilePath]
 
 
-
 -- | datatype som blir brukt i  @--execute@. for å substite path
 data Args = Text String | PathToSubs
     deriving (Eq,Show)
@@ -74,22 +73,22 @@ data Arguments = Arguments {
 
 
 -- | Mathcer fil med regex og 
--- | Tar med all dersom ikke noe spesifisert
+--  Tar med all dersom ikke noe spesifisert
 getRexPattern :: Maybe Regex -> RawFilePath -> Bool
 getRexPattern Nothing      _  = True
 getRexPattern (Just regex) fp = matchTest regex fp
 
 
 -- | Sjekker om filepath ikke er element i sitene vi har definert 
--- | Tar med all dersom ikke noe spesifisert
+--  Tar med all dersom ikke noe spesifisert
 getDisallowFilter :: Arguments -> RawFilePath -> Bool
 getDisallowFilter (exclude -> Nothing)  _ = True
 getDisallowFilter (exclude -> Just sf) fp = not $ any (`BC.isPrefixOf` fp) sf
 
 
 -- | Filterlogikk for skjulte filer.
--- | Sjekker om head til filen @.@
--- | Tar med alle dersom ikke noe spesifiser
+--  Sjekker om head til filen @.@
+--  Tar med alle dersom ikke noe spesifiser
 getHiddenFilter :: Arguments -> RawFilePath -> Bool
 getHiddenFilter (hideHidden  -> False) _                    = True
 getHiddenFilter (hideHidden  -> True) (safeHead -> Nothing) = True
@@ -134,6 +133,7 @@ substituePath cmd rfp = map (inPathSubsitute rfp) cmd
         inPathSubsitute fp PathToSubs = convertToString fp
         inPathSubsitute _  (Text a)   = a
 
+
 getFileExtention :: RawFilePath -> Maybe Extention
 getFileExtention (BC.null -> True) = Nothing
 getFileExtention  fp               = safeTail . takeExtension $ fp
@@ -145,7 +145,6 @@ safeTail xs                = Just . BC.tail  $ xs
 safeHead :: ByteString -> Maybe Char
 safeHead (BC.null -> True) = Nothing
 safeHead xs                = Just . BC.head $ xs
-
 
 convertString :: String -> RawFilePath
 convertString = BC.pack

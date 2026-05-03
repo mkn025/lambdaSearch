@@ -54,15 +54,10 @@ import Control.Monad.Except (
 
 
 type DirContent = (DirType, RawFilePath)
-
-
--- | TODO: Dokumenter informasjonen som lagres per fil eller mappe.
 data FileInfomation = FileInfomation{
-      filePath         :: RawFilePath
-    , fileNameInfo       :: Maybe DirContent -- Nothing dersom det er en mappe som i
+      filePath      :: RawFilePath
+    , fileNameInfo  :: Maybe DirContent -- Nothing dersom det er en mappe
 } deriving (Eq,Show)
-
-
 
 
 -- hehe viktig at vi burker safe call for alt som gjør IO
@@ -95,13 +90,9 @@ instance Exception DirError
 
 -- | Leser neste element fra en åpen 'DirStream' med @readdir@.
 --
--- TODO: Dokumenter detaljene rundt pekerhåndtering, EOF, og feilbehandling.
--- Eksisterende notat (språkvasket):
---
--- - Leser fra en allerede åpen strøm.
+-- - Leser fra en allerede åpnet dirstream.
 -- - Returnerer @Nothing@ ved slutten av katalogen.
--- - Kaster bare feil når systemkallet faktisk feiler.
-
+-- - Kaster feil når systemkallet faktisk feiler.
 type DirContentT = ExceptT DirError IO (Maybe DirContent)
 
 readDirEnt :: DirStream ->  DirContentT
@@ -240,9 +231,8 @@ treversRecursively args = foldDirectoryTree foldFunc
                     pure acc
 
 
-
 -- | Kjører en kommando på på en filen vår 
--- | Vente på om den. Gir tom tupel om good. Eller gir ioError  ellers
+--  Vente på om den. Gir tom tupel om good. Eller gir ioError  ellers
 executeOnFile :: ConstrucedCommand -> RawFilePath ->  IO ()
 executeOnFile c@(prog, args) rfd = do
                                 let argsWithPath = substituePath args rfd
