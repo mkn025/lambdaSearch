@@ -203,7 +203,6 @@ foldDirectoryTree foldFunc acc rootPath  = do
         innerloop currentAcc dc@(typ,filename) = do
             let filePath = rootPath  </> filename
             let isDir = typ == dtDir
-
             nextAcc <- foldFunc currentAcc rootPath dc
             if not isDir
                 then pure nextAcc
@@ -217,8 +216,8 @@ foldDirectoryTree foldFunc acc rootPath  = do
 
 - However, sadly we are still inside the `IO` monad though, so the guarantee is not airtight(it can have any side effect, launch nuclear missiles for instance). But we are still sure that it does folds correctly and that is does not do anything bad with `a`. And as long as we write the `foldFunc` we are good.
 
-I also want to mention that having this generic signature is very useful, we can reuse the same traversal logic for completely different purposes just by swapping  `a`:
 
+I also want to mention that having this generic signature is very useful, we can reuse the same traversal logic for completely different purposes just by swapping  `a`:
 
 ```hs
 traverseRecursively :: Arguments -> [FileInformation] -> RawFilePath -> IO [FileInformation]
@@ -238,7 +237,7 @@ count  = foldDirectoryTree foldFunc
     foldFunc s _ _                        = pure s
 ```
 
-
+#pagebreak()
 == Algebraic data types 
 For storing the arguments of my search logic I used records.
 - Example:
@@ -256,20 +255,19 @@ data Arguments = Arguments {
 
 - The compiler then enforces via pattern matching exhaustiveness checking if every call site handles both the present and absent case.
 
+Another ADT Example:
 ```hs
 data Args = Text String | PathToSubs
     deriving (Eq,Show)
 
 type ConstructedCommand = (String, [Args])
 ```
-- When you give the command to execute, you do it like this: `cat {}`. So here, it is very beneficial to create a datatype for this that says the argument is either a flag or a path where you substitute in the actual filepath. And a complete command is just a list of these. 
-
-- Using 
+- When you give the command to execute, you do it like this: `cat {}`. So here, it is very beneficial to create a datatype for this that says the argument is either a flag or a path where you substitute in the actual filepath. And a complete command is just a list of these. So this is technique is very suited for my program
 
 == View Patterns
 I made  use of  `ViewPatterns` language extension to keep my pattern matching concise. It lets me evaluate a function directly inside the pattern match, saving me from writing nested `case` expressions. 
 
-- Example:
+- Example: 
 ```hs
 getExtensionFilter :: FilterFlags -> RawFilePath ->  Bool
 getExtensionFilter sf fp = case extension sf of
@@ -288,6 +286,7 @@ getExtensionFilter (extension -> Just ext) (getFileExtension -> Just curr) = cur
 ```
 - I think this reads a lot better than the case statement, because it immediately tells what output you get on that specific input. However this is just my subjective opinion.
 
+#pagebreak()
 == A little note about FFI  
 Another thing I want to talk about is the calls done with FFI
 ```hs
@@ -309,6 +308,7 @@ foreign import ccall unsafe "__posixdir_d_type"
 - Property-based testing 
 - I also use a lot of recursion 
 
+#pagebreak()
 = Self evaluation:
 == What was positive about working on this project?
   - I think that using the things we learn in the lessons in practice is really useful. #link("https://www.youtube.com/watch?v=VzAk7IZs1jM","easter egg")
