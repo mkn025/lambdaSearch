@@ -44,7 +44,7 @@ The reason I wanted to make this project is that I really like CLI tools. I use 
   - Write good readable code
 
 == Result
-  - I managed to make the CLI with the syntax that I wanted. But I did not implement concurrency, because it was already faster than the built-in find command and I wanted to prioritise testing and the TUI.
+  - I managed to make the CLI with the syntax that I wanted. But I did not implement concurrency, because it was already faster than the built-in find command and I wanted to prioritize testing and the TUI.
 
   === Implemented
     - Core directory traversal (filter by regex, extension, hidden, ignored).
@@ -53,7 +53,7 @@ The reason I wanted to make this project is that I really like CLI tools. I use 
     - C FFI bindings (`readdir`, etc.) for fast metadata retrieval.
     - CLI parsing using `megaparsec`.
     - Error handling with `Either`/`ExceptT` for permission issues. 
-    - test suite (Tasty, QuickCheck, HUnit).
+    - Test suite (Tasty, QuickCheck, HUnit).
 
   === Not Implemented
     - Concurrency (STM / parallel traversal).
@@ -77,13 +77,13 @@ newtype Parser a = Parser { runParser :: String -> Maybe (a, String) }
 
 - The parser either fails or it returns a parsed value, this is good model because then the parser is just a regular function that you pass around and combine. And from this structure we can derive a hierarchy of typeclasses. 
 
-- Functor: gives us `<$>`. It lets us transform the result of a parser with a pure function, without touching the input consuming logic underneath. I use this specifically in the example below to lift parsed results into the `DataFlags` context. 
+- Functor: gives us `<$>`. It lets us transform the result of a parser with a pure function, without touching the input-consuming logic underneath. I use this specifically in the example below to lift parsed results into the `DataFlags` context. 
 
 - Applicative: builds on Functor and gives us `<*>`, `*>`, and `<*`. The core operation is `<*> : f (a -> b) -> f a -> f b`  it lifts function application into the functor context. For parsers specifically, this means: run the left parser to produce a function, run the right parser on the remaining input to produce a value, then apply the function to the value. Crucially, the structure of what gets parsed is determined statically  unlike `Monad`, the second parser cannot depend on the result of the first. `*>` and `<*` are derived from `<*>` by pairing with `const` and `flip const` respectively, discarding one side. I use `*>` to consume and discard the flag prefix before capturing the actual argument  the prefix is parsed and the input is advanced, but the result is thrown away
 
 - Alternative: builds on Applicative and gives us `<|>` try the left parser, and if it fails, try the right one. Because the type signature is `f a -> f a -> f a`, you can chain as many alternatives as you want and treat the whole thing as a single parser. I use this to accept both short flags like `-p` and long flags like `--pattern` interchangeably.
 
-- Monad: builds on Applicative and gives us `>>=`. It lets us make parsing decisions based on what we have already parsed. The result of one parser can determine what we parse next. From a syntax standpoint it is also really good because you can just parse ting parse thing sequentially downward in a do block. 
+- Monad: builds on Applicative and gives us `>>=`. It lets us make parsing decisions based on what we have already parsed. The result of one parser can determine what we parse next. From a syntax standpoint it is also really good because you can just parse thing sequentially downward in a do block. 
 
 
 Example combinators:
@@ -97,8 +97,8 @@ pFlags = choice
 Example monad:
 
 ```hs
-parseLamdaSearch :: Parser SearchSetting
-parseLamdaSearch = do
+parseLambdaSearch :: Parser SearchSetting
+parseLambdaSearch = do
     paths <- sc *> parsePathOrDot
     args  <- parseFlags
     let ss = SearchSetting {
@@ -114,7 +114,7 @@ parseLamdaSearch = do
 ```
 == Monad Transformers and Monadic Error Handling
 The reason why we need a monad transformer is because monads do not compose natively.
-- Lets say we need you want to write a bind instance for to monads IO and either
+- Let's say you want to write a bind instance for two monads IO and either
 ```hs
 (>>=) :: IO (Either e a) -> (a -> IO (Either e b)) -> IO (Either e b)
 ```
@@ -127,7 +127,7 @@ x >>= f = x >>= \eitherA ->  -- IO's >>=, now eitherA :: Either e a
 eitherA >>= \a ->   -- Either's >>=, now a :: a
           f a       -- but f a :: IO (Either e b)
 ```
-- So the problem is that not we are in Either's bind. It expects the function to return Either e b. But f a returns IO (Either e b). You are one layer too deep you have an IO sitting where Either's bind expects a plain value. So you need a swap function  `swap :: Either e (IO b) -> IO (Either e b)`. You could create this for Either and IO using fmap and pure but for arbitrary m and n monads, we can not make this function. 
+- So the problem is that now we are in Either's bind. It expects the function to return Either e b. But f a returns IO (Either e b). You are one layer too deep you have an IO sitting where Either's bind expects a plain value. So you need a swap function  `swap :: Either e (IO b) -> IO (Either e b)`. You could create this for Either and IO using fmap and pure but for arbitrary m and n monads, we can not make this function. 
 
 - This is exactly the problem `ExceptT` solves. Rather than trying to nest `m` inside `Either` and getting stuck, it flips the approach. It always stays inside `m` and manually inspects the `Either` with a case expression. Look at its `Monad` instance:
 
@@ -142,7 +142,7 @@ instance Monad m => Monad (ExceptT e m) where
 - The `do` block runs inside `m`. The `case` is the hardcoded `swap` it handles both `Either` branches by hand, using `m`'s own `pure` to reconstruct the `Left` case without ever needing to push `m` through `Either` generically. 
 - So, ExceptT is just a newtype that forces you to always stay inside m.
 
-Example where i use this:
+Example where I use this:
 - To make the directory traversal as fast as possible, I used the Foreign Function Interface (FFI) to bind directly to C POSIX functions. But to keep the Haskell side safe, I wrapped these impure calls in Monad Transformers to handle error and end of dir exceptions.
 ```hs
 type DirContentT = ExceptT DirError IO (Maybe DirContent)
@@ -172,7 +172,7 @@ parseFlags = do
   fs <- parseAllFlags 
   pure $ foldl' applyFlag emptyFilterFlags fs  
 ```
-- Essentially what a fold is is a way consume a recursive datastructure by replacing the constructor with a function. In the example above we the replace `:` in `[DataFlags]` with `applyFlag`.
+- Essentially what a fold is is a way consume a recursive data structure by replacing the constructor with a function. In the example above we the replace `:` in `[DataFlags]` with `applyFlag`.
 
 -  Why strict fold? Because we want to avoid space leaks with accumulating expressions on the heap. It is probably not an issue on my program, but it is just good practice.
 
@@ -245,7 +245,7 @@ For storing the arguments of my search logic I used records.
 data Arguments = Arguments {
       regxPattern    :: Maybe SearchPattern
     , exclude        :: Maybe SearchFilters
-    , extension      :: Maybe Extention
+    , extension      :: Maybe Extension
     , hideHidden     :: Bool
     , appliedCommand :: Maybe ConstructedCommand
 }  deriving (Eq, Show)
@@ -270,20 +270,20 @@ I made  use of  `ViewPatterns` language extension to keep my pattern matching co
 
 - Example:
 ```hs
-getExtentionFilter :: FilterFlags -> RawFilePath ->  Bool
-getExtentionFilter sf fp = case extension sf of
+getExtensionFilter :: FilterFlags -> RawFilePath ->  Bool
+getExtensionFilter sf fp = case extension sf of
                         Nothing    ->  True
-                        (Just ext) -> case getFileExtention fp of
+                        (Just ext) -> case getFileExtension fp of
                                         Nothing     -> False
                                         (Just curr) -> curr == ext
 ```
 - Becomes:
 
 ```hs
-getExtentionFilter :: Arguments -> RawFilePath -> Bool
-getExtentionFilter (extension -> Nothing) _                                = True
-getExtentionFilter (extension -> Just _ )  (getFileExtention -> Nothing)   = False
-getExtentionFilter (extension -> Just ext) (getFileExtention -> Just curr) = curr == ext
+getExtensionFilter :: Arguments -> RawFilePath -> Bool
+getExtensionFilter (extension -> Nothing) _                                = True
+getExtensionFilter (extension -> Just _ )  (getFileExtension -> Nothing)   = False
+getExtensionFilter (extension -> Just ext) (getFileExtension -> Just curr) = curr == ext
 ```
 - I think this reads a lot better than the case statement, because it immediately tells what output you get on that specific input. However this is just my subjective opinion.
 
@@ -302,8 +302,8 @@ foreign import ccall unsafe "__posixdir_d_type"
 
 - As you can see, `c_readdir` uses a `safe` call, but the other two use `unsafe`. Why is this? Normally, when we make a `safe` call with the FFI, the runtime releases the capability before doing any C stuff. This allows any other Haskell thread to grab the capability (basically the "right to run Haskell code"). This, of course, results in a bit of overhead. When we do an `unsafe` call, it skips all of this. This can result in blocking the entire Haskell execution until C returns. So, if the C function takes a long time, or if it does not return, it can lead to a deadlock. It is also very important to use `safe` calls when the C code calls back into Haskell (not an issue here). So, it's important that we are selective with the functions we call `unsafe` with, and we should not use them for anything that can take a substantial amount of time (like networked file systems or slow spinning disks). #link("https://github.com/haskell/unix/issues/34", "Issue talking about this.") This is why, when we do the `readdir`, we do it as a `safe` call. The other two are safe to make `unsafe` because they just read a field of a struct, which is very fast, and they do not do anything I/O related no syscalls, so there is no waiting.
 
-== Other techniques that i used
-- I used a lot of state in the in the TUI
+== Other techniques that I used
+- I used a lot of state in the TUI
 - Use bracket on error to close stream safely 
 - Property-based testing 
 - I also use a lot of recursion 
@@ -313,7 +313,7 @@ foreign import ccall unsafe "__posixdir_d_type"
   - I think that using the things we learn in the lessons in practice is really useful. #link("https://www.youtube.com/watch?v=VzAk7IZs1jM","easter egg")
   - I think it is hard to appreciate how good and useful Haskell’s type-system is before you write a bigger project like this. When you write more and more, Haskell's type-system that goes from being something that maybe restricts to something that guides you and holds your hand while you write code.
 
-- It is also very useful to think functionally about problems and appreciate how much shorter and more elegant solutions are when you just solve them with a composition of functions. Now after writing a fair bit of Haskell I found that I am always seeking filter, map, lambda etc. when i write code in java. It makes the code shorter, and in my opinion more readable.
+- It is also very useful to think functionally about problems and appreciate how much shorter and more elegant solutions are when you just solve them with a composition of functions. Now after writing a fair bit of Haskell I found that I am always seeking filter, map, lambda etc. when I write code in Java. It makes the code shorter, and in my opinion more readable.
 
 - I have also enjoyed gaining experience with the Haskell ecosystem, specifically Cabal, Hoogle, and Hackage. Hoogle has been particularly useful, the ability to search for functions by their type signatures is brilliant.
 
