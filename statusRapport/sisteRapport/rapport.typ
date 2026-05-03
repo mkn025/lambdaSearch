@@ -79,11 +79,11 @@ newtype Parser a = Parser { runParser :: String -> Maybe (a, String) }
 
 - Functor: gives us `<$>`. It lets us transform the result of a parser with a pure function, without touching the input consuming logic underneath. I use this specifically in the example below to lift parsed results into the `DataFlags` context. 
 
-- Applicative: builds on Functor and gives us `*>, <*> <*`. It lets us sequence two parsers one after the other run the first, then run the second on whatever input is left over. The `*>` variant specifically discards the result of the left parser and keeps only the right. I use this to consume and throw away the flag prefix before capturing the actual argument.
+- Applicative: builds on Functor and gives us `<*>`, `*>`, and `<*`. The core operation is `<*> : f (a -> b) -> f a -> f b`  it lifts function application into the functor context. For parsers specifically, this means: run the left parser to produce a function, run the right parser on the remaining input to produce a value, then apply the function to the value. Crucially, the structure of what gets parsed is determined statically  unlike `Monad`, the second parser cannot depend on the result of the first. `*>` and `<*` are derived from `<*>` by pairing with `const` and `flip const` respectively, discarding one side. I use `*>` to consume and discard the flag prefix before capturing the actual argument  the prefix is parsed and the input is advanced, but the result is thrown away
 
 - Alternative: builds on Applicative and gives us `<|>` try the left parser, and if it fails, try the right one. Because the type signature is `f a -> f a -> f a`, you can chain as many alternatives as you want and treat the whole thing as a single parser. I use this to accept both short flags like `-p` and long flags like `--pattern` interchangeably.
 
-- Monad: builds on Applicative and gives us `>>=`. It lets us make parsing decisions based on what we have already parsed the result of one parser can determine what we parse next. From a syntax standpoint it is also really good because you can just parse ting parse thing sequentially downward in a do block. 
+- Monad: builds on Applicative and gives us `>>=`. It lets us make parsing decisions based on what we have already parsed. The result of one parser can determine what we parse next. From a syntax standpoint it is also really good because you can just parse ting parse thing sequentially downward in a do block. 
 
 
 Example combinators:
@@ -109,13 +109,41 @@ parseLamdaSearch = do
         (ManyPaths [])   -> pure ss
         (ManyPaths p)    -> pure ss {searchPaths = Just p}
 
+
+
 ```
 == Monad Transformers and Monadic Error Handling
-To make the directory traversal as fast as possible, I used the Foreign Function Interface (FFI) to bind directly to C POSIX functions. But to keep the Haskell side safe, I wrapped these impure calls in Monad Transformers to handle error and end of dir exceptions.
-
 The reason why we need a monad transformer is because monads do not compose natively.
+- Lets say we need you want to write a bind instance for to monads IO and either
+```hs
+(>>=) :: IO (Either e a) -> (a -> IO (Either e b)) -> IO (Either e b)
+```
+- You use bind to get Either out
+```hs
+x >>= f = x >>= \eitherA ->  -- IO's >>=, now eitherA :: Either e a
+```
+- Now you are inside IO and holding an Either e a. You want to reach the a inside it, so you use Either's bind:
+```hs
+eitherA >>= \a ->   -- Either's >>=, now a :: a
+          f a       -- but f a :: IO (Either e b)
+```
+- So the problem is that not we are in Either's bind. It expects the function to return Either e b. But f a returns IO (Either e b). You are one layer too deep you have an IO sitting where Either's bind expects a plain value. So you need a swap function  `swap :: Either e (IO b) -> IO (Either e b)`. You could create this for Either and IO using fmap and pure but for arbitrary m and n monads, we can not make this function. 
 
-Example:
+- This is exactly the problem `ExceptT` solves. Rather than trying to nest `m` inside `Either` and getting stuck, it flips the approach. It always stays inside `m` and manually inspects the `Either` with a case expression. Look at its `Monad` instance:
+
+```hs
+instance Monad m => Monad (ExceptT e m) where
+    x >>= f = ExceptT $ do
+        eitherA <- runExceptT x        -- unwrap to m (Either e a), bind into m
+        case eitherA of
+            Left e  -> pure (Left e)   -- short circuit, re-wrap using m's pure
+            Right a -> runExceptT (f a)
+```
+- The `do` block runs inside `m`. The `case` is the hardcoded `swap` it handles both `Either` branches by hand, using `m`'s own `pure` to reconstruct the `Left` case without ever needing to push `m` through `Either` generically. 
+- So, ExceptT is just a newtype that forces you to always stay inside m.
+
+Example where i use this:
+- To make the directory traversal as fast as possible, I used the Foreign Function Interface (FFI) to bind directly to C POSIX functions. But to keep the Haskell side safe, I wrapped these impure calls in Monad Transformers to handle error and end of dir exceptions.
 ```hs
 type DirContentT = ExceptT DirError IO (Maybe DirContent)
 
@@ -127,7 +155,6 @@ readDirEnt dir = ExceptT readContent
       -- ... raw IO and FFI calls to c_readdir ...
 ```
 
-
 - First, I define `DirContentT` using `ExceptT`. This layers an exception context (`DirError`) over the `IO` monad. This lets me sequence IO actions but still cleanly short-circuit if a specific directory error happens (like a permission denied error).
 
 - Inside `readContent`, I do the actual raw `IO` calls to the C function `c_readdir`. Depending on the `Errno` returned by C, I can return `pure . Right $ Nothing` (if we hit the end of the folder) or `pure . Left $ ReadDirErr err` if it actually failed.
@@ -136,7 +163,7 @@ readDirEnt dir = ExceptT readContent
 == Higher-Order Functions and Folds 
 
 === In the parser
-- To parse the CLI flags, I used a functional fold. This is a clean way to build up the configuration state purely.
+To parse the CLI flags, I used a functional fold. This is a clean way to build up the configuration state purely.
 
 - Example:
 ```hs
@@ -145,14 +172,13 @@ parseFlags = do
   fs <- parseAllFlags 
   pure $ foldl' applyFlag emptyFilterFlags fs  
 ```
-  
 - Essentially what a fold is is a way consume a recursive datastructure by replacing the constructor with a function. In the example above we the replace `:` in `[DataFlags]` with `applyFlag`.
 
 -  Why strict fold? Because we want to avoid space leaks with accumulating expressions on the heap. It is probably not an issue on my program, but it is just good practice.
 
 - The magic happens with the `applyFlag` function, which has the type signature `Arguments -> DataFlags -> Arguments`. It basically acts as a state transition function. It takes the current `Arguments` state, looks at the new `DataFlags` we just parsed, and returns a newly updated `Arguments` record.
 
-- So we start with `emptyFilterFlags` as our base state, consume the list of parsed flags, and get our fully constructed configuration. quite a neat solution I think
+- So we start with `emptyFilterFlags` as our base state, consume the list of parsed flags, and get our fully constructed configuration. Quite a neat solution I think, and very suitable for this purpose 
 
 
 
@@ -211,11 +237,9 @@ count  = foldDirectoryTree foldFunc
     foldFunc s _ _                        = pure s
 ```
 
-#linebreak()
 
 == Algebraic data types 
-
-For storing the config of my search logic I used records.
+For storing the arguments of my search logic I used records.
 - Example:
 ```hs
 data Arguments = Arguments {
@@ -239,6 +263,7 @@ type ConstructedCommand = (String, [Args])
 ```
 - When you give the command to execute, you do it like this: `cat {}`. So here, it is very beneficial to create a datatype for this that says the argument is either a flag or a path where you substitute in the actual filepath. And a complete command is just a list of these. 
 
+- Using 
 
 == View Patterns
 I made  use of  `ViewPatterns` language extension to keep my pattern matching concise. It lets me evaluate a function directly inside the pattern match, saving me from writing nested `case` expressions. 
@@ -260,10 +285,7 @@ getExtentionFilter (extension -> Nothing) _                                = Tru
 getExtentionFilter (extension -> Just _ )  (getFileExtention -> Nothing)   = False
 getExtentionFilter (extension -> Just ext) (getFileExtention -> Just curr) = curr == ext
 ```
-
 - I think this reads a lot better than the case statement, because it immediately tells what output you get on that specific input. However this is just my subjective opinion.
-
-
 
 == A little note about FFI  
 Another thing I want to talk about is the calls done with FFI
@@ -280,11 +302,11 @@ foreign import ccall unsafe "__posixdir_d_type"
 
 - As you can see, `c_readdir` uses a `safe` call, but the other two use `unsafe`. Why is this? Normally, when we make a `safe` call with the FFI, the runtime releases the capability before doing any C stuff. This allows any other Haskell thread to grab the capability (basically the "right to run Haskell code"). This, of course, results in a bit of overhead. When we do an `unsafe` call, it skips all of this. This can result in blocking the entire Haskell execution until C returns. So, if the C function takes a long time, or if it does not return, it can lead to a deadlock. It is also very important to use `safe` calls when the C code calls back into Haskell (not an issue here). So, it's important that we are selective with the functions we call `unsafe` with, and we should not use them for anything that can take a substantial amount of time (like networked file systems or slow spinning disks). #link("https://github.com/haskell/unix/issues/34", "Issue talking about this.") This is why, when we do the `readdir`, we do it as a `safe` call. The other two are safe to make `unsafe` because they just read a field of a struct, which is very fast, and they do not do anything I/O related no syscalls, so there is no waiting.
 
-== Honorable mentions
-- I used a lot of state in the TUI 
+== Other techniques that i used
+- I used a lot of state in the in the TUI
 - Use bracket on error to close stream safely 
-- Property-based testing in my testes
-
+- Property-based testing 
+- I also use a lot of recursion 
 
 = Self evaluation:
 == What was positive about working on this project?
