@@ -13,7 +13,7 @@ module TraversalSettings (
     , substituePath
     , convertString
     , convertToString
-    , safeHead  -- vil egt ikke eksponere -- spørre aria
+    , safeHead  -- vil egt ikke eksponere -- spørre aria, glemte det, menmen
     , safeTail  -- vil egt ikke eksponerei
 ) where
 

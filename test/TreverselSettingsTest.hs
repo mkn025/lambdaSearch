@@ -22,16 +22,10 @@ mainTreverselSettingsTest =  testGroup "Parser teste" [
      , testsGetRexPattern ]
  
 
-
-
-
-
 testConvertions :: TestTree
 testConvertions = adjustOption (const (QuickCheckTests 1_000)) $ testProperty
   "Test many convertions" $
   \(AsciiString s) -> s ===  convertToString (convertString s)
-
-
 
 --------------------------------------------------
 -- Tester head og tail --
@@ -146,6 +140,7 @@ testsExtentionFilter = testGroup "getExtentionFilter"
     ]
   where
     withExt e = defaultArgs { extention = Just (bs e) }
+
 
 
 

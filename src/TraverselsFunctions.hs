@@ -77,7 +77,6 @@ foreign import ccall unsafe "__posixdir_d_type"
 unpackDirStream :: DirStream -> Ptr CDir
 unpackDirStream (DirStream a) = a
 
--- | TODO: Dokumenter feiltyper ved lesing av kataloginnhold.
 data DirError = UnexpectedErrnoZero | ReadDirErr Errno
 
 instance Show DirError where

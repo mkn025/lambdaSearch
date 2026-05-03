@@ -4,15 +4,15 @@ import Test.Tasty
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
 
-import System.IO.Temp                        (withSystemTempDirectory)
+import System.IO.Temp                 (withSystemTempDirectory)
 
-import System.Directory                      (createDirectory, createDirectoryIfMissing)
+import System.Directory               (createDirectory, createDirectoryIfMissing)
 
-import System.Posix.Directory.Foreign        (dtReg)
+import System.Posix.Directory.Foreign (dtReg)
 
+import Utils                          (bs, defaultArgs, defaultSettings )
+import TraversalSettings              (SearchSetting(..), Arguments(..) )
 import TraverselsFunctions
-import Utils ( bs, defaultArgs, defaultSettings )
-import TraversalSettings ( SearchSetting(..), Arguments(..) )
 
 mainTraverselFunctionsTest :: TestTree
 mainTraverselFunctionsTest = testGroup "TraverselFunctionsTest" [
@@ -34,7 +34,6 @@ mkDirInfo path = FileInfomation
     { filePath     = bs path
     , fileNameInfo = Nothing
     }
-
 
 
 -- tester konatingeringen, og at den  gir ut Nothing

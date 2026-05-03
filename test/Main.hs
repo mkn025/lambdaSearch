@@ -8,6 +8,7 @@ import ParserTest (parserTests )
 import Test.Tasty             (defaultMain, testGroup)
 
 
+-- | Kjøre testene
 main :: IO ()
 main = defaultMain $ testGroup 
     "Running all tests"

@@ -48,6 +48,7 @@ lambdaSearch . -e hs
 lambdaSearch  -e hs
 lambdaSearch TUI # for å kjøre tui
 
+# Bruker POSIX Extended Regular Expressions (ERE)
 lambdaSearch -p ^test[0-9]+
 
 # Fungerer med vilkårlig rekkefølge på argumentet. Og med både long og short sammen

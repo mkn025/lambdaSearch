@@ -60,7 +60,6 @@ testsPaths = testGroup "stier"
         ss <- mustParse "/home/foo"
         searchPaths ss @?= Just ["/home/foo"]
 
-
     , testCase "to stier med mellomrom" $ do
         ss <- mustParse "/home/foo /var/bar"
         searchPaths ss @?= Just ["/home/foo", "/var/bar"]
