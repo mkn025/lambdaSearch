@@ -1,9 +1,9 @@
 module PrintFunctions (printResults) where
 
-import TraverselsFunctions   (FileInfomation(..)) 
-import System.Posix.Terminal (queryTerminal)
-import System.Posix.IO       (stdOutput)
-import TraversalSettings     (convertToString)
+import TraverselsFunctions       (FileInfomation(..)) 
+import System.Posix.Terminal     (queryTerminal)
+import System.Posix.IO           (stdOutput)
+import TraversalSettings         (convertToString)
 
 import System.Console.ANSI.Codes (
         setSGRCode
@@ -32,8 +32,7 @@ printFileInformation colorFunc fi = do
                 let path = fp <> ( '/' : colorFunc fn)
                 putStrLn path 
 
-
--- Legger på ansi codes på dersom du skal sende den til terminal. Ellers er det bare id
+-- | Legger på ansi codes på dersom du skal sende den til terminal. Ellers er det bare id
 coloriseFileIfTTY :: IO (String -> String)
 coloriseFileIfTTY = do
     tty <- queryTerminal stdOutput -- burkes til å finne ut om vi skal til terminal eller til en pipe
@@ -41,7 +40,7 @@ coloriseFileIfTTY = do
            then coloriseFile
            else id
 
-
+-- | wrapper ani scape codes på en streng
 coloriseFile :: String -> String
 coloriseFile = (<> setSGRCode [Reset]) . (setSGRCode [SetColor Foreground Vivid Green] <>)
 
