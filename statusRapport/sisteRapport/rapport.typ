@@ -132,12 +132,14 @@ eitherA >>= \a ->   -- Either's >>=, now a :: a
 - This is exactly the problem `ExceptT` solves. Rather than trying to nest `m` inside `Either` and getting stuck, it flips the approach. It always stays inside `m` and manually inspects the `Either` with a case expression. Look at its `Monad` instance:
 
 ```hs
-instance Monad m => Monad (ExceptT e m) where
-    x >>= f = ExceptT $ do
-        eitherA <- runExceptT x        -- unwrap to m (Either e a), bind into m
-        case eitherA of
-            Left e  -> pure (Left e)   -- short circuit, re-wrap using m's pure
-            Right a -> runExceptT (f a)
+instance (Monad m) => Monad (ExceptT e m) where
+    return a = ExceptT $ return (Right a)
+    {-# INLINE return #-}
+    m >>= k = ExceptT $ do
+        a <- runExceptT m
+        case a of
+            Left e -> return (Left e)
+            Right x -> runExceptT (k x)
 ```
 - The `do` block runs inside `m`. The `case` is the hardcoded `swap` it handles both `Either` branches by hand, using `m`'s own `pure` to reconstruct the `Left` case without ever needing to push `m` through `Either` generically. 
 - So, ExceptT is just a newtype that forces you to always stay inside m.
@@ -146,7 +148,6 @@ Example where I use this:
 - To make the directory traversal as fast as possible, I used the Foreign Function Interface (FFI) to bind directly to C POSIX functions. But to keep the Haskell side safe, I wrapped these impure calls in Monad Transformers to handle error and end of dir exceptions.
 ```hs
 type DirContentT = ExceptT DirError IO (Maybe DirContent)
-
 readDirEnt :: DirStream ->  DirContentT
 readDirEnt dir = ExceptT readContent
     where
