@@ -14,7 +14,7 @@
 | `-x` | `--execute` | **ExecuteFlag** - Executes a command on processed files |
 
 
-### Gjort siden innleveringen 
+### Gjort siden innleveringen av midveis rapport 
 - Gjort det mulig å søke med `.` eller ingen argumenter. Dette vil da til da bruke working directory
 - Gjort det mulig å kjøre commando på filer du søker etter (beta)
 - Gjort slik at det er bare filen som blir grønn. Og ikke hele stien (gif er ikke oppdatert)
