@@ -74,6 +74,7 @@ foreign import ccall unsafe "__posixdir_d_type"
 
 
 
+
 -- | En funksjon som pattern matcher og henter ut pekeren
 unpackDirStream :: DirStream -> Ptr CDir
 unpackDirStream (DirStream a) = a
@@ -214,15 +215,17 @@ treversRecursively args = foldDirectoryTree foldFunc
 
         let fullPath = parentPath  </> file
         let isDir = typ == dtDir
-        if isDir
-            then pure $ FileInfomation {filePath = fullPath, fileNameInfo = Nothing} : acc -- om den er nothign så er det bare en mappe
-            else do
 
+        if isDir
+            -- Sjekker om det er en hidden folder
+            then if getHiddenFilter args file 
+                 then pure $ FileInfomation {filePath = fullPath, fileNameInfo = Nothing} : acc
+                 else pure acc 
+            else do
                 let rg  = getRexPattern      regexCompiled file
                 let hf  = getHiddenFilter    args file
                 let ef  = getExtentionFilter args file
                 let df  = getDisallowFilter  args parentPath
-
                 if and [rg, ef, hf, df]
                 then do
                     executeFunction args fullPath executeOnFile

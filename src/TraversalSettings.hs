@@ -32,7 +32,6 @@ import Text.Regex.TDFA(
   , matchTest
   )
 
-
 -- | Type aliers for og øke lesbarheten
 type Extention     = RawFilePath
 type SearchPattern = RawFilePath
@@ -84,6 +83,10 @@ getRexPattern (Just regex) fp = matchTest regex fp
 getDisallowFilter :: Arguments -> RawFilePath -> Bool
 getDisallowFilter (exclude -> Nothing)  _ = True
 getDisallowFilter (exclude -> Just sf) fp = not $ any (`BC.isPrefixOf` fp) sf
+
+
+
+
 
 -- | Filterlogikk for skjulte filer.
 --  Sjekker om head til filen @.@

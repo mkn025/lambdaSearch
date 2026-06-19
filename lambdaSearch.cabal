@@ -18,6 +18,8 @@ library
                     , TraversalFunctions
                     , PrintFunctions
                     , ParseInput
+                    , DefultFilter
+
 
     build-depends:    text ^>=2.0.2
                     , base ^>=4.18.3.0

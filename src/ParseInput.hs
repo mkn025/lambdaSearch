@@ -46,23 +46,20 @@ parseWord :: Parser String
 parseWord = many (satisfy (\c -> c /= ' ' && c /= '\t'))
 
 
-
 -- Parser til et et nytt flag 
 parseToFlagsWithParser :: Parser a -> Parser [a]
 parseToFlagsWithParser p =
-  manyTill
-    p
-    (lookAhead (pFlags $> () <|> eof)) -- end of file. fungere med null flagg også
+  manyTill p (lookAhead (pFlags $> () <|> eof)) -- end of file. fungere med null flagg også
 
 
 
 -- |  standardverdier for filterflagg.
-emptyFilterFlags :: Arguments
-emptyFilterFlags = Arguments {
+defaultArguments :: Arguments
+defaultArguments = Arguments {
       regxPattern    = Nothing
     , exclude        = Nothing
     , extention      = []
-    , hideHidden     = False
+    , hideHidden     = True
     , applyedCommand = Nothing
     }
 
@@ -141,7 +138,7 @@ applyFlag st df = case df of
      ExtentionFlag     e -> st {extention      = (convertString <$> e) <> extention st}
      IgnoreFlag        i -> st {exclude        = Just (map convertString i)}
      ExecuteFlag       x -> st {applyedCommand = Just x}
-     HiddenFilesFlag     -> st {hideHidden     = True  }
+     HiddenFilesFlag     -> st {hideHidden     = not . hideHidden $ st}
 
 
 -- | Parser mange dataflagg 
@@ -152,7 +149,7 @@ parseAllFlags = many (sc *> pFlags <* sc) --
 -- | Parser alle flagg og folder dem inn i én 'Arguments'-verdi.
 --  Burker listen som av flagg som er parset og applyfalg og foldr over alle og lager Arguments datastukruen
 parseFlags :: Parser Arguments
-parseFlags = foldl' applyFlag emptyFilterFlags <$>parseAllFlags
+parseFlags = foldl' applyFlag defaultArguments <$>parseAllFlags
 
 
 --- STI PARSER ---
