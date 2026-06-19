@@ -1,5 +1,3 @@
-
-
 module ParseInput (runParserIO, runMyParser, parseLamdaSearch) where
 
 import Data.Void            (Void)
@@ -12,9 +10,9 @@ import Control.Exception.Base (throwIO)
 
 import TraversalSettings    (
       SearchSetting (..)
-    , Arguments (..)
+    , Arguments     (..)
+    , Args          (..)
     , convertString
-    , Args(..)
     , ConstrucedCommand
     )
 
@@ -32,9 +30,11 @@ import Text.Megaparsec      (
     )
 
 import Text.Megaparsec.Error (errorBundlePretty)
-import Data.List             (foldl')
+import Data.List             (foldl', singleton)
 
 type Parser = Parsec Void String
+
+-- Helper funksjoner
 
 -- | Parser til whitespace-parseren. 
 sc :: Parser ()
@@ -44,6 +44,16 @@ sc = skipMany (char ' ' <|> char '\t')
 -- | Parser for ett  ord.
 parseWord :: Parser String
 parseWord = many (satisfy (\c -> c /= ' ' && c /= '\t'))
+
+
+
+-- Parser til et et nytt flag 
+parseToFlagsWithParser :: Parser a -> Parser [a]
+parseToFlagsWithParser p =
+  manyTill
+    p
+    (lookAhead (pFlags $> () <|> eof)) -- end of file. fungere med null flagg også
+
 
 
 -- |  standardverdier for filterflagg.
@@ -66,7 +76,7 @@ data Paths =
 data DataFlags =
       SearchPatternFlag String
     | HiddenFilesFlag
-    | ExtentionFlag     String
+    | ExtentionFlag     [String]
     | ExecuteFlag      ConstrucedCommand
     | IgnoreFlag       [String]
 
@@ -77,10 +87,16 @@ pFlags = choice
     [
        SearchPatternFlag <$> ((string' "-p" <|> string  "--pattern"   ) *> sc *> parseWord)
      , HiddenFilesFlag   <$  ( string' "-a" <|> string  "--show--dots")
-     , ExtentionFlag     <$> ((string' "-e" <|> string  "--extention" ) *> sc *> parseWord)
+     , ExtentionFlag     <$> ((string' "-e" <|> string  "--extention" ) *> sc *> (parseManyExteions <|> (singleton <$> parseWord) ))
      , IgnoreFlag        <$> ((string' "-i" <|> string  "--ignore"    ) *> sc *> pathsUntilFlag )
      , ExecuteFlag       <$> ((string' "-x" <|> string  "--execute"   ) *> sc *> parseConstrucedCommand) 
     ]
+
+
+
+
+parseManyExteions :: Parser [String]
+parseManyExteions =  parseToFlagsWithParser $ sc *> parseWord 
 
 
 -- | Parser våres argrumenter @Brukes med execute falgget@
@@ -91,12 +107,10 @@ parseConstrucedCommand  = do
     args <- parseManyArgs
     pure (cmd, args)
 
+
 -- | Dokumenter parser for mange execute-argumenter frem til neste flagg.
 parseManyArgs :: Parser [Args]
-parseManyArgs =
-  manyTill
-    (sc *> parseArgs)
-    (lookAhead (pFlags $> () <|> eof)) -- end of file. fungere med null flagg også
+parseManyArgs = parseToFlagsWithParser $ sc *> parseArgs
 
 
 -- | Parser for commando datatypen kan enten være en commando eller en sti
@@ -117,7 +131,6 @@ parseArgumentAndWord = do
     pure (f : w <> s)
 
 
-
 --- FLAG PARSER --- 
 
 -- | Tar argument datatypen og  og et flag og putter det i datastukruen våre
@@ -125,7 +138,7 @@ parseArgumentAndWord = do
 applyFlag :: Arguments -> DataFlags -> Arguments
 applyFlag st df = case df of
      SearchPatternFlag s -> st {regxPattern    = Just (convertString s)}
-     ExtentionFlag     e -> st {extention      = convertString e : extention st}
+     ExtentionFlag     e -> st {extention      = (convertString <$> e) <> extention st}
      IgnoreFlag        i -> st {exclude        = Just (map convertString i)}
      ExecuteFlag       x -> st {applyedCommand = Just x}
      HiddenFilesFlag     -> st {hideHidden     = True  }
@@ -157,11 +170,7 @@ parsePathWithQuote = between (char '"') (char '"') (many (satisfy (/= '"')))
 
 -- | Parser mange stier helt til vi kommer til et flag e
 pathsUntilFlag :: Parser [String]
-pathsUntilFlag =
-  manyTill
-    ((parsePath <|> parsePathWithQuote) <* sc)
-    (lookAhead (pFlags $> () <|> eof)) -- end of file. fungere med null flagg også
-
+pathsUntilFlag = parseToFlagsWithParser $ (parsePath <|> parsePathWithQuote) <* sc
 
 -- |  Parse første del av input. skal enten parse et punktum eller til flaggene begnner
 parsePathOrDot :: Parser Paths
@@ -170,7 +179,6 @@ parsePathOrDot = choice
           NoPath     <$ (sc *> char '.' <* sc )
         , ManyPaths  <$> pathsUntilFlag
      ]
-
 
 
 --- HOVEDPARSER ---

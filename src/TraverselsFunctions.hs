@@ -54,6 +54,7 @@ import Control.Monad.Except (
 
 
 type DirContent = (DirType, RawFilePath)
+
 data FileInfomation = FileInfomation{
       filePath      :: RawFilePath
     , fileNameInfo  :: Maybe DirContent -- Nothing dersom det er en mappe

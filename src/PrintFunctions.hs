@@ -1,8 +1,9 @@
 module PrintFunctions (printResults) where
 
+
 import TraverselsFunctions       (FileInfomation(..)) 
-import System.Posix.Terminal     (queryTerminal)
-import System.Posix.IO           (stdOutput)
+import System.Posix.Terminal     (queryTerminal     )
+import System.Posix.IO           (stdOutput      )
 import TraversalSettings         (convertToString)
 
 import System.Console.ANSI.Codes (
@@ -43,4 +44,6 @@ coloriseFileIfTTY = do
 -- | wrapper ani scape codes på en streng
 coloriseFile :: String -> String
 coloriseFile = (<> setSGRCode [Reset]) . (setSGRCode [SetColor Foreground Vivid Green] <>)
+
+
 
