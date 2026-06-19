@@ -1,4 +1,3 @@
-{- HLINT ignore "Use <$>" -}
 
 
 module ParseInput (runParserIO, runMyParser, parseLamdaSearch) where
@@ -37,9 +36,6 @@ import Data.List             (foldl')
 
 type Parser = Parsec Void String
 
-
-
-
 -- | Parser til whitespace-parseren. 
 sc :: Parser ()
 sc = skipMany (char ' ' <|> char '\t')
@@ -55,7 +51,7 @@ emptyFilterFlags :: Arguments
 emptyFilterFlags = Arguments {
       regxPattern    = Nothing
     , exclude        = Nothing
-    , extention      = Nothing
+    , extention      = []
     , hideHidden     = False
     , applyedCommand = Nothing
     }
@@ -129,7 +125,7 @@ parseArgumentAndWord = do
 applyFlag :: Arguments -> DataFlags -> Arguments
 applyFlag st df = case df of
      SearchPatternFlag s -> st {regxPattern    = Just (convertString s)}
-     ExtentionFlag     e -> st {extention      = Just (convertString  e)}
+     ExtentionFlag     e -> st {extention      = convertString e : extention st}
      IgnoreFlag        i -> st {exclude        = Just (map convertString i)}
      ExecuteFlag       x -> st {applyedCommand = Just x}
      HiddenFilesFlag     -> st {hideHidden     = True  }
@@ -143,9 +139,7 @@ parseAllFlags = many (sc *> pFlags <* sc) --
 -- | Parser alle flagg og folder dem inn i én 'Arguments'-verdi.
 --  Burker listen som av flagg som er parset og applyfalg og foldr over alle og lager Arguments datastukruen
 parseFlags :: Parser Arguments
-parseFlags = do
-  fs <- parseAllFlags                          --Løfter ut monaden
-  pure $ foldl' applyFlag emptyFilterFlags fs  --foldr over
+parseFlags = foldl' applyFlag emptyFilterFlags <$>parseAllFlags
 
 
 --- STI PARSER ---

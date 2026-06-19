@@ -1,4 +1,5 @@
 
+
 module TraversalSettings (
       Arguments         (..)
     , SearchSetting     (..)
@@ -64,7 +65,7 @@ data SearchSetting = SearchSetting {
 data Arguments = Arguments {
       regxPattern    :: Maybe SearchPattern
     , exclude        :: Maybe SearchFilters
-    , extention      :: Maybe Extention
+    , extention      :: [Extention]
     , hideHidden     :: Bool
     , applyedCommand :: Maybe ConstrucedCommand
 
@@ -85,7 +86,6 @@ getDisallowFilter :: Arguments -> RawFilePath -> Bool
 getDisallowFilter (exclude -> Nothing)  _ = True
 getDisallowFilter (exclude -> Just sf) fp = not $ any (`BC.isPrefixOf` fp) sf
 
-
 -- | Filterlogikk for skjulte filer.
 --  Sjekker om head til filen @.@
 --  Tar med alle dersom ikke noe spesifiser
@@ -98,9 +98,10 @@ getHiddenFilter (hideHidden  -> True) (safeHead -> Just h)  = h /= '.'
 -- | Filter som filterer for de rikgte extentionene 
 --  Tar med alle dersom ikke noe spesifiser
 getExtentionFilter :: Arguments -> RawFilePath -> Bool
-getExtentionFilter (extention -> Nothing) _                                = True
-getExtentionFilter (extention -> Just _ )  (getFileExtention -> Nothing)   = False
-getExtentionFilter (extention -> Just ext) (getFileExtention -> Just curr) = curr == ext
+getExtentionFilter (extention -> [] ) _                               = True
+getExtentionFilter (extention ->  _ ) (getFileExtention -> Nothing)   = False
+getExtentionFilter (extention -> ext) (getFileExtention -> Just curr) = curr `elem` ext
+
 
 -- | Kompilerer regex-mønsteret. 
 --  Git nothing dersom brukeren ikke har spesifisert noe
