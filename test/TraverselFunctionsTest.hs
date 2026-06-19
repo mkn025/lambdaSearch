@@ -12,7 +12,10 @@ import System.Posix.Directory.Foreign (dtReg)
 
 import Utils                          (bs, defaultArgs, defaultSettings )
 import TraversalSettings              (SearchSetting(..), Arguments(..) )
-import TraverselsFunctions
+import TraversalFunctions
+
+
+
 
 mainTraverselFunctionsTest :: TestTree
 mainTraverselFunctionsTest = testGroup "TraverselFunctionsTest" [
@@ -130,7 +133,7 @@ testsTraversal = testGroup "treverseDirWithSettings"
 
             writeFile (tmp <> "/Main.hs") ""
             writeFile (tmp <> "/Main.py") ""
-            let args = defaultArgs { extention = Just (bs "hs") }
+            let args = defaultArgs { extention = [bs "hs"] }
 
             result <- treverseDirWithSettings
                         SearchSetting { searchPaths = Just [tmp], arguments = args }

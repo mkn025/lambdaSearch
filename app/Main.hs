@@ -1,10 +1,10 @@
 module Main (main) where
 
-import ParseInput          (runParserIO)
-import System.Environment  (getArgs)
+import ParseInput         (runParserIO)
+import System.Environment (getArgs)
+import PrintFunctions     (printResults)
+import TraversalFunctions (treverseDirWithSettings)
 
-import TraverselsFunctions (treverseDirWithSettings)
-import PrintFunctions      (printResults)
 
 main :: IO ()
 main = do
@@ -13,8 +13,8 @@ main = do
 
 
 actOnInput :: [String] ->  IO()
-actOnInput []                           = runCLi []
-actOnInput x                            = runCLi x
+actOnInput [] = runCLi []
+actOnInput x  = runCLi x
 
 
 runCLi :: [String] -> IO ()

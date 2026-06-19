@@ -139,7 +139,7 @@ testsExtentionFilter = testGroup "getExtentionFilter"
             getExtentionFilter defaultArgs (bs s) === True
     ]
   where
-    withExt e = defaultArgs { extention = Just (bs e) }
+    withExt e = defaultArgs { extention =  [bs e] }
 
 
 

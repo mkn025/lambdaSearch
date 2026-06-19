@@ -22,7 +22,7 @@ defaultArgs :: Arguments
 defaultArgs = Arguments
     { regxPattern    = Nothing
     , exclude        = Nothing
-    , extention      = Nothing
+    , extention      = []
     , hideHidden     = False
     , applyedCommand = Nothing
     }

@@ -45,7 +45,8 @@ executable lambdaSearch
     main-is:          Main.hs
     build-depends:
         base ^>=4.18.3.0,
-        lambdaSearch,
+        lambdaSearch
+
     hs-source-dirs:   app
     default-language: GHC2021
 
@@ -68,11 +69,11 @@ test-suite lambdaSearch-test
 
 
     build-depends:
-          directory 
+          lambdaSearch
+        , directory 
         , unix
         , posix-paths
         , base 
-        , lambdaSearch
         , tasty
         , tasty-hunit
         , tasty-quickcheck

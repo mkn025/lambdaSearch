@@ -96,7 +96,7 @@ pFlags = choice
 
 
 parseManyExteions :: Parser [String]
-parseManyExteions =  parseToFlagsWithParser $ sc *> parseWord 
+parseManyExteions =  parseToFlagsWithParser $ parseWord <* sc
 
 
 -- | Parser våres argrumenter @Brukes med execute falgget@
