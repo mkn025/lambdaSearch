@@ -1,8 +1,7 @@
 
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module TraverselsFunctions (
-
+module TraversalFunctions (
       DirContent
     , FileInfomation(..)
     , treverseDirWithSettings
@@ -63,6 +62,7 @@ data FileInfomation = FileInfomation{
 
 -- hehe viktig at vi burker safe call for alt som gjør IO
 --  https://github.com/haskell/unix/issues/34
+
 foreign import ccall safe "readdir"
   c_readdir :: Ptr CDir -> IO (Ptr CDirent) --Leser fra allerede åpenet dirStream -- Byttet fra readDir-R
 

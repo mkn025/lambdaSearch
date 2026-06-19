@@ -1,6 +1,6 @@
 
 
-module TraversalSettings (
+module  TraversalSettings (
       Arguments         (..)
     , SearchSetting     (..)
     , Args           (..)

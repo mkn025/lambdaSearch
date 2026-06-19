@@ -1,7 +1,7 @@
 module PrintFunctions (printResults) where
 
 
-import TraverselsFunctions       (FileInfomation(..)) 
+import TraversalFunctions       (FileInfomation(..)) 
 import System.Posix.Terminal     (queryTerminal     )
 import System.Posix.IO           (stdOutput      )
 import TraversalSettings         (convertToString)
