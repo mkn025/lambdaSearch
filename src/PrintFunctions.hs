@@ -28,8 +28,8 @@ printFileInformation colorFunc fi = do
         case fileNameInfo fi of
             Nothing -> pure ()
             Just dc  -> do
-                let fp   = convertToString . filePath $ fi
-                let fn   = convertToString . snd      $ dc
+                let fp   = convertToString . fullFilePath $ fi
+                let fn   = convertToString . snd          $ dc
                 let path = fp <> ( '/' : colorFunc fn)
                 putStrLn path 
 
