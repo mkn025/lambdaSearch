@@ -13,6 +13,7 @@ common warnings
 library
     -- Import common warning flags.
     import:           warnings
+    c-sources:        cFuncs/dirutils.c
     exposed-modules: 
                       TraversalSettings
                     , TraversalFunctions
@@ -28,7 +29,6 @@ library
                     , unix
                     , bytestring
                     , filepath
-                    , posix-paths
                     , unliftio
                     , async
                     , regex-tdfa ^>= 1.3.2
