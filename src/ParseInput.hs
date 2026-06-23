@@ -203,8 +203,8 @@ type StringToParse = String
 runMyParser :: Parser a -> StringToParse ->  Either String a
 runMyParser parser input =
   case runParser parser "" input of
-    Left err  -> Left $ errorBundlePretty err
-    Right x   -> Right x
+    Left err -> Left $ errorBundlePretty err
+    Right x  -> Right x
 
 
 -- | IO-wrapper som kaster feil dersom vi ikke klare å parse
