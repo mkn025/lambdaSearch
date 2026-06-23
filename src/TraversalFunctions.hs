@@ -1,5 +1,5 @@
-
 {-# LANGUAGE ScopedTypeVariables #-}
+
 
 module TraversalFunctions (
       DirContent
@@ -10,8 +10,9 @@ module TraversalFunctions (
     )
 where
 
-import System.Posix.Directory.Foreign               (DirType(..), dtDir )
-import System.Posix.ByteString.FilePath             (RawFilePath, peekFilePath )
+import System.Posix.ByteString.FilePath             (RawFilePath, peekFilePath)
+import System.FilePath.Posix.ByteString             ((</>))
+
 import Foreign.C.Error                              (Errno  (..), eINTR,  getErrno, resetErrno,eOK, eACCES, ePERM )
 import Foreign.C.String                             (CString )
 import UnliftIO                                     (MonadUnliftIO, finally,askRunInIO, throwIO, Exception )
@@ -20,7 +21,6 @@ import Control.Monad.IO.Class                       (MonadIO(liftIO) )
 
 import System.Posix.Directory.ByteString as PosixBS (openDirStream, closeDirStream, DirStream, getWorkingDirectory)
 
-import System.Posix.FilePath                        ((</>))
 import Foreign.Ptr as PTR                           (Ptr, nullPtr)
 import System.Process                               (createProcess, proc, waitForProcess)
 import System.Exit                                  (ExitCode (..))
@@ -52,12 +52,22 @@ import Control.Monad.Except (
     )
 
 
+
+dtDir :: DirType
+dtDir = DirType 4
+
+
+newtype DirType = DirType Int
+    deriving (Eq, Show)
+
 type DirContent = (DirType, RawFilePath)
 
 data FileInfomation = FileInfomation{
-      filePath      :: RawFilePath
-    , fileNameInfo  :: Maybe DirContent -- Nothing dersom det er en mappe
+      fullFilePath    :: RawFilePath
+    , relativFilePath :: RawFilePath
+    , fileNameInfo    :: Maybe DirContent -- Nothing dersom det er en mappe
 } deriving (Eq,Show)
+
 
 
 -- hehe viktig at vi burker safe call for alt som gjør IO
@@ -74,7 +84,6 @@ foreign import ccall unsafe "__posixdir_d_type"
 
 
 
-
 -- | En funksjon som pattern matcher og henter ut pekeren
 unpackDirStream :: DirStream -> Ptr CDir
 unpackDirStream (DirStream a) = a
@@ -86,8 +95,6 @@ instance Show DirError where
     show UnexpectedErrnoZero    = "UnexpectedErrnoZero"
 
 instance Exception DirError
-
-
 
 -- | Leser neste element fra en åpen 'DirStream' med @readdir@.
 --
@@ -103,7 +110,7 @@ readDirEnt dir = ExceptT readContent
     readContent = do
       let dirp = unpackDirStream dir
     -- fra docs : set errno to zero before calling readdir()
-      resetErrno 
+      resetErrno
 
       dEnt <- c_readdir dirp
       if dEnt == PTR.nullPtr
@@ -154,7 +161,6 @@ traverseDirectoryContents f s0 p = do
         (\case
             Nothing   -> pure s0         -- access denied, skipper
             Just dirp -> loop run s0 dirp `finally` PosixBS.closeDirStream dirp)
-
   where
     openDirStreamPermissive :: RawFilePath -> IO (Maybe DirStream)
     openDirStreamPermissive path =
@@ -188,21 +194,23 @@ foldDirectoryTree
     -> RawFilePath
     -> IO a
 foldDirectoryTree foldFunc acc rootPath  = do
-    isDir <- isDirectory <$> getFileStatus  rootPath
+    isDir <- isDirectory <$> getFileStatus rootPath
+
     if not isDir
         then pure acc
         else traverseDirectoryContents innerloop acc rootPath
     where
         innerloop  :: a -> DirContent -> IO a
         innerloop currentAcc dc@(typ,filename) = do
-            let filePath = rootPath  </> filename
+            let fp    = rootPath  </> filename
             let isDir = typ == dtDir
             -- legge funskjonen på 
             nextAcc <- foldFunc currentAcc rootPath dc
             if not isDir
                 then pure nextAcc
-                else foldDirectoryTree foldFunc nextAcc filePath
-
+                else foldDirectoryTree foldFunc nextAcc fp
+        
+            
 
 -- | Rekkursiv traversering med aktive filter
 --  Går igjennom alle filene og rekusrsivt. Og akkumlerer ønskete filer i acc listen vår
@@ -214,13 +222,18 @@ treversRecursively args = foldDirectoryTree foldFunc
     foldFunc acc parentPath dc@(typ,file)  = do
 
         let fullPath = parentPath  </> file
-        let isDir = typ == dtDir
 
+        let isDir    = typ == dtDir
         if isDir
             -- Sjekker om det er en hidden folder
-            then if getHiddenFilter args file 
-                 then pure $ FileInfomation {filePath = fullPath, fileNameInfo = Nothing} : acc
-                 else pure acc 
+            then if getHiddenFilter args file
+                then 
+                    pure $ FileInfomation {fullFilePath = fullPath, relativFilePath = "",fileNameInfo = Nothing} : acc
+                else
+                    -- debug
+                    -- print file
+                    -- mapM_ (putStrLn .  convertToString . filePath) acc
+                    pure acc
             else do
                 let rg  = getRexPattern      regexCompiled file
                 let hf  = getHiddenFilter    args file
@@ -229,7 +242,7 @@ treversRecursively args = foldDirectoryTree foldFunc
                 if and [rg, ef, hf, df]
                 then do
                     executeFunction args fullPath executeOnFile
-                    pure $ FileInfomation {filePath = parentPath, fileNameInfo = Just dc} : acc
+                    pure $ FileInfomation {fullFilePath = parentPath, relativFilePath ="", fileNameInfo = Just dc} : acc
                 else do
                     pure acc
 
@@ -267,7 +280,8 @@ treverseOnPathWithArgs ff sp = treversRecursively ff [] $ convertString sp
 
 -- Hjelpemeothde som lager helefilstien dersom, dersom det er en sti
 constructFilePath :: FileInfomation -> Maybe String
-constructFilePath fi = case fileNameInfo fi of
-                        Nothing               -> Nothing
-                        Just (_ ,b)           -> Just $ convertToString $ filePath fi </>  b
+constructFilePath FileInfomation{fileNameInfo = Nothing}                        = Nothing
+constructFilePath FileInfomation{fileNameInfo = (Just (_,a)), fullFilePath = f} = Just . convertToString $ (</>) f a
+
+
 
