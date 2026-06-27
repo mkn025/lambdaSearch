@@ -1,9 +1,11 @@
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE RecordWildCards #-}
 
 
 module TraversalFunctions (
-      DirContent
+      DirContent    (..)
     , FileInfomation(..)
+    , DirType       (..)
     , treverseDirWithSettings
     , constructFilePath
     , executeOnFile
@@ -52,29 +54,32 @@ import Control.Monad.Except (
     )
 
 
-
 dtDir :: DirType
 dtDir = DirType 4
-
 
 newtype DirType = DirType Int
     deriving (Eq, Show)
 
-type DirContent = (DirType, RawFilePath)
+
+data DirContent =  DirContent {
+      fileType       :: DirType
+    , name           :: RawFilePath
+
+    } deriving (Eq,Show)
+
 
 data FileInfomation = FileInfomation{
-      fullFilePath    :: RawFilePath
-    , relativFilePath :: RawFilePath
-    , fileNameInfo    :: Maybe DirContent -- Nothing dersom det er en mappe
+      fullFilePath     :: RawFilePath
+    , relativeFilePath :: RawFilePath
+    , fileNameInfo     :: Maybe DirContent -- Nothing dersom det er en mappe
 } deriving (Eq,Show)
-
 
 
 -- hehe viktig at vi burker safe call for alt som gjør IO
 --  https://github.com/haskell/unix/issues/34
 
 foreign import ccall safe "readdir"
-  c_readdir :: Ptr CDir -> IO (Ptr CDirent) --Leser fra allerede åpenet dirStream -- Byttet fra readDir-R
+  c_readdir :: Ptr CDir -> IO (Ptr CDirent)
 
 foreign import ccall unsafe "__hscore_d_name"
   c_name :: Ptr CDirent -> IO CString
@@ -134,7 +139,8 @@ readDirEnt dir = ExceptT readContent
         -- On success, readdir() returns a pointer to a dirent structure.
         -- (This structure may be statically allocated; do not attempt to
         -- free(3) it.)
-          pure . Right . Just  $ (dType, dName)
+          pure . Right . Just  $ DirContent{fileType = dType, name = dName}
+         -- pure . Right . Just  $ (dType, dName)
 
 
 
@@ -172,14 +178,18 @@ traverseDirectoryContents f s0 p = do
     loop run acc dirp = do
         dirAnd <- runExceptT $ readDirEnt dirp
         case dirAnd of
-            Left  errMsg                   -> throwIO errMsg
-            Right Nothing                  -> pure acc          -- Om den er kommeet til enden av dir
-            Right (Just content@(_typ, e)) -> if e == "." || e == ".."
-                                              then loop run acc dirp
-                                              else do
-                                                  acc' <- run $ f acc content
+            Left  errMsg                     -> throwIO errMsg
+            Right Nothing                    -> pure acc          -- Om den er kommeet til enden av dir
+            Right (Just  dc@DirContent{..}) -> if name == "." || name == ".."
+                                                then loop run acc dirp
+                                                else do
+                                                  acc' <- run $ f acc dc
                                                   loop run acc' dirp
 
+
+
+type AbsolutPath = RawFilePath
+type RelativPath = RawFilePath
 
 -- | Traverserer katalogtreet rekursivt og putter det og har en fold funksjon bestemmer hvordan den skal legge inn helemeter
 --
@@ -189,11 +199,12 @@ traverseDirectoryContents f s0 p = do
 --
 -- * Er @rootPath@ ikke en direrctory da er  @acc@ uendret.
 foldDirectoryTree
-    :: forall a . (a -> RawFilePath -> DirContent -> IO a)  --  forall scoopes a in hele func function
+    :: forall a . (a -> AbsolutPath -> RelativPath  -> DirContent -> IO a)  --  forall scoopes a in hele func function
     -> a -- 
-    -> RawFilePath
+    -> AbsolutPath
+    -> RelativPath
     -> IO a
-foldDirectoryTree foldFunc acc rootPath  = do
+foldDirectoryTree foldFunc acc rootPath relPath = do
     isDir <- isDirectory <$> getFileStatus rootPath
 
     if not isDir
@@ -201,50 +212,50 @@ foldDirectoryTree foldFunc acc rootPath  = do
         else traverseDirectoryContents innerloop acc rootPath
     where
         innerloop  :: a -> DirContent -> IO a
-        innerloop currentAcc dc@(typ,filename) = do
-            let fp    = rootPath  </> filename
-            let isDir = typ == dtDir
+        innerloop currentAcc dc@DirContent{..} = do
+            let fp    = rootPath  </> name
+            let rp    = relPath  </> name
+            let isDir = fileType == dtDir
+
             -- legge funskjonen på 
-            nextAcc <- foldFunc currentAcc rootPath dc
+            nextAcc <- foldFunc currentAcc rootPath relPath dc
             if not isDir
                 then pure nextAcc
-                else foldDirectoryTree foldFunc nextAcc fp
-        
-            
+                else foldDirectoryTree foldFunc nextAcc fp rp
+
+
 
 -- | Rekkursiv traversering med aktive filter
 --  Går igjennom alle filene og rekusrsivt. Og akkumlerer ønskete filer i acc listen vår
-treversRecursively :: Arguments -> [FileInfomation] -> RawFilePath -> IO [FileInfomation]
+
+treversRecursively :: Arguments -> [FileInfomation] -> AbsolutPath -> RelativPath -> IO [FileInfomation]
 treversRecursively args = foldDirectoryTree foldFunc
     where
     regexCompiled = compileRegexFilter args
-    foldFunc :: [FileInfomation] -> RawFilePath -> DirContent -> IO [FileInfomation]
-    foldFunc acc parentPath dc@(typ,file)  = do
+    foldFunc :: [FileInfomation] -> RawFilePath -> RawFilePath -> DirContent -> IO [FileInfomation]
+    foldFunc acc parentPath rfp dc@DirContent{..}  = do
 
-        let fullPath = parentPath  </> file
+        let rp       = rfp </> name
+        let fullPath = parentPath   </> name
+        let isDir    = fileType == dtDir
 
-        let isDir    = typ == dtDir
         if isDir
-            -- Sjekker om det er en hidden folder
-            then if getHiddenFilter args file
-                then 
-                    pure $ FileInfomation {fullFilePath = fullPath, relativFilePath = "",fileNameInfo = Nothing} : acc
-                else
-                    -- debug
-                    -- print file
-                    -- mapM_ (putStrLn .  convertToString . filePath) acc
-                    pure acc
+            then pure $ FileInfomation {fullFilePath = fullPath, relativeFilePath = rp , fileNameInfo = Nothing} : acc
             else do
-                let rg  = getRexPattern      regexCompiled file
-                let hf  = getHiddenFilter    args file
-                let ef  = getExtentionFilter args file
+
+                let rg  = getRexPattern      regexCompiled name
+                let hf  = getHiddenFilter    args name
+                let ef  = getExtentionFilter args name
                 let df  = getDisallowFilter  args parentPath
                 if and [rg, ef, hf, df]
                 then do
                     executeFunction args fullPath executeOnFile
-                    pure $ FileInfomation {fullFilePath = parentPath, relativFilePath ="", fileNameInfo = Just dc} : acc
+                    pure $ FileInfomation {fullFilePath = parentPath, relativeFilePath  = rp,  fileNameInfo = Just dc} : acc
                 else do
                     pure acc
+
+
+
 
 
 -- | Kjører en kommando på på en filen vår 
@@ -276,12 +287,15 @@ treveseManyPathsWithArgs ff (Just fp) = concat <$> mapM (treverseOnPathWithArgs 
 -- | Treveser en filsti
 --  difinere hvordan vi skal jobbe på en filepath. Slik at vi etterpå kan mapM på en liste med filepath
 treverseOnPathWithArgs :: Arguments -> FilePath -> IO [FileInfomation]
-treverseOnPathWithArgs ff sp = treversRecursively ff [] $ convertString sp
+treverseOnPathWithArgs ff sp = treversRecursively ff []  absStartPath relStartPath
+    where
+    absStartPath = convertString  sp
+    relStartPath = ""
+
 
 -- Hjelpemeothde som lager helefilstien dersom, dersom det er en sti
 constructFilePath :: FileInfomation -> Maybe String
-constructFilePath FileInfomation{fileNameInfo = Nothing}                        = Nothing
-constructFilePath FileInfomation{fileNameInfo = (Just (_,a)), fullFilePath = f} = Just . convertToString $ (</>) f a
-
+constructFilePath FileInfomation{fileNameInfo = Nothing}                                  = Nothing
+constructFilePath FileInfomation{fileNameInfo = (Just DirContent{..}), fullFilePath = f} = Just . convertToString $ f </> name
 
 

@@ -1,8 +1,8 @@
 module PrintFunctions (printResults) where
 
 
-import TraversalFunctions       (FileInfomation(..)) 
 import System.Posix.Terminal     (queryTerminal     )
+import TraversalFunctions        (FileInfomation(..), DirContent(..)) 
 import System.Posix.IO           (stdOutput      )
 import TraversalSettings         (convertToString)
 
@@ -28,8 +28,8 @@ printFileInformation colorFunc fi = do
         case fileNameInfo fi of
             Nothing -> pure ()
             Just dc  -> do
-                let fp   = convertToString . fullFilePath $ fi
-                let fn   = convertToString . snd          $ dc
+                let fp   = convertToString . relativeFilePath $ fi
+                let fn   = convertToString . name             $ dc
                 let path = fp <> ( '/' : colorFunc fn)
                 putStrLn path 
 

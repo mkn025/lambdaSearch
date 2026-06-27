@@ -59,7 +59,7 @@ defaultArguments = Arguments {
       regxPattern    = Nothing
     , exclude        = Nothing
     , extention      = []
-    , hideHidden     = True
+    , hideHidden     = False
     , applyedCommand = Nothing
     }
 

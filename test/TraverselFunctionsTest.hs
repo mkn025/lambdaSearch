@@ -8,7 +8,6 @@ import System.IO.Temp                 (withSystemTempDirectory)
 
 import System.Directory               (createDirectory, createDirectoryIfMissing)
 
-import System.Posix.Directory.Foreign (dtReg)
 
 import Utils                          (bs, defaultArgs, defaultSettings )
 import TraversalSettings              (SearchSetting(..), Arguments(..) )
@@ -27,14 +26,14 @@ mainTraverselFunctionsTest = testGroup "TraverselFunctionsTest" [
 -- lager en feilinformasjonhjelepr
 mkFileInfo :: FilePath -> String -> FileInfomation
 mkFileInfo parent name = FileInfomation
-    { filePath     = bs parent
-    , fileNameInfo = Just (dtReg, bs name)
+    { fullFilePath = bs parent
+    , fileNameInfo = Just $ DirContent_{fileType = DirType  67, name  = bs name ,relatviePath  = ""}
     }
 
 
 mkDirInfo :: FilePath -> FileInfomation
 mkDirInfo path = FileInfomation
-    { filePath     = bs path
+    { fullFilePath = bs path
     , fileNameInfo = Nothing
     }
 
