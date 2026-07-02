@@ -7,6 +7,7 @@ author:             Martin Elde Knutsen
 maintainer:         maknu0536@uib.no
 build-type:         Simple
 extra-doc-files:    CHANGELOG.md
+extra-source-files: cfuncs/dirutils.h
 
 common warnings
     ghc-options: -Wall -threaded -XViewPatterns -XOverloadedStrings  -XLambdaCase

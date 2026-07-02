@@ -8,6 +8,5 @@
 #include <fcntl.h>
 
 extern unsigned int
-    __posixdir_d_type(struct dirent* d)
-    ;
+    __posixdir_d_type(struct dirent* d);
 #endif

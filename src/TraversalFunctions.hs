@@ -234,9 +234,7 @@ foldDirectoryTree
     -> RelativPath RawFilePath
     -> IO a
 foldDirectoryTree foldFunc acc rootPath relPath = do
-
     isDir <- checkIfDir rootPath
-
     if not isDir
         then pure acc
         else traverseDirectoryContents innerloop acc rootPath
@@ -244,7 +242,6 @@ foldDirectoryTree foldFunc acc rootPath relPath = do
     where
         innerloop  :: a -> DirContent -> IO a
         innerloop currentAcc dc@DirContent{..} = do
-
             let fp = concatAbsolutePath rootPath (pure name)
             let rp = contructRelPath relPath     (pure name) Nothing
 
@@ -266,21 +263,22 @@ treversRecursively args = foldDirectoryTree foldFunc
     where
     regexCompiled = compileRegexFilter args
     foldFunc :: [FileInfomation] -> AbsolutPath RawFilePath -> RelativPath RawFilePath -> DirContent -> IO [FileInfomation]
-    foldFunc acc parentPath@(AbsolutPath p) rfp dc@DirContent{..}  = do
 
+    foldFunc acc parentPath@(AbsolutPath pp) rfp dc@DirContent{..}  = do
         let rp       = contructRelPath  rfp (pure name) (Just dc)
         let fullPath = concatAbsolutePath parentPath (pure name)
         let isDir    = fileType == dtDir
         if isDir
             then pure $ FileInfomation {fullFilePath =  fullPath, relativeFilePath = rp , fileNameInfo = Nothing} : acc
             else do
+                
                 let rg  = getRexPattern      regexCompiled name
                 let hf  = getHiddenFilter    args name
                 let ef  = getExtentionFilter args name
-                let df  = getDisallowFilter  args p
+                let df  = getDisallowFilter  args pp
                 if and [rg, ef, hf, df]
                 then do
-                    executeFunction args p executeOnFile
+                    executeFunction args pp executeOnFile
                     pure $ FileInfomation {fullFilePath = parentPath, relativeFilePath  = rp,  fileNameInfo = Just dc} : acc
                 else pure acc
 
