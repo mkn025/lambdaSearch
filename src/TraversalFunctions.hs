@@ -1,4 +1,3 @@
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE RecordWildCards #-}
 
 
@@ -97,10 +96,11 @@ data FileInfomation = FileInfomation{
 concatAbsolutePath :: AbsolutPath RawFilePath -> AbsolutPath RawFilePath -> AbsolutPath RawFilePath
 concatAbsolutePath = liftA2 (</>)
 
-contructRelPath :: RelativPath RawFilePath -> RelativPath RawFilePath -> DirContent -> RelativPath RawFilePath
-contructRelPath old new (DirContent {..}) = if pure name == new
-                                            then old
-                                            else liftA2 (</>) old new
+contructRelPath :: RelativPath RawFilePath -> RelativPath RawFilePath -> Maybe DirContent -> RelativPath RawFilePath
+contructRelPath old new Nothing = liftA2 (</>) old new 
+contructRelPath old new (Just DirContent {..}) = if pure name == new
+                                                                then old
+                                                                else contructRelPath old new Nothing
 
 checkIfDir :: AbsolutPath RawFilePath -> IO Bool
 checkIfDir (AbsolutPath path)  = isDirectory <$> getFileStatus path
@@ -246,7 +246,7 @@ foldDirectoryTree foldFunc acc rootPath relPath = do
         innerloop currentAcc dc@DirContent{..} = do
 
             let fp = concatAbsolutePath rootPath (pure name)
-            let rp = contructRelPath relPath     (pure name) dc
+            let rp = contructRelPath relPath     (pure name) Nothing
 
             let isDir = fileType == dtDir
 
@@ -267,7 +267,8 @@ treversRecursively args = foldDirectoryTree foldFunc
     regexCompiled = compileRegexFilter args
     foldFunc :: [FileInfomation] -> AbsolutPath RawFilePath -> RelativPath RawFilePath -> DirContent -> IO [FileInfomation]
     foldFunc acc parentPath@(AbsolutPath p) rfp dc@DirContent{..}  = do
-        let rp       = contructRelPath  rfp (pure name) dc
+
+        let rp       = contructRelPath  rfp (pure name) (Just dc)
         let fullPath = concatAbsolutePath parentPath (pure name)
         let isDir    = fileType == dtDir
         if isDir
