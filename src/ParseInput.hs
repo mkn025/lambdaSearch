@@ -1,6 +1,3 @@
-{- HLINT ignore "Use <$>" -}
-
-
 module ParseInput (runParserIO, runMyParser, parseLamdaSearch) where
 
 import Data.Void            (Void)
@@ -13,9 +10,9 @@ import Control.Exception.Base (throwIO)
 
 import TraversalSettings    (
       SearchSetting (..)
-    , Arguments (..)
+    , Arguments     (..)
+    , Args          (..)
     , convertString
-    , Args(..)
     , ConstrucedCommand
     )
 
@@ -33,12 +30,11 @@ import Text.Megaparsec      (
     )
 
 import Text.Megaparsec.Error (errorBundlePretty)
-import Data.List             (foldl')
+import Data.List             (foldl', singleton)
 
 type Parser = Parsec Void String
 
-
-
+-- Helper funksjoner
 
 -- | Parser til whitespace-parseren. 
 sc :: Parser ()
@@ -50,12 +46,19 @@ parseWord :: Parser String
 parseWord = many (satisfy (\c -> c /= ' ' && c /= '\t'))
 
 
+-- Parser til et et nytt flag 
+parseToFlagsWithParser :: Parser a -> Parser [a]
+parseToFlagsWithParser p =
+  manyTill p (lookAhead (pFlags $> () <|> eof)) -- end of file. fungere med null flagg også
+
+
+
 -- |  standardverdier for filterflagg.
-emptyFilterFlags :: Arguments
-emptyFilterFlags = Arguments {
+defaultArguments :: Arguments
+defaultArguments = Arguments {
       regxPattern    = Nothing
     , exclude        = Nothing
-    , extention      = Nothing
+    , extention      = []
     , hideHidden     = False
     , applyedCommand = Nothing
     }
@@ -70,7 +73,7 @@ data Paths =
 data DataFlags =
       SearchPatternFlag String
     | HiddenFilesFlag
-    | ExtentionFlag     String
+    | ExtentionFlag     [String]
     | ExecuteFlag      ConstrucedCommand
     | IgnoreFlag       [String]
 
@@ -81,10 +84,16 @@ pFlags = choice
     [
        SearchPatternFlag <$> ((string' "-p" <|> string  "--pattern"   ) *> sc *> parseWord)
      , HiddenFilesFlag   <$  ( string' "-a" <|> string  "--show--dots")
-     , ExtentionFlag     <$> ((string' "-e" <|> string  "--extention" ) *> sc *> parseWord)
+     , ExtentionFlag     <$> ((string' "-e" <|> string  "--extention" ) *> sc *> (parseManyExteions <|> (singleton <$> parseWord) ))
      , IgnoreFlag        <$> ((string' "-i" <|> string  "--ignore"    ) *> sc *> pathsUntilFlag )
      , ExecuteFlag       <$> ((string' "-x" <|> string  "--execute"   ) *> sc *> parseConstrucedCommand) 
     ]
+
+
+
+
+parseManyExteions :: Parser [String]
+parseManyExteions =  parseToFlagsWithParser $ parseWord <* sc
 
 
 -- | Parser våres argrumenter @Brukes med execute falgget@
@@ -95,12 +104,10 @@ parseConstrucedCommand  = do
     args <- parseManyArgs
     pure (cmd, args)
 
+
 -- | Dokumenter parser for mange execute-argumenter frem til neste flagg.
 parseManyArgs :: Parser [Args]
-parseManyArgs =
-  manyTill
-    (sc *> parseArgs)
-    (lookAhead (pFlags $> () <|> eof)) -- end of file. fungere med null flagg også
+parseManyArgs = parseToFlagsWithParser $ sc *> parseArgs
 
 
 -- | Parser for commando datatypen kan enten være en commando eller en sti
@@ -121,7 +128,6 @@ parseArgumentAndWord = do
     pure (f : w <> s)
 
 
-
 --- FLAG PARSER --- 
 
 -- | Tar argument datatypen og  og et flag og putter det i datastukruen våre
@@ -129,10 +135,10 @@ parseArgumentAndWord = do
 applyFlag :: Arguments -> DataFlags -> Arguments
 applyFlag st df = case df of
      SearchPatternFlag s -> st {regxPattern    = Just (convertString s)}
-     ExtentionFlag     e -> st {extention      = Just (convertString  e)}
+     ExtentionFlag     e -> st {extention      = (convertString <$> e) <> extention st}
      IgnoreFlag        i -> st {exclude        = Just (map convertString i)}
      ExecuteFlag       x -> st {applyedCommand = Just x}
-     HiddenFilesFlag     -> st {hideHidden     = True  }
+     HiddenFilesFlag     -> st {hideHidden     = not . hideHidden $ st}
 
 
 -- | Parser mange dataflagg 
@@ -143,9 +149,7 @@ parseAllFlags = many (sc *> pFlags <* sc) --
 -- | Parser alle flagg og folder dem inn i én 'Arguments'-verdi.
 --  Burker listen som av flagg som er parset og applyfalg og foldr over alle og lager Arguments datastukruen
 parseFlags :: Parser Arguments
-parseFlags = do
-  fs <- parseAllFlags                          --Løfter ut monaden
-  pure $ foldl' applyFlag emptyFilterFlags fs  --foldr over
+parseFlags = foldl' applyFlag defaultArguments <$>parseAllFlags
 
 
 --- STI PARSER ---
@@ -163,11 +167,7 @@ parsePathWithQuote = between (char '"') (char '"') (many (satisfy (/= '"')))
 
 -- | Parser mange stier helt til vi kommer til et flag e
 pathsUntilFlag :: Parser [String]
-pathsUntilFlag =
-  manyTill
-    ((parsePath <|> parsePathWithQuote) <* sc)
-    (lookAhead (pFlags $> () <|> eof)) -- end of file. fungere med null flagg også
-
+pathsUntilFlag = parseToFlagsWithParser $ (parsePath <|> parsePathWithQuote) <* sc
 
 -- |  Parse første del av input. skal enten parse et punktum eller til flaggene begnner
 parsePathOrDot :: Parser Paths
@@ -176,7 +176,6 @@ parsePathOrDot = choice
           NoPath     <$ (sc *> char '.' <* sc )
         , ManyPaths  <$> pathsUntilFlag
      ]
-
 
 
 --- HOVEDPARSER ---
@@ -204,8 +203,8 @@ type StringToParse = String
 runMyParser :: Parser a -> StringToParse ->  Either String a
 runMyParser parser input =
   case runParser parser "" input of
-    Left err  -> Left $ errorBundlePretty err
-    Right x   -> Right x
+    Left err -> Left $ errorBundlePretty err
+    Right x  -> Right x
 
 
 -- | IO-wrapper som kaster feil dersom vi ikke klare å parse

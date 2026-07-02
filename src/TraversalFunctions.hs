@@ -1,18 +1,21 @@
+{-# LANGUAGE RecordWildCards #-}
 
-{-# LANGUAGE ScopedTypeVariables #-}
 
-module TraverselsFunctions (
-
-      DirContent
+module TraversalFunctions (
+      DirContent    (..)
     , FileInfomation(..)
+    , DirType       (..)
+    , RelativPath   (..)
+    , AbsolutPath   (..)
     , treverseDirWithSettings
     , constructFilePath
     , executeOnFile
     )
 where
 
-import System.Posix.Directory.Foreign               (DirType(..), dtDir )
-import System.Posix.ByteString.FilePath             (RawFilePath, peekFilePath )
+import System.Posix.ByteString.FilePath             (RawFilePath, peekFilePath)
+import System.FilePath.Posix.ByteString             ((</>))
+
 import Foreign.C.Error                              (Errno  (..), eINTR,  getErrno, resetErrno,eOK, eACCES, ePERM )
 import Foreign.C.String                             (CString )
 import UnliftIO                                     (MonadUnliftIO, finally,askRunInIO, throwIO, Exception )
@@ -21,7 +24,6 @@ import Control.Monad.IO.Class                       (MonadIO(liftIO) )
 
 import System.Posix.Directory.ByteString as PosixBS (openDirStream, closeDirStream, DirStream, getWorkingDirectory)
 
-import System.Posix.FilePath                        ((</>))
 import Foreign.Ptr as PTR                           (Ptr, nullPtr)
 import System.Process                               (createProcess, proc, waitForProcess)
 import System.Exit                                  (ExitCode (..))
@@ -53,17 +55,61 @@ import Control.Monad.Except (
     )
 
 
-type DirContent = (DirType, RawFilePath)
+dtDir :: DirType
+dtDir = DirType 4
+
+newtype DirType = DirType Int
+    deriving (Eq, Show)
+
+newtype AbsolutPath a = AbsolutPath a
+    deriving (Eq,Show,Functor)
+
+newtype RelativPath  a = RelativPath a
+    deriving (Eq,Show,Functor)
+
+instance Applicative AbsolutPath where
+    pure = AbsolutPath
+    AbsolutPath  f <*>  AbsolutPath x  = AbsolutPath (f  x)
+
+
+instance Applicative RelativPath where
+    pure = RelativPath
+    RelativPath  f <*>  RelativPath x  = RelativPath (f  x)
+
+data DirContent =  DirContent {
+      fileType       :: DirType
+    , name           :: RawFilePath
+    } deriving (Eq,Show)
+
+
+
 data FileInfomation = FileInfomation{
-      filePath      :: RawFilePath
-    , fileNameInfo  :: Maybe DirContent -- Nothing dersom det er en mappe
+      fullFilePath     :: AbsolutPath RawFilePath
+    , relativeFilePath :: RelativPath RawFilePath
+    , fileNameInfo     :: Maybe DirContent -- Nothing dersom det er en mappe
 } deriving (Eq,Show)
 
 
+
+
+
+concatAbsolutePath :: AbsolutPath RawFilePath -> AbsolutPath RawFilePath -> AbsolutPath RawFilePath
+concatAbsolutePath = liftA2 (</>)
+
+contructRelPath :: RelativPath RawFilePath -> RelativPath RawFilePath -> Maybe DirContent -> RelativPath RawFilePath
+contructRelPath old new Nothing = liftA2 (</>) old new 
+contructRelPath old new (Just DirContent {..}) = if pure name == new
+                                                                then old
+                                                                else contructRelPath old new Nothing
+
+checkIfDir :: AbsolutPath RawFilePath -> IO Bool
+checkIfDir (AbsolutPath path)  = isDirectory <$> getFileStatus path
+
 -- hehe viktig at vi burker safe call for alt som gjør IO
 --  https://github.com/haskell/unix/issues/34
+
 foreign import ccall safe "readdir"
-  c_readdir :: Ptr CDir -> IO (Ptr CDirent) --Leser fra allerede åpenet dirStream -- Byttet fra readDir-R
+  c_readdir :: Ptr CDir -> IO (Ptr CDirent)
 
 foreign import ccall unsafe "__hscore_d_name"
   c_name :: Ptr CDirent -> IO CString
@@ -85,8 +131,6 @@ instance Show DirError where
 
 instance Exception DirError
 
-
-
 -- | Leser neste element fra en åpen 'DirStream' med @readdir@.
 --
 -- - Leser fra en allerede åpnet dirstream.
@@ -101,7 +145,7 @@ readDirEnt dir = ExceptT readContent
     readContent = do
       let dirp = unpackDirStream dir
     -- fra docs : set errno to zero before calling readdir()
-      resetErrno 
+      resetErrno
 
       dEnt <- c_readdir dirp
       if dEnt == PTR.nullPtr
@@ -125,7 +169,8 @@ readDirEnt dir = ExceptT readContent
         -- On success, readdir() returns a pointer to a dirent structure.
         -- (This structure may be statically allocated; do not attempt to
         -- free(3) it.)
-          pure . Right . Just  $ (dType, dName)
+          pure . Right . Just  $ DirContent{fileType = dType, name = dName}
+         -- pure . Right . Just  $ (dType, dName)
 
 
 
@@ -142,9 +187,9 @@ readDirEnt dir = ExceptT readContent
 traverseDirectoryContents :: (MonadUnliftIO m)
                           => (a -> DirContent -> m a)
                           -> a
-                          -> RawFilePath
+                          -> AbsolutPath RawFilePath
                           -> m a
-traverseDirectoryContents f s0 p = do
+traverseDirectoryContents f s0 (AbsolutPath p) = do
     run <- askRunInIO
     liftIO $ bracketOnError
         (openDirStreamPermissive p)
@@ -152,7 +197,6 @@ traverseDirectoryContents f s0 p = do
         (\case
             Nothing   -> pure s0         -- access denied, skipper
             Just dirp -> loop run s0 dirp `finally` PosixBS.closeDirStream dirp)
-
   where
     openDirStreamPermissive :: RawFilePath -> IO (Maybe DirStream)
     openDirStreamPermissive path =
@@ -164,13 +208,16 @@ traverseDirectoryContents f s0 p = do
     loop run acc dirp = do
         dirAnd <- runExceptT $ readDirEnt dirp
         case dirAnd of
-            Left  errMsg                   -> throwIO errMsg
-            Right Nothing                  -> pure acc          -- Om den er kommeet til enden av dir
-            Right (Just content@(_typ, e)) -> if e == "." || e == ".."
-                                              then loop run acc dirp
-                                              else do
-                                                  acc' <- run $ f acc content
+            Left  errMsg                     -> throwIO errMsg
+            Right Nothing                    -> pure acc          -- Om den er kommeet til enden av dir
+            Right (Just  dc@DirContent{..}) -> if name == "." || name == ".."
+                                                then loop run acc dirp
+                                                else do
+                                                  acc' <- run $ f acc dc
                                                   loop run acc' dirp
+
+
+
 
 
 -- | Traverserer katalogtreet rekursivt og putter det og har en fold funksjon bestemmer hvordan den skal legge inn helemeter
@@ -181,53 +228,62 @@ traverseDirectoryContents f s0 p = do
 --
 -- * Er @rootPath@ ikke en direrctory da er  @acc@ uendret.
 foldDirectoryTree
-    :: forall a . (a -> RawFilePath -> DirContent -> IO a)  --  forall scoopes a in hele func function
+    :: forall a . (a -> AbsolutPath RawFilePath -> RelativPath RawFilePath -> DirContent -> IO a)  --  forall scoopes a in hele func function
     -> a -- 
-    -> RawFilePath
+    -> AbsolutPath RawFilePath
+    -> RelativPath RawFilePath
     -> IO a
-foldDirectoryTree foldFunc acc rootPath  = do
-    isDir <- isDirectory <$> getFileStatus  rootPath
+foldDirectoryTree foldFunc acc rootPath relPath = do
+    isDir <- checkIfDir rootPath
     if not isDir
         then pure acc
         else traverseDirectoryContents innerloop acc rootPath
+
     where
         innerloop  :: a -> DirContent -> IO a
-        innerloop currentAcc dc@(typ,filename) = do
-            let filePath = rootPath  </> filename
-            let isDir = typ == dtDir
+        innerloop currentAcc dc@DirContent{..} = do
+            let fp = concatAbsolutePath rootPath (pure name)
+            let rp = contructRelPath relPath     (pure name) Nothing
+
+            let isDir = fileType == dtDir
+
             -- legge funskjonen på 
-            nextAcc <- foldFunc currentAcc rootPath dc
+            nextAcc <- foldFunc currentAcc rootPath relPath dc
             if not isDir
                 then pure nextAcc
-                else foldDirectoryTree foldFunc nextAcc filePath
+                else foldDirectoryTree foldFunc nextAcc fp rp
+
 
 
 -- | Rekkursiv traversering med aktive filter
 --  Går igjennom alle filene og rekusrsivt. Og akkumlerer ønskete filer i acc listen vår
-treversRecursively :: Arguments -> [FileInfomation] -> RawFilePath -> IO [FileInfomation]
+
+treversRecursively :: Arguments -> [FileInfomation] -> AbsolutPath RawFilePath -> RelativPath  RawFilePath -> IO [FileInfomation]
 treversRecursively args = foldDirectoryTree foldFunc
     where
     regexCompiled = compileRegexFilter args
-    foldFunc :: [FileInfomation] -> RawFilePath -> DirContent -> IO [FileInfomation]
-    foldFunc acc parentPath dc@(typ,file)  = do
+    foldFunc :: [FileInfomation] -> AbsolutPath RawFilePath -> RelativPath RawFilePath -> DirContent -> IO [FileInfomation]
 
-        let fullPath = parentPath  </> file
-        let isDir = typ == dtDir
+    foldFunc acc parentPath@(AbsolutPath pp) rfp dc@DirContent{..}  = do
+        let rp       = contructRelPath  rfp (pure name) (Just dc)
+        let fullPath = concatAbsolutePath parentPath (pure name)
+        let isDir    = fileType == dtDir
         if isDir
-            then pure $ FileInfomation {filePath = fullPath, fileNameInfo = Nothing} : acc -- om den er nothign så er det bare en mappe
+            then pure $ FileInfomation {fullFilePath =  fullPath, relativeFilePath = rp , fileNameInfo = Nothing} : acc
             else do
-
-                let rg  = getRexPattern      regexCompiled file
-                let hf  = getHiddenFilter    args file
-                let ef  = getExtentionFilter args file
-                let df  = getDisallowFilter  args parentPath
-
+                
+                let rg  = getRexPattern      regexCompiled name
+                let hf  = getHiddenFilter    args name
+                let ef  = getExtentionFilter args name
+                let df  = getDisallowFilter  args pp
                 if and [rg, ef, hf, df]
                 then do
-                    executeFunction args fullPath executeOnFile
-                    pure $ FileInfomation {filePath = parentPath, fileNameInfo = Just dc} : acc
-                else do
-                    pure acc
+                    executeFunction args pp executeOnFile
+                    pure $ FileInfomation {fullFilePath = parentPath, relativeFilePath  = rp,  fileNameInfo = Just dc} : acc
+                else pure acc
+
+
+
 
 
 -- | Kjører en kommando på på en filen vår 
@@ -259,11 +315,16 @@ treveseManyPathsWithArgs ff (Just fp) = concat <$> mapM (treverseOnPathWithArgs 
 -- | Treveser en filsti
 --  difinere hvordan vi skal jobbe på en filepath. Slik at vi etterpå kan mapM på en liste med filepath
 treverseOnPathWithArgs :: Arguments -> FilePath -> IO [FileInfomation]
-treverseOnPathWithArgs ff sp = treversRecursively ff [] $ convertString sp
+treverseOnPathWithArgs ff sp = treversRecursively ff []  absStartPath relStartPath
+    where
+    absStartPath = AbsolutPath .  convertString  $ sp
+    relStartPath = RelativPath ""
+
 
 -- Hjelpemeothde som lager helefilstien dersom, dersom det er en sti
 constructFilePath :: FileInfomation -> Maybe String
-constructFilePath fi = case fileNameInfo fi of
-                        Nothing               -> Nothing
-                        Just (_ ,b)           -> Just $ convertToString $ filePath fi </>  b
+constructFilePath FileInfomation{fileNameInfo = Nothing}                                             = Nothing
+constructFilePath FileInfomation{fileNameInfo = (Just DirContent{..}), fullFilePath = AbsolutPath f} = Just . convertToString $ f </> name
+
+
 

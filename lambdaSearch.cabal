@@ -7,17 +7,21 @@ author:             Martin Elde Knutsen
 maintainer:         maknu0536@uib.no
 build-type:         Simple
 extra-doc-files:    CHANGELOG.md
+extra-source-files: cfuncs/dirutils.h
 
 common warnings
     ghc-options: -Wall -threaded -XViewPatterns -XOverloadedStrings  -XLambdaCase
 library
     -- Import common warning flags.
     import:           warnings
+    c-sources:        cFuncs/dirutils.c
     exposed-modules: 
                       TraversalSettings
-                    , TraverselsFunctions
+                    , TraversalFunctions
                     , PrintFunctions
                     , ParseInput
+                    , DefultFilter
+
 
     build-depends:    text ^>=2.0.2
                     , base ^>=4.18.3.0
@@ -26,7 +30,6 @@ library
                     , unix
                     , bytestring
                     , filepath
-                    , posix-paths
                     , unliftio
                     , async
                     , regex-tdfa ^>= 1.3.2
@@ -45,7 +48,8 @@ executable lambdaSearch
     main-is:          Main.hs
     build-depends:
         base ^>=4.18.3.0,
-        lambdaSearch,
+        lambdaSearch
+
     hs-source-dirs:   app
     default-language: GHC2021
 
@@ -68,11 +72,11 @@ test-suite lambdaSearch-test
 
 
     build-depends:
-          directory 
+          lambdaSearch
+        , directory 
         , unix
         , posix-paths
         , base 
-        , lambdaSearch
         , tasty
         , tasty-hunit
         , tasty-quickcheck

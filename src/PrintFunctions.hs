@@ -1,8 +1,9 @@
 module PrintFunctions (printResults) where
 
-import TraverselsFunctions       (FileInfomation(..)) 
-import System.Posix.Terminal     (queryTerminal)
-import System.Posix.IO           (stdOutput)
+
+import System.Posix.Terminal     (queryTerminal     )
+import TraversalFunctions        (FileInfomation(..), DirContent(..),RelativPath(..) ,AbsolutPath(..) ) 
+import System.Posix.IO           (stdOutput      )
 import TraversalSettings         (convertToString)
 
 import System.Console.ANSI.Codes (
@@ -27,9 +28,9 @@ printFileInformation colorFunc fi = do
         case fileNameInfo fi of
             Nothing -> pure ()
             Just dc  -> do
-                let fp   = convertToString . filePath $ fi
-                let fn   = convertToString . snd      $ dc
-                let path = fp <> ( '/' : colorFunc fn)
+                let (RelativPath fp) = convertToString <$> relativeFilePath  fi
+                let fn               = convertToString . name $ dc
+                let path             = fp <> ( '/' : colorFunc fn)
                 putStrLn path 
 
 -- | Legger på ansi codes på dersom du skal sende den til terminal. Ellers er det bare id
@@ -43,4 +44,9 @@ coloriseFileIfTTY = do
 -- | wrapper ani scape codes på en streng
 coloriseFile :: String -> String
 coloriseFile = (<> setSGRCode [Reset]) . (setSGRCode [SetColor Foreground Vivid Green] <>)
+
+
+
+
+
 

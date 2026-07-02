@@ -9,6 +9,7 @@ import Data.Maybe   (isNothing)
 import ParseInput   (runMyParser, parseLamdaSearch)
 
 import Utils        ( bs, defaultArgs )
+import Data.List    (sort)
 
 import TraversalSettings
 
@@ -132,15 +133,15 @@ testsExtentionFlag :: TestTree
 testsExtentionFlag = testGroup "-e / --extention"
     [ testCase "-e setter extention" $ do
         ss <- mustParse ". -e hs"
-        extention (arguments ss) @?= Just (bs "hs")
+        extention (arguments ss) @?=  [bs "hs"]
 
     , testCase "--extention lang form" $ do
         ss <- mustParse ". --extention py"
-        extention (arguments ss) @?= Just (bs "py")
+        extention (arguments ss) @?=  [bs "py"]
 
     , testCase "uten -e: Nothing" $ do
         ss <- mustParse "."
-        extention (arguments ss) @?= Nothing
+        extention (arguments ss) @?= []
     ]
 
 -- ── -i / --ignore ─────────────────────────────────────────────────────────────
@@ -205,24 +206,28 @@ testsCombined = testGroup "kombinerte flagg"
 
     , testCase "alle flagg sammen" $ do
         ss <- mustParse ". -p foo -a -e hs -i /dist -x echo {}"
+
         let args = arguments ss
         regxPattern    args @?= Just (bs "foo")
         hideHidden     args @?= True
-        extention      args @?= Just (bs "hs")
+        extention      args @?= [bs "hs"]
         exclude        args @?= Just [bs "/dist"]
         applyedCommand args @?= Just ("echo", [PathToSubs])
 
     , testCase "rekkefølge på flagg spiller ingen rolle" $ do
-        ss1 <- mustParse ". -a -e .hs"
-        ss2 <- mustParse ". -e .hs -a"
+        ss1 <- mustParse ". -a -e hs"
+        ss2 <- mustParse ". -e hs -a"
         arguments ss1 @?= arguments ss2
     , testCase "duplikate flagg: siste vinner (foldl)" $ do
-
         -- skal bare ha det siste
         ss <- mustParse ". -e hs -e py"
-        extention (arguments ss) @?= Just (bs "py")
-
+        sort (extention (arguments ss))  @?=  sort (map bs ["py", "hs"])
     , adjustOption (const (QuickCheckTests 500)) $
+
+    -- ikke en bug, men en feature
+
+    -- ikke en bug, men en feature
+      
 
     -- ikke en bug, men en feature
       testProperty "punktum gir alltid Nothing searchPaths" $
@@ -231,7 +236,6 @@ testsCombined = testGroup "kombinerte flagg"
             case runMyParser parseLamdaSearch (". " <> flags) of
                 Left  _  -> True          -- parse-feil er ok her
                 Right ss -> isNothing (searchPaths ss)
-
     ]
 
 
