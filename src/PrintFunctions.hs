@@ -29,9 +29,9 @@ printFileInformation colorFunc fi = do
             Nothing -> pure ()
             Just dc  -> do
                 let (RelativPath fp) = convertToString <$> relativeFilePath  fi
-                let fn               = convertToString . name $ dc
-                let path             = fp <> ( '/' : colorFunc fn)
-                putStrLn path 
+                let filename         = convertToString . name $ dc
+                let colorisedPath    = fp <> ( '/' : colorFunc filename)
+                putStrLn colorisedPath 
 
 -- | Legger på ansi codes på dersom du skal sende den til terminal. Ellers er det bare id
 coloriseFileIfTTY :: IO (String -> String)

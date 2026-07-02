@@ -76,6 +76,23 @@ instance Applicative RelativPath where
     pure = RelativPath
     RelativPath  f <*>  RelativPath x  = RelativPath (f  x)
 
+concatAbsolutePath :: AbsolutPath RawFilePath -> AbsolutPath RawFilePath -> AbsolutPath RawFilePath
+concatAbsolutePath = liftA2 (</>)
+
+concatRelativeFilePath :: RelativPath RawFilePath -> RelativPath RawFilePath -> Maybe DirContent -> RelativPath RawFilePath
+concatRelativeFilePath old new Nothing = liftA2 (</>) old new
+concatRelativeFilePath old new (Just DirContent {..}) = if pure name == new
+                                                        then old
+                                                        else concatRelativeFilePath old new Nothing
+
+
+checkIfDir :: AbsolutPath RawFilePath -> IO Bool
+checkIfDir (AbsolutPath path)  = isDirectory <$> getFileStatus path
+
+unpackAbsolutPath :: AbsolutPath a -> a
+unpackAbsolutPath (AbsolutPath a) = a
+
+
 data DirContent =  DirContent {
       fileType       :: DirType
     , name           :: RawFilePath
@@ -91,21 +108,14 @@ data FileInfomation = FileInfomation{
 
 
 
-concatAbsolutePath :: AbsolutPath RawFilePath -> AbsolutPath RawFilePath -> AbsolutPath RawFilePath
-concatAbsolutePath = liftA2 (</>)
+createFileInformation :: AbsolutPath RawFilePath -> RelativPath RawFilePath -> Maybe DirContent -> FileInfomation
+createFileInformation a r d = FileInfomation {
+      fullFilePath     = a
+    , relativeFilePath = r
+    , fileNameInfo     = d
 
-contructRelPath :: RelativPath RawFilePath -> RelativPath RawFilePath -> Maybe DirContent -> RelativPath RawFilePath
-contructRelPath old new Nothing = liftA2 (</>) old new 
-contructRelPath old new (Just DirContent {..}) = if pure name == new
-                                                 then old
-                                                 else contructRelPath old new Nothing
+    } 
 
-
-checkIfDir :: AbsolutPath RawFilePath -> IO Bool
-checkIfDir (AbsolutPath path)  = isDirectory <$> getFileStatus path
-
-unpackAbsolutPath :: AbsolutPath a -> a
-unpackAbsolutPath (AbsolutPath a) = a
 
 -- hehe viktig at vi burker safe call for alt som gjør IO
 --  https://github.com/haskell/unix/issues/34
@@ -244,7 +254,7 @@ foldDirectoryTree foldFunc acc rootPath relPath = do
         innerloop  :: a -> DirContent -> IO a
         innerloop currentAcc dc@DirContent{..} = do
             let fp = concatAbsolutePath rootPath (pure name)
-            let rp = contructRelPath    relPath  (pure name) Nothing
+            let rp = concatRelativeFilePath    relPath  (pure name) Nothing
 
             let isDir = fileType == dtDir
             -- legge funskjonen på 
@@ -264,24 +274,26 @@ treversRecursively args = foldDirectoryTree foldFunc
     regexCompiled = compileRegexFilter args
     foldFunc :: [FileInfomation] -> AbsolutPath RawFilePath -> RelativPath RawFilePath -> DirContent -> IO [FileInfomation]
 
-    foldFunc acc parentPath@(AbsolutPath pp) rfp dc@DirContent{..}  = do
-        let rp       = contructRelPath  rfp (pure name) (Just dc)
-        let fullPath = concatAbsolutePath parentPath (pure name)
-        let isDir    = fileType == dtDir
+    foldFunc acc parentPath rfp dc@DirContent{..}  = do
+        let relFilePath = concatRelativeFilePath  rfp (pure name) (Just dc)
+        let fullPath    = concatAbsolutePath parentPath (pure name)
+        let isDir       = fileType == dtDir
+
         if isDir
-            then pure $ FileInfomation {fullFilePath =  fullPath, relativeFilePath = rp , fileNameInfo = Nothing} : acc
+            then pure $ createFileInformation fullPath relFilePath Nothing : acc
             else do
+
                 let rg  = getRexPattern      regexCompiled name
                 let hf  = getHiddenFilter    args name
                 let ef  = getExtentionFilter args name
-                let df  = getDisallowFilter  args pp
+                let df  = getDisallowFilter  args (unpackAbsolutPath  parentPath)
+
                 if and [rg, ef, hf, df]
+
                 then do
-                    executeFunction args pp executeOnFile
-                    pure $ FileInfomation {fullFilePath = parentPath, relativeFilePath  = rp,  fileNameInfo = Just dc} : acc
+                    executeFunction args (unpackAbsolutPath  parentPath) executeOnFile
+                    pure $ createFileInformation parentPath relFilePath (Just dc) : acc
                 else pure acc
-
-
 
 
 

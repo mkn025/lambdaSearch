@@ -13,9 +13,10 @@ module TraversalSettings (
     , substituePath
     , convertString
     , convertToString
-    , safeHead  -- vil egt ikke eksponere -- spørre aria, glemte det, menmen
-    , safeTail  -- vil egt ikke eksponerei
+    , safeHead  
+    , safeTail  
 ) where
+
 
 import System.Posix.ByteString               (RawFilePath)
 import qualified Data.ByteString.Char8 as BC (head, pack, unpack, tail, null, isPrefixOf)
