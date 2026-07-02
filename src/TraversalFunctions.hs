@@ -55,6 +55,7 @@ import Control.Monad.Except (
     )
 
 
+
 dtDir :: DirType
 dtDir = DirType 4
 
@@ -70,7 +71,6 @@ newtype RelativPath  a = RelativPath a
 instance Applicative AbsolutPath where
     pure = AbsolutPath
     AbsolutPath  f <*>  AbsolutPath x  = AbsolutPath (f  x)
-
 
 instance Applicative RelativPath where
     pure = RelativPath
@@ -91,19 +91,21 @@ data FileInfomation = FileInfomation{
 
 
 
-
-
 concatAbsolutePath :: AbsolutPath RawFilePath -> AbsolutPath RawFilePath -> AbsolutPath RawFilePath
 concatAbsolutePath = liftA2 (</>)
 
 contructRelPath :: RelativPath RawFilePath -> RelativPath RawFilePath -> Maybe DirContent -> RelativPath RawFilePath
 contructRelPath old new Nothing = liftA2 (</>) old new 
 contructRelPath old new (Just DirContent {..}) = if pure name == new
-                                                                then old
-                                                                else contructRelPath old new Nothing
+                                                 then old
+                                                 else contructRelPath old new Nothing
+
 
 checkIfDir :: AbsolutPath RawFilePath -> IO Bool
 checkIfDir (AbsolutPath path)  = isDirectory <$> getFileStatus path
+
+unpackAbsolutPath :: AbsolutPath a -> a
+unpackAbsolutPath (AbsolutPath a) = a
 
 -- hehe viktig at vi burker safe call for alt som gjør IO
 --  https://github.com/haskell/unix/issues/34
@@ -238,15 +240,13 @@ foldDirectoryTree foldFunc acc rootPath relPath = do
     if not isDir
         then pure acc
         else traverseDirectoryContents innerloop acc rootPath
-
     where
         innerloop  :: a -> DirContent -> IO a
         innerloop currentAcc dc@DirContent{..} = do
             let fp = concatAbsolutePath rootPath (pure name)
-            let rp = contructRelPath relPath     (pure name) Nothing
+            let rp = contructRelPath    relPath  (pure name) Nothing
 
             let isDir = fileType == dtDir
-
             -- legge funskjonen på 
             nextAcc <- foldFunc currentAcc rootPath relPath dc
             if not isDir
@@ -271,7 +271,6 @@ treversRecursively args = foldDirectoryTree foldFunc
         if isDir
             then pure $ FileInfomation {fullFilePath =  fullPath, relativeFilePath = rp , fileNameInfo = Nothing} : acc
             else do
-                
                 let rg  = getRexPattern      regexCompiled name
                 let hf  = getHiddenFilter    args name
                 let ef  = getExtentionFilter args name
@@ -304,7 +303,6 @@ executeOnFile c@(prog, args) rfd = do
 -- | Treveser med søkinstillinger
 treverseDirWithSettings  :: SearchSetting -> IO [FileInfomation]
 treverseDirWithSettings ss = treveseManyPathsWithArgs  (arguments ss) (searchPaths ss)
-
 
 -- | Treverser med argumter, standardsti velges når ingen søkestier er oppgitt.
 --  Treverser med mange i cwd dersom du ikke gir noe dir
