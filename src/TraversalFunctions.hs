@@ -108,7 +108,7 @@ data DirContent =  DirContent {
 
 
 data FileInfomation = FileInfomation{
-      filePaths     :: FilePaths -- Nothing dersom det er en mappe
+      filePaths    :: FilePaths -- Nothing dersom det er en mappe
     , fileNameInfo :: Maybe DirContent -- Nothing dersom det er en mappe
 } deriving (Eq,Show)
 

@@ -26,16 +26,21 @@ mainTraverselFunctionsTest = testGroup "TraverselFunctionsTest" [
 -- lager en feilinformasjonhjelepr
 mkFileInfo :: FilePath -> String -> FileInfomation
 mkFileInfo parent name = FileInfomation
-    { fullFilePath = bs parent
-    , fileNameInfo = Just $ DirContent_{fileType = DirType  67, name  = bs name ,relatviePath  = ""}
+    { filePaths = fp 
+    , fileNameInfo = Just $ DirContent{fileType = DirType  67, name  = bs name }
     }
+    where 
+        fp = FilePaths{relativeFilePath  = RelativPath (bs ""), absoluteFilePath  = AbsolutPath (bs parent) }
 
 
 mkDirInfo :: FilePath -> FileInfomation
 mkDirInfo path = FileInfomation
-    { fullFilePath = bs path
+    { filePaths = fp
     , fileNameInfo = Nothing
     }
+    where
+        fp = FilePaths{relativeFilePath  = RelativPath (bs""), absoluteFilePath  = AbsolutPath (bs path ) }
+
 
 
 -- tester konatingeringen, og at den  gir ut Nothing
