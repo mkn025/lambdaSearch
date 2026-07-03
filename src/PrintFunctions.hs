@@ -2,7 +2,7 @@ module PrintFunctions (printResults) where
 
 
 import System.Posix.Terminal     (queryTerminal     )
-import TraversalFunctions        (FileInfomation(..), DirContent(..),RelativPath(..) ,AbsolutPath(..) ) 
+import TraversalFunctions        (FileInfomation_(..), DirContent(..),RelativPath(..) , FilePaths (relativeFilePath_) ) 
 import System.Posix.IO           (stdOutput      )
 import TraversalSettings         (convertToString)
 
@@ -17,18 +17,18 @@ import System.Console.ANSI.Codes (
 
 -- | Printer all filene som er funnet 
 --  mapper og kaster output for hele listen
-printResults :: [FileInfomation] -> IO ()
+printResults :: [FileInfomation_] -> IO ()
 printResults contents = do
     color <- coloriseFileIfTTY  
     mapM_ (printFileInformation color) contents  -- mapM_ siden den bare skal >> ikke >>= basicly
 
 -- | Printer et Enkelt FileInfomation element. Og bruker fargefunksjoen på bare filen
-printFileInformation :: (String -> String) -> FileInfomation -> IO ()
+printFileInformation :: (String -> String) -> FileInfomation_ -> IO ()
 printFileInformation colorFunc fi = do
-        case fileNameInfo fi of
+        case fileNameInfo_ fi of
             Nothing -> pure ()
             Just dc  -> do
-                let (RelativPath fp) = convertToString <$> relativeFilePath  fi
+                let (RelativPath fp) = convertToString  <$> ( relativeFilePath_ . filePaths)  fi
                 let filename         = convertToString . name $ dc
                 let colorisedPath    = fp <> ( '/' : colorFunc filename)
                 putStrLn colorisedPath 

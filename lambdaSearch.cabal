@@ -10,7 +10,7 @@ extra-doc-files:    CHANGELOG.md
 extra-source-files: cfuncs/dirutils.h
 
 common warnings
-    ghc-options: -Wall -threaded -XViewPatterns -XOverloadedStrings  -XLambdaCase
+    ghc-options: -Wall -threaded -XViewPatterns -XOverloadedStrings  -XLambdaCase -XRecordWildCards
 library
     -- Import common warning flags.
     import:           warnings
