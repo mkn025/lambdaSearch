@@ -1,9 +1,7 @@
-{-# LANGUAGE RecordWildCards #-}
-
-
 module TraversalFunctions (
       DirContent    (..)
     , FileInfomation(..)
+    , FilePaths     (..)
     , DirType       (..)
     , RelativPath   (..)
     , AbsolutPath   (..)
@@ -34,6 +32,7 @@ import UnliftIO.Exception                           (bracketOnError)
 import Control.Exception.Base                       (catch)
 import System.IO.Error                              (isPermissionError)
 
+
 import TraversalSettings (
       Arguments     (..)
     , SearchSetting (..)
@@ -49,6 +48,7 @@ import TraversalSettings (
     , convertString
 
     )
+
 import Control.Monad.Except (
       runExceptT
     , ExceptT(..)
@@ -76,6 +76,14 @@ instance Applicative RelativPath where
     pure = RelativPath
     RelativPath  f <*>  RelativPath x  = RelativPath (f  x)
 
+data FilePaths = FilePaths {
+          relativeFilePath :: RelativPath RawFilePath
+        , absoluteFilePath :: AbsolutPath RawFilePath
+    } deriving (Eq,Show)
+
+
+
+
 concatAbsolutePath :: AbsolutPath RawFilePath -> AbsolutPath RawFilePath -> AbsolutPath RawFilePath
 concatAbsolutePath = liftA2 (</>)
 
@@ -84,7 +92,6 @@ concatRelativeFilePath old new Nothing = liftA2 (</>) old new
 concatRelativeFilePath old new (Just DirContent {..}) = if pure name == new
                                                         then old
                                                         else concatRelativeFilePath old new Nothing
-
 
 checkIfDir :: AbsolutPath RawFilePath -> IO Bool
 checkIfDir (AbsolutPath path)  = isDirectory <$> getFileStatus path
@@ -101,20 +108,17 @@ data DirContent =  DirContent {
 
 
 data FileInfomation = FileInfomation{
-      fullFilePath     :: AbsolutPath RawFilePath
-    , relativeFilePath :: RelativPath RawFilePath
-    , fileNameInfo     :: Maybe DirContent -- Nothing dersom det er en mappe
+      filePaths    :: FilePaths -- Nothing dersom det er en mappe
+    , fileNameInfo :: Maybe DirContent -- Nothing dersom det er en mappe
 } deriving (Eq,Show)
 
 
+createFileInformation_ :: FilePaths -> Maybe DirContent -> FileInfomation
+createFileInformation_ fp dc = FileInfomation{
+      filePaths    = fp
+    , fileNameInfo = dc
+    }
 
-createFileInformation :: AbsolutPath RawFilePath -> RelativPath RawFilePath -> Maybe DirContent -> FileInfomation
-createFileInformation a r d = FileInfomation {
-      fullFilePath     = a
-    , relativeFilePath = r
-    , fileNameInfo     = d
-
-    } 
 
 
 -- hehe viktig at vi burker safe call for alt som gjør IO
@@ -239,61 +243,60 @@ traverseDirectoryContents f s0 (AbsolutPath p) = do
 -- (unntatt @.@ og @..@). Er elementet en en dir treveserer den rekusrsivt
 --
 -- * Er @rootPath@ ikke en direrctory da er  @acc@ uendret.
-foldDirectoryTree
-    :: forall a . (a -> AbsolutPath RawFilePath -> RelativPath RawFilePath -> DirContent -> IO a)  --  forall scoopes a in hele func function
+foldDirectoryTree_
+    :: forall a . (a -> FilePaths -> DirContent -> IO a)  --  forall scoopes a in hele func function
     -> a -- 
-    -> AbsolutPath RawFilePath
-    -> RelativPath RawFilePath
+    -> FilePaths
     -> IO a
-foldDirectoryTree foldFunc acc rootPath relPath = do
-    isDir <- checkIfDir rootPath
+foldDirectoryTree_ foldFunc acc paths = do
+    isDir <- checkIfDir (absoluteFilePath paths)
     if not isDir
         then pure acc
-        else traverseDirectoryContents innerloop acc rootPath
+        else traverseDirectoryContents innerloop acc (absoluteFilePath paths )
     where
         innerloop  :: a -> DirContent -> IO a
         innerloop currentAcc dc@DirContent{..} = do
-            let fp = concatAbsolutePath rootPath (pure name)
-            let rp = concatRelativeFilePath    relPath  (pure name) Nothing
-
+            let newAbsPath = concatAbsolutePath     (absoluteFilePath paths )   (pure name)
+            let newRelPath = concatRelativeFilePath (relativeFilePath paths)  (pure name) Nothing
             let isDir = fileType == dtDir
-            -- legge funskjonen på 
-            nextAcc <- foldFunc currentAcc rootPath relPath dc
+            nextAcc <- foldFunc currentAcc paths dc
+
             if not isDir
                 then pure nextAcc
-                else foldDirectoryTree foldFunc nextAcc fp rp
+                else foldDirectoryTree_ foldFunc nextAcc (FilePaths{absoluteFilePath = newAbsPath, relativeFilePath = newRelPath})
 
 
 
 -- | Rekkursiv traversering med aktive filter
 --  Går igjennom alle filene og rekusrsivt. Og akkumlerer ønskete filer i acc listen vår
-
-treversRecursively :: Arguments -> [FileInfomation] -> AbsolutPath RawFilePath -> RelativPath  RawFilePath -> IO [FileInfomation]
-treversRecursively args = foldDirectoryTree foldFunc
+treversRecursively_:: Arguments -> [FileInfomation] -> FilePaths -> IO [FileInfomation]
+treversRecursively_ args = foldDirectoryTree_ foldFunc
     where
     regexCompiled = compileRegexFilter args
-    foldFunc :: [FileInfomation] -> AbsolutPath RawFilePath -> RelativPath RawFilePath -> DirContent -> IO [FileInfomation]
+    foldFunc :: [FileInfomation] -> FilePaths -> DirContent -> IO [FileInfomation]
 
-    foldFunc acc parentPath rfp dc@DirContent{..}  = do
-        let relFilePath = concatRelativeFilePath  rfp (pure name) (Just dc)
-        let fullPath    = concatAbsolutePath parentPath (pure name)
+    foldFunc acc filePaths dc@DirContent{..}  = do
+        let relFilePath = concatRelativeFilePath  (relativeFilePath filePaths) (pure name) (Just dc)
+        let fullPath    = concatAbsolutePath      (absoluteFilePath filePaths) (pure name)
+
+        let paths       = FilePaths{ absoluteFilePath = fullPath, relativeFilePath = relFilePath }
         let isDir       = fileType == dtDir
 
         if isDir
-            then pure $ createFileInformation fullPath relFilePath Nothing : acc
+            then pure $ createFileInformation_ paths Nothing : acc
             else do
-
                 let rg  = getRexPattern      regexCompiled name
                 let hf  = getHiddenFilter    args name
                 let ef  = getExtentionFilter args name
-                let df  = getDisallowFilter  args (unpackAbsolutPath  parentPath)
-
+                let df  = getDisallowFilter  args (unpackAbsolutPath . absoluteFilePath $ filePaths )
                 if and [rg, ef, hf, df]
-
                 then do
-                    executeFunction args (unpackAbsolutPath  parentPath) executeOnFile
-                    pure $ createFileInformation parentPath relFilePath (Just dc) : acc
+                    executeFunction args (unpackAbsolutPath . absoluteFilePath $ filePaths ) executeOnFile
+                    pure $ createFileInformation_ paths{absoluteFilePath = absoluteFilePath filePaths } (Just dc) : acc -- absoluteFilePath filePaths = old filepath
                 else pure acc
+
+
+
 
 
 
@@ -312,9 +315,11 @@ executeOnFile c@(prog, args) rfd = do
                                         <> " (exit " ++ show n ++ ")"    )
 
 
+
 -- | Treveser med søkinstillinger
 treverseDirWithSettings  :: SearchSetting -> IO [FileInfomation]
 treverseDirWithSettings ss = treveseManyPathsWithArgs  (arguments ss) (searchPaths ss)
+
 
 -- | Treverser med argumter, standardsti velges når ingen søkestier er oppgitt.
 --  Treverser med mange i cwd dersom du ikke gir noe dir
@@ -322,19 +327,21 @@ treveseManyPathsWithArgs  :: Arguments ->  Maybe [FilePath]  -> IO [FileInfomati
 treveseManyPathsWithArgs ff Nothing   = getWorkingDirectory  >>= treverseOnPathWithArgs ff . convertToString
 treveseManyPathsWithArgs ff (Just fp) = concat <$> mapM (treverseOnPathWithArgs ff) fp
 
+
 -- | Treveser en filsti
 --  difinere hvordan vi skal jobbe på en filepath. Slik at vi etterpå kan mapM på en liste med filepath
 treverseOnPathWithArgs :: Arguments -> FilePath -> IO [FileInfomation]
-treverseOnPathWithArgs ff sp = treversRecursively ff []  absStartPath relStartPath
+treverseOnPathWithArgs ff sp = treversRecursively_ ff [] paths
     where
+    paths = FilePaths {absoluteFilePath  = absStartPath , relativeFilePath  = relStartPath }
     absStartPath = AbsolutPath .  convertString  $ sp
     relStartPath = RelativPath ""
 
 
 -- Hjelpemeothde som lager helefilstien dersom, dersom det er en sti
 constructFilePath :: FileInfomation -> Maybe String
-constructFilePath FileInfomation{fileNameInfo = Nothing}                                             = Nothing
-constructFilePath FileInfomation{fileNameInfo = (Just DirContent{..}), fullFilePath = AbsolutPath f} = Just . convertToString $ f </> name
+constructFilePath FileInfomation{fileNameInfo = Nothing}                                          = Nothing
+constructFilePath FileInfomation{fileNameInfo = (Just DirContent{..}), filePaths = FilePaths{..}} = Just . convertToString $ unpackAbsolutPath  absoluteFilePath </> name
 
 
 
