@@ -3,8 +3,9 @@ module TraversalFunctions (
     , FileInfomation(..)
     , FilePaths     (..)
     , DirType       (..)
-    , RelativPath   (..)
-    , AbsolutPath   (..)
+    , RelativPath   (..) , AbsolutPath   (..)
+    , unpackAbsolutPath 
+    , unpackRelativPath 
     , treverseDirWithSettings
     , constructFilePath
     , executeOnFile
@@ -99,6 +100,9 @@ checkIfDir (AbsolutPath path)  = isDirectory <$> getFileStatus path
 unpackAbsolutPath :: AbsolutPath a -> a
 unpackAbsolutPath (AbsolutPath a) = a
 
+
+unpackRelativPath :: RelativPath a -> a
+unpackRelativPath (RelativPath a) = a
 
 data DirContent =  DirContent {
       fileType       :: DirType
