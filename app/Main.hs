@@ -6,6 +6,7 @@ import PrintFunctions     (printResults, PrintSettings (..), PathType(..), Outpu
 import TraversalFunctions (treverseDirWithSettings)
 
 
+
 defPrintSettings :: PrintSettings
 defPrintSettings = PrintSettings {
           pathType   = RelativeFilePath  
