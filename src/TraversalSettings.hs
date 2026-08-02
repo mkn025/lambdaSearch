@@ -38,7 +38,6 @@ type Extention     = RawFilePath
 type SearchPattern = RawFilePath
 type SearchFilters = [RawFilePath]
 
-
 -- | datatype som blir brukt i  @--execute@. for å substite path
 data Args = Text String | PathToSubs
     deriving (Eq,Show)
@@ -64,20 +63,16 @@ data SearchSetting = SearchSetting {
 data Arguments = Arguments {
       regxPattern    :: Maybe SearchPattern
     , exclude        :: Maybe SearchFilters
-    , extention      :: [Extention]
-    , hideHidden     :: Bool
+    , extention      :: [Extention] 
+    , hideHidden     :: Bool 
     , applyedCommand :: Maybe ConstrucedCommand
-
 }  deriving (Eq, Show)
 
 
-
--- | Mathcer fil med regex og 
 --  Tar med all dersom ikke noe spesifisert
 getRexPattern :: Maybe Regex -> RawFilePath -> Bool
 getRexPattern Nothing      _  = True
 getRexPattern (Just regex) fp = matchTest regex fp
-
 
 -- | Sjekker om filepath ikke er element i sitene vi har definert 
 --  Tar med all dersom ikke noe spesifisert

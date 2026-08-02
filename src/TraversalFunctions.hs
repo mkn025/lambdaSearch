@@ -1,9 +1,11 @@
+
 module TraversalFunctions (
       DirContent    (..)
     , FileInfomation(..)
     , FilePaths     (..)
     , DirType       (..)
-    , RelativPath   (..) , AbsolutPath   (..)
+    , RelativPath   (..) 
+    , AbsolutPath   (..)
     , unpackAbsolutPath 
     , unpackRelativPath 
     , treverseDirWithSettings
@@ -11,6 +13,9 @@ module TraversalFunctions (
     , executeOnFile
     )
 where
+
+
+import Core.Types                                   (DirType(..), AbsolutPath(..), RelativPath(..), FilePaths (..))
 
 import System.Posix.ByteString.FilePath             (RawFilePath, peekFilePath)
 import System.FilePath.Posix.ByteString             ((</>))
@@ -57,33 +62,9 @@ import Control.Monad.Except (
 
 
 
+
 dtDir :: DirType
 dtDir = DirType 4
-
-newtype DirType = DirType Int
-    deriving (Eq, Show)
-
-newtype AbsolutPath a = AbsolutPath a
-    deriving (Eq,Show,Functor)
-
-newtype RelativPath  a = RelativPath a
-    deriving (Eq,Show,Functor)
-
-instance Applicative AbsolutPath where
-    pure = AbsolutPath
-    AbsolutPath  f <*>  AbsolutPath x  = AbsolutPath (f  x)
-
-instance Applicative RelativPath where
-    pure = RelativPath
-    RelativPath  f <*>  RelativPath x  = RelativPath (f  x)
-
-data FilePaths = FilePaths {
-          relativeFilePath :: RelativPath RawFilePath
-        , absoluteFilePath :: AbsolutPath RawFilePath
-    } deriving (Eq,Show)
-
-
-
 
 concatAbsolutePath :: AbsolutPath RawFilePath -> AbsolutPath RawFilePath -> AbsolutPath RawFilePath
 concatAbsolutePath = liftA2 (</>)
@@ -108,8 +89,6 @@ data DirContent =  DirContent {
       fileType       :: DirType
     , name           :: RawFilePath
     } deriving (Eq,Show)
-
-
 
 data FileInfomation = FileInfomation{
       filePaths    :: FilePaths -- Nothing dersom det er en mappe
@@ -148,6 +127,7 @@ data DirError = UnexpectedErrnoZero | ReadDirErr Errno
 instance Show DirError where
     show (ReadDirErr (Errno n)) = "ReadDirErr: Ernno code: " <> show n
     show UnexpectedErrnoZero    = "UnexpectedErrnoZero"
+
 
 instance Exception DirError
 
@@ -322,7 +302,7 @@ executeOnFile c@(prog, args) rfd = do
 
 -- | Treveser med søkinstillinger
 treverseDirWithSettings  :: SearchSetting -> IO [FileInfomation]
-treverseDirWithSettings ss = treveseManyPathsWithArgs  (arguments ss) (searchPaths ss)
+treverseDirWithSettings  = liftA2 treveseManyPathsWithArgs  arguments  searchPaths 
 
 
 -- | Treverser med argumter, standardsti velges når ingen søkestier er oppgitt.
