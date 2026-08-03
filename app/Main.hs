@@ -1,6 +1,6 @@
 module Main (main) where
 
-import ParseInput         (runParserIO)
+import Cli.Parser         (runParserIO)
 import System.Environment (getArgs)
 import PrintFunctions     (printResults)
 import Core.PrintTypes    (PrintSettings (..), PathType(..), OutputColor(..))

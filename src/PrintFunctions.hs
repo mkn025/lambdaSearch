@@ -6,11 +6,11 @@ import Core.TraversalTypes   (FileInfomation(..), DirContent(..), FilePaths(..))
 import Core.PrintTypes       (OutputColor(..), PathType(..), PrintSettings(..) )
 
 
--- Hjelpefunksjoner
+-- Hjelpecunksjoner
 import System.Posix.Terminal (queryTerminal  )
 import System.Posix.IO       (stdOutput      )
 import Core.Filters          (convertToString)
-import FileSystem.Search     (unpackRelativPath, unpackAbsolutPath ) 
+import FileSystem.Search     (unpackRelativPath, unpackAbsolutPath) 
 
 
 import System.Console.ANSI.Codes (
@@ -44,8 +44,8 @@ printFileInformation PrintSettings{..} colorFunc fi = do
 
 
 getFilePath :: PathType -> FileInfomation -> String
-getFilePath  RelativeFilePath    = unpackRelativPath  . fmap convertToString . relativeFilePath . filePaths  
-getFilePath  AbsolutPathFilePath = unpackAbsolutPath  . fmap convertToString . absoluteFilePath . filePaths
+getFilePath  RelativeFilePath    =  FileSystem.Search.unpackRelativPath . fmap convertToString . relativeFilePath . filePaths  
+getFilePath  AbsolutPathFilePath =  FileSystem.Search.unpackAbsolutPath . fmap convertToString . absoluteFilePath . filePaths
 
 
 -- | Legger på ansi codes på dersom du skal sende den til terminal. Ellers er det bare id

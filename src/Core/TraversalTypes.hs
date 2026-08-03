@@ -1,16 +1,15 @@
-module Core.TraversalTypes
-    (
+module Core.TraversalTypes (
       DirType        (..)
     , AbsolutPath    (..)
     , RelativPath    (..)
     , FilePaths      (..) 
     , DirContent     (..)
     , FileInfomation (..)
-
     )
     where
 
 import System.Posix.ByteString.FilePath (RawFilePath)
+
 
 
 newtype DirType = DirType Int
@@ -29,6 +28,14 @@ instance Applicative AbsolutPath where
 instance Applicative RelativPath where
     pure = RelativPath
     RelativPath  f <*>  RelativPath x  = RelativPath (f  x)
+
+instance (Semigroup a) => Semigroup (AbsolutPath a) where
+    (AbsolutPath a) <> (AbsolutPath b) = AbsolutPath (a <> b)
+
+instance (Semigroup a) => Semigroup (RelativPath a) where
+    (RelativPath a) <> (RelativPath b) = RelativPath (a <> b)
+
+
 
 
 data FilePaths = FilePaths {

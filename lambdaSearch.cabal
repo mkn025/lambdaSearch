@@ -18,13 +18,15 @@ library
 
     exposed-modules: 
                       PrintFunctions
-                    , ParseInput
                     , Core.SettingsTypes
                     , Core.TraversalTypes 
                     , Core.PrintTypes 
                     , Core.Filters 
+                    , FileSystem.Raw
                     , FileSystem.Search
+                    , FileSystem.RawFilePathUtils
                     , Cli.Parser
+                    , Output.Print
 
 
     build-depends:    text 

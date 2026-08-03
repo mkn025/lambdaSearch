@@ -6,9 +6,9 @@ import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
 
 import Data.Maybe   (isNothing)
-import ParseInput   (runMyParser, parseLamdaSearch)
+import Cli.Parser   (runMyParser, parseLamdaSearch)
 
-import Utils        ( bs, defaultArgs )
+import Utils        (bs, defaultArgs )
 import Data.List    (sort)
 
 import Core.SettingsTypes 

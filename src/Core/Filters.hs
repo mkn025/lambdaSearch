@@ -1,4 +1,3 @@
-
 module Core.Filters (
       getRexPattern
     , getDisallowFilter
@@ -92,10 +91,9 @@ executeFunction (applyedCommand -> Nothing)  _  _ = pure ()
 executeFunction (applyedCommand -> Just cmd) fp f = f cmd fp
 
 
-
 -- | Bytter alle @{}@ med en git filepath
 substituePath :: [Args] -> RawFilePath -> [String]
-substituePath cmd rfp = map (inPathSubsitute rfp) cmd
+substituePath cmd rfp =  inPathSubsitute rfp <$> cmd
     where
         inPathSubsitute fp PathToSubs = convertToString fp
         inPathSubsitute _  (Text a)   = a
