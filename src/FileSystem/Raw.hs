@@ -3,7 +3,6 @@ module FileSystem.Raw where
 -- Alt FFI og i skal ligger her
 
 
-
 import Core.TraversalTypes (
       DirType        (..)
     , AbsolutPath    (..)

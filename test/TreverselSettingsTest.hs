@@ -8,8 +8,6 @@ import qualified Data.ByteString.Char8 as BC
 
 import Core.SettingsTypes 
 
-import Core.TraversalTypes 
-import FileSystem.Search
 import Core.Filters 
  
 import Utils (AsciiString(AsciiString), bs,defaultArgs )

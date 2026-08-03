@@ -1,4 +1,13 @@
-module FileSystem.RawFilePathUtils where
+
+module FileSystem.RawFilePathUtils (
+      dtDir
+    , concatRelativeFilePath
+    , checkIfDir 
+    , unpackAbsolutPath
+    , unpackRelativPath
+    , createFileInformation
+    , constructFilePath
+    ) where
 
 import Core.TraversalTypes (
       DirType        (..)

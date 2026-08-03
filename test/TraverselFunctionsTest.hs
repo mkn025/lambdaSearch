@@ -11,13 +11,13 @@ import System.Directory               (createDirectory, createDirectoryIfMissing
 
 import Utils                          (bs, defaultArgs, defaultSettings )
 
-import Data.ByteString (singleton )
 
 
 import Core.SettingsTypes 
 
 import Core.TraversalTypes 
 import FileSystem.Search
+import FileSystem.RawFilePathUtils
 
 
 

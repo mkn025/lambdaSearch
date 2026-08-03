@@ -103,7 +103,7 @@ executeOnFile c@(prog, args) rfd = do
 
 -- | Treveser med søkinstillinger
 treverseDirWithSettings  :: SearchSetting -> IO [FileInfomation]
-treverseDirWithSettings  = liftA2 treveseManyPathsWithArgs  arguments  searchPaths 
+treverseDirWithSettings  = liftA2 treveseManyPathsWithArgs arguments searchPaths 
 
 
 -- | Treverser med argumter, standardsti velges når ingen søkestier er oppgitt.

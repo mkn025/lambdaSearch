@@ -2,7 +2,7 @@ module Main (main) where
 
 import Cli.Parser         (runParserIO)
 import System.Environment (getArgs)
-import PrintFunctions     (printResults)
+import Output.Print       (printResults)
 import Core.PrintTypes    (PrintSettings (..), PathType(..), OutputColor(..))
 
 import FileSystem.Search  (treverseDirWithSettings)
