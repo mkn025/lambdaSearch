@@ -1,12 +1,17 @@
-module Core.Types (
-      DirType     (..)
-    , AbsolutPath (..)
-    , RelativPath (..)
-    , FilePaths   (..)
+module Core.TraversalTypes
+    (
+      DirType        (..)
+    , AbsolutPath    (..)
+    , RelativPath    (..)
+    , FilePaths      (..) 
+    , DirContent     (..)
+    , FileInfomation (..)
 
-    ) where
+    )
+    where
 
-import System.Posix.ByteString.FilePath             (RawFilePath)
+import System.Posix.ByteString.FilePath (RawFilePath)
+
 
 newtype DirType = DirType Int
     deriving (Eq, Show)
@@ -32,20 +37,21 @@ data FilePaths = FilePaths {
     } deriving (Eq,Show)
 
 
-    -- Arguments,
-    -- SearchSetting,
-    -- Args,
-    -- ConstrucedCommand,
-    -- 
-    -- OutputColor,
-    -- PathType,
-    -- PrintSettings,
-    -- 
-    -- DirType,
-    -- DirContent,
-    -- FilePaths,
-    -- FileInfomation,
-    -- 
-    -- defaultArguments
-    -- NOTHING but data/newtype decls + trivial instances
+data DirContent =  DirContent {
+      fileType       :: DirType
+    , name           :: RawFilePath
+    } deriving (Eq,Show)
+     
+
+data FileInfomation = FileInfomation{
+      filePaths    :: FilePaths -- Nothing dersom det er en mappe
+    , fileNameInfo :: Maybe DirContent -- Nothing dersom det er en mappe
+} deriving (Eq,Show)
+
+
+
+
+
+
+
 

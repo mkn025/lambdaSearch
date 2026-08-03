@@ -4,7 +4,7 @@ module Utils where
 import qualified Data.ByteString.Char8 as BC
 import Test.Tasty.QuickCheck (Arbitrary(arbitrary), listOf, suchThat )
 import Data.Char             (isAscii)
-import TraversalSettings     (Arguments (..), SearchSetting (..))
+import Core.SettingsTypes    (Arguments (..), SearchSetting (..))
 
 
 

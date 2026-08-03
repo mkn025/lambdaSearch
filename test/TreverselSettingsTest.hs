@@ -6,9 +6,14 @@ import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
 import qualified Data.ByteString.Char8 as BC
 
-import TraversalSettings
+import Core.SettingsTypes 
 
-import Utils (AsciiString(AsciiString), bs, defaultArgs )
+import Core.TraversalTypes 
+import FileSystem.Search
+import Core.Filters 
+ 
+import Utils (AsciiString(AsciiString), bs,defaultArgs )
+
 
 
 mainTreverselSettingsTest :: TestTree 

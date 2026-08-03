@@ -1,16 +1,17 @@
-module PrintFunctions (printResults, PrintSettings(..),PathType(..), OutputColor(..) ) where
+module PrintFunctions (printResults) where
 
-import System.Posix.Terminal     (queryTerminal  )
-import System.Posix.IO           (stdOutput      )
-import TraversalSettings         (convertToString)
 
-import TraversalFunctions        ( 
-                                   FileInfomation(..)
-                                 , DirContent    (..)
-                                 , FilePaths     (..)
-                                 , unpackRelativPath
-                                 , unpackAbsolutPath 
-                                 ) 
+-- Typer
+import Core.TraversalTypes   (FileInfomation(..), DirContent(..), FilePaths(..))
+import Core.PrintTypes       (OutputColor(..), PathType(..), PrintSettings(..) )
+
+
+-- Hjelpefunksjoner
+import System.Posix.Terminal (queryTerminal  )
+import System.Posix.IO       (stdOutput      )
+import Core.Filters          (convertToString)
+import FileSystem.Search     (unpackRelativPath, unpackAbsolutPath ) 
+
 
 import System.Console.ANSI.Codes (
         setSGRCode
@@ -20,17 +21,6 @@ import System.Console.ANSI.Codes (
       , SGR            (Reset, SetColor)
       )
 
-
-data PathType = RelativeFilePath | AbsolutPathFilePath 
-    deriving (Eq,Show)
-
-data OutputColor = Redish | Greeny | Blueish
-    deriving (Eq, Show)
-
-data PrintSettings = PrintSettings{
-      pathType   :: PathType
-    , matchColor :: OutputColor
-    } deriving (Eq,Show)
 
 
 -- | Printer all filene som er funnet 

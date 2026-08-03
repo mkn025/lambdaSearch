@@ -2,10 +2,10 @@ module Main (main) where
 
 import ParseInput         (runParserIO)
 import System.Environment (getArgs)
-import PrintFunctions     (printResults, PrintSettings (..), PathType(..), OutputColor(..))
-import TraversalFunctions (treverseDirWithSettings)
+import PrintFunctions     (printResults)
+import Core.PrintTypes    (PrintSettings (..), PathType(..), OutputColor(..))
 
-
+import FileSystem.Search  (treverseDirWithSettings)
 
 defPrintSettings :: PrintSettings
 defPrintSettings = PrintSettings {

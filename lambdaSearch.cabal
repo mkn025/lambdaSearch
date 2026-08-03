@@ -17,14 +17,14 @@ library
     c-sources:        cFuncs/dirutils.c
 
     exposed-modules: 
-                      TraversalSettings
-                    , TraversalFunctions
-                    , PrintFunctions
+                      PrintFunctions
                     , ParseInput
-                    , DefultFilter
-                    , Core.Types
-                    , Core.Filters
+                    , Core.SettingsTypes
+                    , Core.TraversalTypes 
+                    , Core.PrintTypes 
+                    , Core.Filters 
                     , FileSystem.Search
+                    , Cli.Parser
 
 
     build-depends:    text 
@@ -56,6 +56,7 @@ executable lambdaSearch
 
     hs-source-dirs:   app
     default-language: GHC2021
+
 
 test-suite lambdaSearch-test
 

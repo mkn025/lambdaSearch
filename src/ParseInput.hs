@@ -1,18 +1,17 @@
 module ParseInput (runParserIO, runMyParser, parseLamdaSearch) where
 
-import Data.Void            (Void)
-import Control.Applicative  ((<|>))
-import Data.Functor         (($>))
-
-import Text.Megaparsec.Char (char, string, string')
-
+import Data.Void              (Void)
+import Control.Applicative    ((<|>))
+import Data.Functor           (($>))
+import Text.Megaparsec.Char   (char, string, string')
 import Control.Exception.Base (throwIO)
+import Core.Filters           (convertString)
 
-import TraversalSettings    (
+
+import Core.SettingsTypes    (
       SearchSetting (..)
     , Arguments     (..)
     , Args          (..)
-    , convertString
     , ConstrucedCommand
     )
 

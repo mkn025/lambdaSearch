@@ -11,7 +11,7 @@ import ParseInput   (runMyParser, parseLamdaSearch)
 import Utils        ( bs, defaultArgs )
 import Data.List    (sort)
 
-import TraversalSettings
+import Core.SettingsTypes 
 
 
 -- Kjører parseren og feiler testen om den ikke klarer å parse
