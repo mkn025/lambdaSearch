@@ -1,9 +1,4 @@
-module FileSystem.Search (
-       treverseDirWithSettings
-     , unpackAbsolutPath 
-     , unpackRelativPath 
-     )
-    where 
+module FileSystem.Search (treverseDirWithSettings) where 
 
 import Core.TraversalTypes (
       AbsolutPath    (..)
@@ -12,6 +7,7 @@ import Core.TraversalTypes (
     , DirContent     (..)
     , FileInfomation (..)
     )
+
 
 import Core.SettingsTypes  (
       SearchSetting(..)
@@ -35,11 +31,12 @@ import Core.Filters (
 
 import FileSystem.RawFilePathUtils (
       concatRelativeFilePath
+    , concatAbsolutePath 
     , createFileInformation
     , dtDir
     , unpackAbsolutPath
-    , unpackRelativPath
     )
+
 import FileSystem.Raw (foldDirectoryTree)
 
 
@@ -62,7 +59,7 @@ treversRecursively args = foldDirectoryTree foldFunc
     foldFunc acc filePaths dc@DirContent{..}  = do
 
         let relFilePath = concatRelativeFilePath  (relativeFilePath filePaths) (pure name) (Just dc)
-        let fullPath    = absoluteFilePath filePaths <> pure name
+        let fullPath    = concatAbsolutePath (absoluteFilePath filePaths) (pure name)
 
         let paths       = FilePaths{ absoluteFilePath = fullPath, relativeFilePath = relFilePath }
         let isDir       = fileType == dtDir

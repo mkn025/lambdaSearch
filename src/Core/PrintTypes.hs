@@ -1,5 +1,8 @@
-module Core.PrintTypes where
-
+module Core.PrintTypes (
+      PathType      (..)
+    , OutputColor   (..)
+    , PrintSettings (..)
+    ) where
 
 
 data PathType = RelativeFilePath | AbsolutPathFilePath 

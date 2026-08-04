@@ -2,6 +2,7 @@
 module FileSystem.RawFilePathUtils (
       dtDir
     , concatRelativeFilePath
+    , concatAbsolutePath 
     , checkIfDir 
     , unpackAbsolutPath
     , unpackRelativPath
@@ -28,11 +29,19 @@ import Core.Filters                     (convertToString )
 dtDir :: DirType
 dtDir = DirType 4
 
+
+
+concatAbsolutePath :: AbsolutPath RawFilePath -> AbsolutPath RawFilePath -> AbsolutPath RawFilePath
+concatAbsolutePath = liftA2 (</>)
+
+
+
 concatRelativeFilePath :: RelativPath RawFilePath -> RelativPath RawFilePath -> Maybe DirContent -> RelativPath RawFilePath
-concatRelativeFilePath old new Nothing = old <> new
+concatRelativeFilePath old new Nothing = liftA2 (</>) old new
 concatRelativeFilePath old new (Just DirContent {..}) = if pure name == new
                                                         then old
-                                                        else old <> new 
+                                                        else concatRelativeFilePath old new Nothing
+
 
 checkIfDir :: AbsolutPath RawFilePath -> IO Bool
 checkIfDir (AbsolutPath path)  = isDirectory <$> getFileStatus path

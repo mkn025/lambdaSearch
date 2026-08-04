@@ -4,12 +4,13 @@ import Cli.Parser         (runParserIO)
 import System.Environment (getArgs)
 import Output.Print       (printResults)
 import Core.PrintTypes    (PrintSettings (..), PathType(..), OutputColor(..))
-
 import FileSystem.Search  (treverseDirWithSettings)
+
+
 
 defPrintSettings :: PrintSettings
 defPrintSettings = PrintSettings {
-          pathType   = RelativeFilePath  
+          pathType   = RelativeFilePath
         , matchColor = Greeny
         }
 
@@ -18,8 +19,7 @@ main = do
      input  <- getArgs
      actOnInput input
 
-
-actOnInput :: [String] ->  IO()
+actOnInput :: [String] ->  IO ()
 actOnInput [] = runCLi []
 actOnInput x  = runCLi x
 

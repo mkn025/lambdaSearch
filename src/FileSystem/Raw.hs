@@ -1,8 +1,6 @@
-module FileSystem.Raw where
+module FileSystem.Raw (foldDirectoryTree) where
 
 -- Alt FFI og i skal ligger her
-
-
 import Core.TraversalTypes (
       DirType        (..)
     , AbsolutPath    (..)
@@ -15,7 +13,7 @@ import Core.TraversalTypes (
 -- Filter And helpers --
 
 
-import System.Posix.Directory.ByteString (DirStream,closeDirStream, openDirStream)
+import System.Posix.Directory.ByteString as PosixBS (DirStream,closeDirStream, openDirStream)
 
 import System.Posix.ByteString.FilePath  (RawFilePath, peekFilePath)
 import Foreign.C.Error                   (Errno               (..), eINTR,  getErrno, resetErrno,eOK, eACCES, ePERM )
@@ -33,7 +31,7 @@ import System.IO.Error                   (isPermissionError)
 
 import Control.Monad.Except              (runExceptT , ExceptT(..))
 
-import FileSystem.RawFilePathUtils       (checkIfDir, concatRelativeFilePath, dtDir )
+import FileSystem.RawFilePathUtils       (checkIfDir, concatRelativeFilePath, dtDir,concatAbsolutePath )
 
 
 
@@ -99,7 +97,7 @@ readDirEnt dir = ExceptT readContent
 
               -- har mulihet å legge til flere type feil 
         else do
-          dName <- c_name dEnt >>= System.Posix.ByteString.FilePath.peekFilePath
+          dName <- c_name dEnt >>= peekFilePath
           dType <- c_type dEnt
 
         -- fra wiki. Vi trenger ikke å free den
@@ -133,14 +131,14 @@ traverseDirectoryContents f s0 (AbsolutPath p) = do
     run <- askRunInIO
     liftIO $ bracketOnError
         (openDirStreamPermissive p)
-        (mapM_ closeDirStream)   -- kjøre bare dersom den kaster feil. 
+        (mapM_ PosixBS.closeDirStream)   -- kjøre bare dersom den kaster feil. 
         (\case
             Nothing   -> pure s0         -- access denied, skipper
-            Just dirp -> loop run s0 dirp `finally` closeDirStream dirp)
+            Just dirp -> loop run s0 dirp `finally` PosixBS.closeDirStream dirp)
   where
-    openDirStreamPermissive :: System.Posix.ByteString.FilePath.RawFilePath -> IO (Maybe DirStream)
+    openDirStreamPermissive :: RawFilePath -> IO (Maybe DirStream)
     openDirStreamPermissive path =
-        (Just <$> openDirStream path)
+        (Just <$> PosixBS.openDirStream path)
         `catch`
         \errMsg -> if isPermissionError errMsg
                    then pure Nothing
@@ -157,7 +155,6 @@ traverseDirectoryContents f s0 (AbsolutPath p) = do
                                                   loop run acc' dirp
 
 
-
 foldDirectoryTree
     :: forall a . (a -> FilePaths -> DirContent -> IO a)  --  forall scoopes a in hele func function
     -> a -- 
@@ -171,9 +168,8 @@ foldDirectoryTree foldFunc acc paths = do
     where
         innerloop  :: a -> DirContent -> IO a
         innerloop currentAcc dc@DirContent{..} = do
-            let newAbsPath = absoluteFilePath paths <> pure name
-            let newRelPath = concatRelativeFilePath (relativeFilePath paths)  (pure name) Nothing
-
+            let newAbsPath = concatAbsolutePath     (absoluteFilePath paths) (pure name)
+            let newRelPath = concatRelativeFilePath (relativeFilePath paths) (pure name) Nothing
             let isDir = fileType == dtDir
             nextAcc <- foldFunc currentAcc paths dc
 
