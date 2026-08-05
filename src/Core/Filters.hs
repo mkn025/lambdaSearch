@@ -1,22 +1,24 @@
-
-module TraversalSettings (
-      Arguments         (..)
-    , SearchSetting     (..)
-    , Args           (..)
-    , ConstrucedCommand
+module Core.Filters (
+      getRexPattern
     , getDisallowFilter
-    , getHiddenFilter
-    , getExtentionFilter
-    , compileRegexFilter
-    , getRexPattern
-    , executeFunction
-    , substituePath
-    , convertString
-    , convertToString
-    , safeHead  
-    , safeTail  
-) where
+    , getHiddenFilter 
+    , getExtentionFilter 
+    , compileRegexFilter 
+    , executeFunction 
+    , substituePath 
+    , getFileExtention 
+    , safeTail
+    , safeHead 
+    , convertString 
+    , convertToString 
+    ) where
 
+import Core.SettingsTypes (
+       Args      (..)
+     , Arguments (..)
+     , ConstrucedCommand
+     , Extention 
+    )
 
 import System.Posix.ByteString               (RawFilePath)
 import qualified Data.ByteString.Char8 as BC (head, pack, unpack, tail, null, isPrefixOf)
@@ -25,67 +27,24 @@ import Data.ByteString                       (ByteString)
 
 
 import Text.Regex.TDFA(
-    Regex
-  , ExecOption(..)
+    ExecOption (..)
+  , Regex
   , defaultCompOpt
   , defaultExecOpt
   , makeRegexOpts
   , matchTest
   )
 
--- | Type aliers for og øke lesbarheten
-type Extention     = RawFilePath
-type SearchPattern = RawFilePath
-type SearchFilters = [RawFilePath]
 
-
--- | datatype som blir brukt i  @--execute@. for å substite path
-data Args = Text String | PathToSubs
-    deriving (Eq,Show)
-
--- | alias som beskriver en kommaddo eksterne kommandoer og argumenter.
-type ConstrucedCommand = (String, [Args])
-
---  Dokumenter globale søkeinnstillinger.
-data SearchSetting = SearchSetting {
-      searchPaths    :: Maybe [FilePath]
-    , arguments      :: Arguments
-} deriving (Eq,Show)
-
-
--- | Søke- og filterargumenter for traversering.
--- Datatype som beskriver hvilke argumenter vi vi skal når vi treverser igjennom
---
--- - @regxPattern@: regex-filter.
--- - @exclude@: liste med mapper som skal ekskluderes.
--- - @extention@: valgfritt filter på filendelse.
--- - @hideHidden@: om skjulte filer skal vies.
-
-data Arguments = Arguments {
-      regxPattern    :: Maybe SearchPattern
-    , exclude        :: Maybe SearchFilters
-    , extention      :: [Extention]
-    , hideHidden     :: Bool
-    , applyedCommand :: Maybe ConstrucedCommand
-
-}  deriving (Eq, Show)
-
-
-
--- | Mathcer fil med regex og 
---  Tar med all dersom ikke noe spesifisert
 getRexPattern :: Maybe Regex -> RawFilePath -> Bool
 getRexPattern Nothing      _  = True
 getRexPattern (Just regex) fp = matchTest regex fp
-
 
 -- | Sjekker om filepath ikke er element i sitene vi har definert 
 --  Tar med all dersom ikke noe spesifisert
 getDisallowFilter :: Arguments -> RawFilePath -> Bool
 getDisallowFilter (exclude -> Nothing)  _ = True
 getDisallowFilter (exclude -> Just sf) fp = not $ any (`BC.isPrefixOf` fp) sf
-
-
 
 
 
@@ -117,7 +76,7 @@ compileRegexFilter (regxPattern  -> (Just pat)) = Just $ makeRegexOpts comp exec
 
 
 
--- | Litt mer fifi
+-- | Litt mer fiffi
 --  Bruker en funksjon f på på en RawFilePath dersom har sagt at vi skal exeute en kommando
 --  Generaliserer bare den slik at vi ikke trenger og importere masse BS (ikke byteString) i denne modulen
 executeFunction ::
@@ -129,10 +88,9 @@ executeFunction (applyedCommand -> Nothing)  _  _ = pure ()
 executeFunction (applyedCommand -> Just cmd) fp f = f cmd fp
 
 
-
 -- | Bytter alle @{}@ med en git filepath
 substituePath :: [Args] -> RawFilePath -> [String]
-substituePath cmd rfp = map (inPathSubsitute rfp) cmd
+substituePath cmd rfp =  inPathSubsitute rfp <$> cmd
     where
         inPathSubsitute fp PathToSubs = convertToString fp
         inPathSubsitute _  (Text a)   = a
@@ -155,5 +113,6 @@ convertString = BC.pack
 
 convertToString :: RawFilePath  -> String
 convertToString = BC.unpack
+
 
 

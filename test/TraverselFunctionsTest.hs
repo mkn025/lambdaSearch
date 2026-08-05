@@ -10,8 +10,14 @@ import System.Directory               (createDirectory, createDirectoryIfMissing
 
 
 import Utils                          (bs, defaultArgs, defaultSettings )
-import TraversalSettings              (SearchSetting(..), Arguments(..) )
-import TraversalFunctions
+
+
+
+import Core.SettingsTypes 
+
+import Core.TraversalTypes 
+import FileSystem.Search
+import FileSystem.RawFilePathUtils
 
 
 
@@ -39,7 +45,7 @@ mkDirInfo path = FileInfomation
     , fileNameInfo = Nothing
     }
     where
-        fp = FilePaths{relativeFilePath  = RelativPath (bs""), absoluteFilePath  = AbsolutPath (bs path ) }
+        fp = FilePaths{relativeFilePath  = RelativPath "", absoluteFilePath  = AbsolutPath (bs path ) }
 
 
 

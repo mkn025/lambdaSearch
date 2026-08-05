@@ -6,19 +6,19 @@ import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck
 
 import Data.Maybe   (isNothing)
-import ParseInput   (runMyParser, parseLamdaSearch)
+import Cli.Parser   (runMyParser, parseLamdaSearch)
 
-import Utils        ( bs, defaultArgs )
+import Utils        (bs, defaultArgs )
 import Data.List    (sort)
 
-import TraversalSettings
+import Core.SettingsTypes 
 
 
 -- Kjører parseren og feiler testen om den ikke klarer å parse
 mustParse :: String -> IO SearchSetting
 mustParse input = case runMyParser parseLamdaSearch input of
-    Right ss  -> pure ss
-    Left  err -> assertFailure ("Parse feilet uventet:\n" <> err)
+    Right (ProgramSettings{..})  -> pure searchSetting 
+    Left  err                    -> assertFailure ("Parse feilet uventet:\n" <> err)
 
 
 parserTests :: TestTree
@@ -235,7 +235,7 @@ testsCombined = testGroup "kombinerte flagg"
             -- punktum låser sti-parsingen uansett hva som kommer etter
             case runMyParser parseLamdaSearch (". " <> flags) of
                 Left  _  -> True          -- parse-feil er ok her
-                Right ss -> isNothing (searchPaths ss)
+                Right (ProgramSettings{..}) -> isNothing (searchPaths searchSetting )
     ]
 
 

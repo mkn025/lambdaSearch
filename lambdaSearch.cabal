@@ -15,15 +15,20 @@ library
     -- Import common warning flags.
     import:           warnings
     c-sources:        cFuncs/dirutils.c
+
     exposed-modules: 
-                      TraversalSettings
-                    , TraversalFunctions
-                    , PrintFunctions
-                    , ParseInput
-                    , DefultFilter
+                      Core.SettingsTypes
+                    , Core.TraversalTypes 
+                    , Core.PrintTypes 
+                    , Core.Filters 
+                    , FileSystem.Raw
+                    , FileSystem.Search
+                    , FileSystem.RawFilePathUtils
+                    , Cli.Parser
+                    , Output.Print
 
 
-    build-depends:    text ^>=2.0.2
+    build-depends:    text 
                     , base 
                     , mtl
                     , ansi-terminal
@@ -47,12 +52,12 @@ executable lambdaSearch
     import:           warnings
     main-is:          Main.hs
     build-depends:
-
           base 
         , lambdaSearch
 
     hs-source-dirs:   app
     default-language: GHC2021
+
 
 test-suite lambdaSearch-test
 

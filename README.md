@@ -14,6 +14,8 @@
 | `-e` | `--extention` | **ExtentionFlag** - Filters or processes files by extension |
 | `-i` | `--ignore` | **IgnoreFlag** - Specifies files or paths to exclude from processing |
 | `-x` | `--execute` | **ExecuteFlag** - Executes a command on processed files |
+| `-c` | `--color` | **Color the output** - Supported colors are red/green/blue (must be lowercase/ green if it fails) | 
+| `-f` | `--full-path  ` | **Absoulte/Full- filepath** -  If you want absoulte path|
 
 
 

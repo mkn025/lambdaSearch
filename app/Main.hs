@@ -1,33 +1,33 @@
 module Main (main) where
 
-import ParseInput         (runParserIO)
+import Cli.Parser         (runParserIO)
 import System.Environment (getArgs)
-import PrintFunctions     (printResults, PrintSettings (..), PathType(..), OutputColor(..))
-import TraversalFunctions (treverseDirWithSettings)
+import Output.Print       (printResults)
+import Core.SettingsTypes (ProgramSettings(..))
+import FileSystem.Search  (treverseDirWithSettings)
 
 
-defPrintSettings :: PrintSettings
-defPrintSettings = PrintSettings {
-          pathType   = RelativeFilePath  
-        , matchColor = Greeny
-        }
+
 
 main :: IO ()
 main = do
      input  <- getArgs
      actOnInput input
 
-
-actOnInput :: [String] ->  IO()
+actOnInput :: [String] ->  IO ()
 actOnInput [] = runCLi []
 actOnInput x  = runCLi x
 
 
+
+
 runCLi :: [String] -> IO ()
 runCLi args = do
-     ss     <- runParserIO $ unwords args 
-     output <- treverseDirWithSettings ss
-     printResults defPrintSettings output
+     prgs  <- runParserIO $ unwords args 
+     let ss =  searchSetting  prgs
+     let ps =  printSettings  prgs
+     output <- treverseDirWithSettings  ss
+     printResults ps output
 
 
 

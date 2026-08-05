@@ -1,16 +1,17 @@
-module PrintFunctions (printResults, PrintSettings(..),PathType(..), OutputColor(..) ) where
+module Output.Print (printResults) where
 
-import System.Posix.Terminal     (queryTerminal  )
-import System.Posix.IO           (stdOutput      )
-import TraversalSettings         (convertToString)
+-- Typer
+import Core.TraversalTypes   (FileInfomation(..), DirContent(..), FilePaths(..))
+import Core.PrintTypes       (OutputColor(..), PathType(..), PrintSettings(..) )
 
-import TraversalFunctions        ( 
-                                   FileInfomation(..)
-                                 , DirContent    (..)
-                                 , FilePaths     (..)
-                                 , unpackRelativPath
-                                 , unpackAbsolutPath 
-                                 ) 
+
+-- Hjelpecunksjoner
+import System.Posix.Terminal (queryTerminal  )
+import System.Posix.IO       (stdOutput      )
+import Core.Filters          (convertToString)
+
+import FileSystem.RawFilePathUtils     (unpackRelativPath, unpackAbsolutPath) 
+
 
 import System.Console.ANSI.Codes (
         setSGRCode
@@ -20,17 +21,6 @@ import System.Console.ANSI.Codes (
       , SGR            (Reset, SetColor)
       )
 
-
-data PathType = RelativeFilePath | AbsolutPathFilePath 
-    deriving (Eq,Show)
-
-data OutputColor = Redish | Greeny | Blueish
-    deriving (Eq, Show)
-
-data PrintSettings = PrintSettings{
-      pathType   :: PathType
-    , matchColor :: OutputColor
-    } deriving (Eq,Show)
 
 
 -- | Printer all filene som er funnet 
@@ -53,9 +43,10 @@ printFileInformation PrintSettings{..} colorFunc fi = do
                 putStrLn colorisedPath 
 
 
+
 getFilePath :: PathType -> FileInfomation -> String
-getFilePath  RelativeFilePath    = unpackRelativPath  . fmap convertToString . relativeFilePath . filePaths  
-getFilePath  AbsolutPathFilePath = unpackAbsolutPath  . fmap convertToString . absoluteFilePath . filePaths
+getFilePath  RelativeFilePath    =  unpackRelativPath . fmap convertToString . relativeFilePath . filePaths  
+getFilePath  AbsolutPathFilePath =  unpackAbsolutPath . fmap convertToString . absoluteFilePath . filePaths
 
 
 -- | Legger på ansi codes på dersom du skal sende den til terminal. Ellers er det bare id
