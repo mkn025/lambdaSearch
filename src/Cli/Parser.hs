@@ -33,6 +33,7 @@ import Text.Megaparsec (
 import Text.Megaparsec.Error (errorBundlePretty)
 import Data.List             (foldl', singleton)
 import Core.PrintTypes (PrintSettings (matchColor, pathType, PrintSettings), OutputColor (Redish, Greeny, Blueish), PathType (AbsolutPathFilePath, RelativeFilePath))
+import Data.Char (toLower)
 
 
 type Parser = Parsec Void String
@@ -99,7 +100,7 @@ data Paths =
 data DataFlags =
       SearchPatternFlag String
     | HiddenFilesFlag
-    | ExtentionFlag     [String]
+    | ExtentionFlag    [String]
     | ExecuteFlag      ConstrucedCommand
     | IgnoreFlag       [String]
 
@@ -107,6 +108,11 @@ data DataFlags =
 data PrintFlags = 
       Color String
     | FullPath
+
+
+
+
+
 
 
 data Flags = DataFlags DataFlags | PrintFlags PrintFlags
@@ -177,11 +183,12 @@ applyDataFlags st  HiddenFilesFlag      = st {hideHidden     = not . hideHidden 
 
 
 applyPrintSettings ::  PrintSettings -> PrintFlags -> PrintSettings
-applyPrintSettings  ps (Color "red")   = ps {matchColor  = Redish}
-applyPrintSettings  ps (Color "green") = ps {matchColor  = Greeny}
-applyPrintSettings  ps (Color "blue")  = ps {matchColor  = Blueish}
-applyPrintSettings  ps (Color _)       = ps
-applyPrintSettings  ps FullPath        = ps {pathType  = AbsolutPathFilePath}
+applyPrintSettings  ps (Color (map toLower  -> "red"))   = ps {matchColor = Redish}
+applyPrintSettings  ps (Color (map toLower  -> "green")) = ps {matchColor = Greeny}
+applyPrintSettings  ps (Color (map toLower  -> "blue"))  = ps {matchColor = Blueish}
+applyPrintSettings  ps (Color _)                         = ps
+applyPrintSettings  ps FullPath                          = ps {pathType   = AbsolutPathFilePath}
+
 
 
 updateSearchSetting :: SearchSetting -> Arguments -> DataFlags -> SearchSetting
