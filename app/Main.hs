@@ -3,16 +3,11 @@ module Main (main) where
 import Cli.Parser         (runParserIO)
 import System.Environment (getArgs)
 import Output.Print       (printResults)
-import Core.PrintTypes    (PrintSettings (..), PathType(..), OutputColor(..))
+import Core.SettingsTypes (ProgramSettings(..))
 import FileSystem.Search  (treverseDirWithSettings)
 
 
 
-defPrintSettings :: PrintSettings
-defPrintSettings = PrintSettings {
-          pathType   = RelativeFilePath
-        , matchColor = Greeny
-        }
 
 main :: IO ()
 main = do
@@ -24,11 +19,15 @@ actOnInput [] = runCLi []
 actOnInput x  = runCLi x
 
 
+
+
 runCLi :: [String] -> IO ()
 runCLi args = do
-     ss     <- runParserIO $ unwords args 
-     output <- treverseDirWithSettings ss
-     printResults defPrintSettings output
+     prgs  <- runParserIO $ unwords args 
+     let ss =  searchSetting  prgs
+     let ps =  printSettings  prgs
+     output <- treverseDirWithSettings  ss
+     printResults ps output
 
 
 

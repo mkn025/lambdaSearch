@@ -14,12 +14,11 @@ module Core.Filters (
     ) where
 
 import Core.SettingsTypes (
-       Args(..)
+       Args      (..)
      , Arguments (..)
      , ConstrucedCommand
      , Extention 
     )
-
 
 import System.Posix.ByteString               (RawFilePath)
 import qualified Data.ByteString.Char8 as BC (head, pack, unpack, tail, null, isPrefixOf)
@@ -28,14 +27,13 @@ import Data.ByteString                       (ByteString)
 
 
 import Text.Regex.TDFA(
-    Regex
-  , ExecOption(..)
+    ExecOption (..)
+  , Regex
   , defaultCompOpt
   , defaultExecOpt
   , makeRegexOpts
   , matchTest
   )
-
 
 
 getRexPattern :: Maybe Regex -> RawFilePath -> Bool
@@ -78,10 +76,9 @@ compileRegexFilter (regxPattern  -> (Just pat)) = Just $ makeRegexOpts comp exec
 
 
 
--- | Litt mer fifi
+-- | Litt mer fiffi
 --  Bruker en funksjon f på på en RawFilePath dersom har sagt at vi skal exeute en kommando
 --  Generaliserer bare den slik at vi ikke trenger og importere masse BS (ikke byteString) i denne modulen
-
 executeFunction ::
     Arguments                                   ->
     RawFilePath                                 ->

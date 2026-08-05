@@ -10,13 +10,14 @@ import Core.Filters           (convertString)
 
 
 import Core.SettingsTypes    (
-      SearchSetting (..)
-    , Arguments     (..)
-    , Args          (..)
+      SearchSetting     (..)
+    , Arguments         (..)
+    , Args              (..)
+    , ProgramSettings   (..)
     , ConstrucedCommand
     )
 
-import Text.Megaparsec      (
+import Text.Megaparsec (
       Parsec
     , satisfy
     , between
@@ -31,6 +32,8 @@ import Text.Megaparsec      (
 
 import Text.Megaparsec.Error (errorBundlePretty)
 import Data.List             (foldl', singleton)
+import Core.PrintTypes (PrintSettings (matchColor, pathType, PrintSettings), OutputColor (Redish, Greeny, Blueish), PathType (AbsolutPathFilePath, RelativeFilePath))
+
 
 type Parser = Parsec Void String
 
@@ -63,6 +66,29 @@ defaultArguments = Arguments {
     , applyedCommand = Nothing
     }
 
+defaultPrintSettings :: PrintSettings
+defaultPrintSettings = PrintSettings{
+      pathType    = RelativeFilePath
+    , matchColor  = Greeny
+    }
+
+defaultSearchSetting :: SearchSetting
+defaultSearchSetting = SearchSetting{
+      searchPaths    = Nothing
+    , arguments      = defaultArguments 
+    }
+
+
+defaultProgramSetting :: ProgramSettings
+defaultProgramSetting = ProgramSettings {
+      searchSetting  = defaultSearchSetting 
+    , printSettings  = defaultPrintSettings 
+    }
+
+
+
+
+
 -- |  Representasjon av om søkestier er oppgitt.
 data Paths =
       NoPath
@@ -78,15 +104,25 @@ data DataFlags =
     | IgnoreFlag       [String]
 
 
+data PrintFlags = 
+      Color String
+    | FullPath
+
+
+data Flags = DataFlags DataFlags | PrintFlags PrintFlags
+
+
 -- |  Parser for enkeltflagg og fmapper vår datatype på
-pFlags :: Parser DataFlags
+pFlags :: Parser Flags
 pFlags = choice
     [
-       SearchPatternFlag <$> ((string' "-p" <|> string  "--pattern"   ) *> sc *> parseWord)
-     , HiddenFilesFlag   <$  ( string' "-a" <|> string  "--show--dots")
-     , ExtentionFlag     <$> ((string' "-e" <|> string  "--extention" ) *> sc *> (parseManyExteions <|> (singleton <$> parseWord) ))
-     , IgnoreFlag        <$> ((string' "-i" <|> string  "--ignore"    ) *> sc *> pathsUntilFlag )
-     , ExecuteFlag       <$> ((string' "-x" <|> string  "--execute"   ) *> sc *> parseConstrucedCommand) 
+       DataFlags  . SearchPatternFlag <$> ((string' "-p" <|> string  "--pattern"   ) *> sc *> parseWord)
+     , DataFlags    HiddenFilesFlag   <$  ( string' "-a" <|> string  "--show--dots")
+     , DataFlags  . ExtentionFlag     <$> ((string' "-e" <|> string  "--extention" ) *> sc *> (parseManyExteions <|> (singleton <$> parseWord) ))
+     , DataFlags  . IgnoreFlag        <$> ((string' "-i" <|> string  "--ignore"    ) *> sc *> pathsUntilFlag )
+     , DataFlags  . ExecuteFlag       <$> ((string' "-x" <|> string  "--execute"   ) *> sc *> parseConstrucedCommand) 
+     , PrintFlags . Color             <$> ((string' "-c" <|> string  "--color"     ) *> sc *> parseWord) 
+     , PrintFlags   FullPath          <$  (string' "-f" <|> string  "--full-path"  ) 
     ]
 
 
@@ -130,26 +166,44 @@ parseArgumentAndWord = do
 
 --- FLAG PARSER --- 
 
--- | Tar argument datatypen og  og et flag og putter det i datastukruen våre
---  Blir nesten som og oppdaterte en state
-applyFlag :: Arguments -> DataFlags -> Arguments
-applyFlag st df = case df of
-     SearchPatternFlag s -> st {regxPattern    = Just (convertString s)}
-     ExtentionFlag     e -> st {extention      = (convertString <$> e) <> extention st}
-     IgnoreFlag        i -> st {exclude        = Just (map convertString i)}
-     ExecuteFlag       x -> st {applyedCommand = Just x}
-     HiddenFilesFlag     -> st {hideHidden     = not . hideHidden $ st}
 
 
--- | Parser mange dataflagg 
-parseAllFlags :: Parser [DataFlags]
+applyDataFlags :: Arguments -> DataFlags -> Arguments
+applyDataFlags st (SearchPatternFlag s) = st {regxPattern    = Just (convertString s)}
+applyDataFlags st (ExtentionFlag     e) = st {extention      = (convertString <$> e) <> extention st}
+applyDataFlags st (IgnoreFlag        i) = st {exclude        = Just (map convertString i)}
+applyDataFlags st (ExecuteFlag       x) = st {applyedCommand = Just x}
+applyDataFlags st  HiddenFilesFlag      = st {hideHidden     = not . hideHidden $ st}
+
+
+applyPrintSettings ::  PrintSettings -> PrintFlags -> PrintSettings
+applyPrintSettings  ps (Color "red")   = ps {matchColor  = Redish}
+applyPrintSettings  ps (Color "green") = ps {matchColor  = Greeny}
+applyPrintSettings  ps (Color "blue")  = ps {matchColor  = Blueish}
+applyPrintSettings  ps (Color _)       = ps
+applyPrintSettings  ps FullPath        = ps {pathType  = AbsolutPathFilePath}
+
+
+updateSearchSetting :: SearchSetting -> Arguments -> DataFlags -> SearchSetting
+updateSearchSetting ss args df = ss {arguments  = applyDataFlags args df }
+
+
+
+
+applyFlag :: ProgramSettings -> Flags -> ProgramSettings
+applyFlag pgs@ProgramSettings{..} (DataFlags a)  = pgs { searchSetting  = updateSearchSetting searchSetting (arguments  searchSetting) a } 
+applyFlag pgs@ProgramSettings{..} (PrintFlags a) = pgs { printSettings  = applyPrintSettings printSettings a  }  
+
+
+-- | Parser mange dataflagg          =
+parseAllFlags :: Parser [Flags]
 parseAllFlags = many (sc *> pFlags <* sc) -- 
 
 
 -- | Parser alle flagg og folder dem inn i én 'Arguments'-verdi.
 --  Burker listen som av flagg som er parset og applyfalg og foldr over alle og lager Arguments datastukruen
-parseFlags :: Parser Arguments
-parseFlags = foldl' applyFlag defaultArguments <$>parseAllFlags
+parseFlags :: Parser ProgramSettings
+parseFlags = foldl' applyFlag defaultProgramSetting <$> parseAllFlags
 
 
 --- STI PARSER ---
@@ -181,23 +235,27 @@ parsePathOrDot = choice
 --- HOVEDPARSER ---
 
 -- | Parser hele input og generer en searchSetting datatype
-parseLamdaSearch :: Parser SearchSetting
+parseLamdaSearch :: Parser ProgramSettings
 parseLamdaSearch = do
     paths <- sc *> parsePathOrDot
-    args  <- parseFlags
-    let ss = SearchSetting {
-           searchPaths  = Nothing
-         , arguments    = args }
-
+    prgs  <- parseFlags
     case paths of
-        NoPath           -> pure ss
-        (ManyPaths [])   -> pure ss
-        (ManyPaths p)    -> pure ss {searchPaths = Just p}
+        NoPath           -> pure prgs
+        (ManyPaths [])   -> pure prgs
+        (ManyPaths p)    -> pure $ applyPath prgs p 
+    where 
+        applyPath :: ProgramSettings -> [String] -> ProgramSettings 
+        applyPath ps s = ps {searchSetting = SearchSetting{
+              searchPaths = Just s
+            , arguments  =  (arguments . searchSetting) ps 
+            }}
+
+
+
 
 
 -- | Lagde en et typealias bare for å gjøre det tydelig hva strengen skal brukes til
 type StringToParse = String
-
 
 -- | Kjører parser på en streng og generer feilmelding om den feiler
 runMyParser :: Parser a -> StringToParse ->  Either String a
@@ -206,10 +264,9 @@ runMyParser parser input =
     Left err -> Left $ errorBundlePretty err
     Right x  -> Right x
 
-
 -- | IO-wrapper som kaster feil dersom vi ikke klare å parse
-runParserIO :: StringToParse -> IO SearchSetting
-runParserIO (runMyParser parseLamdaSearch -> (Right ss)) = pure  ss
+runParserIO :: StringToParse -> IO ProgramSettings
+runParserIO (runMyParser parseLamdaSearch -> (Right ss)) = pure ss
 runParserIO (runMyParser parseLamdaSearch -> (Left er) ) = throwIO $ userError er
 
 

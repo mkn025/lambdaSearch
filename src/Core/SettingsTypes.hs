@@ -3,12 +3,16 @@ module Core.SettingsTypes (
     , SearchPattern
     , SearchFilters
     , ConstrucedCommand
-    , Args          (..)
-    , SearchSetting (..)
-    , Arguments     (..)
+    , Args             (..)
+    , SearchSetting    (..)
+    , Arguments        (..)
+    , ProgramSettings  (..)
     , defaultArguments 
     )
     where
+
+import Core.PrintTypes (PrintSettings (..),PathType (..),OutputColor (..))
+
 
 import System.Posix.ByteString.FilePath (RawFilePath)
 
@@ -20,15 +24,8 @@ type SearchFilters = [RawFilePath]
 data Args = Text String | PathToSubs
     deriving (Eq,Show)
 
--- | alias som beskriver en kommaddo eksterne kommandoer og argumenter.
+-- | Alias som beskriver en kommaddo eksterne kommandoer og argumenter.
 type ConstrucedCommand = (String, [Args])
-
---  Dokumenter globale søkeinnstillinger.
-data SearchSetting = SearchSetting {
-      searchPaths    :: Maybe [FilePath]
-    , arguments      :: Arguments
-} deriving (Eq,Show)
-
 
 -- | Søke- og filterargumenter for traversering.
 -- Datatype som beskriver hvilke argumenter vi vi skal når vi treverser igjennom
@@ -37,6 +34,8 @@ data SearchSetting = SearchSetting {
 -- - @exclude@: liste med mapper som skal ekskluderes.
 -- - @extention@: valgfritt filter på filendelse.
 -- - @hideHidden@: om skjulte filer skal vies.
+
+
 data Arguments = Arguments {
       regxPattern    :: Maybe SearchPattern
     , exclude        :: Maybe SearchFilters
@@ -44,6 +43,22 @@ data Arguments = Arguments {
     , hideHidden     :: Bool 
     , applyedCommand :: Maybe ConstrucedCommand
 }  deriving (Eq, Show)
+
+--  instillinger den skal søke etter
+data SearchSetting = SearchSetting {
+      searchPaths    :: Maybe [FilePath]
+    , arguments      :: Arguments
+} deriving (Eq,Show)
+
+
+
+data ProgramSettings = ProgramSettings {
+      searchSetting :: SearchSetting
+    , printSettings :: PrintSettings 
+    } deriving (Eq, Show)
+    
+
+
 
 
 
