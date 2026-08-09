@@ -24,6 +24,7 @@ library
                     , FileSystem.Raw
                     , FileSystem.Search
                     , FileSystem.RawFilePathUtils
+                    , FileSystem.DefultIgnore
                     , Cli.Parser
                     , Output.Print
 

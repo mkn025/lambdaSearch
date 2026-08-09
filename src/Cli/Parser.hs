@@ -1,6 +1,5 @@
 module Cli.Parser (runParserIO, runMyParser, parseLamdaSearch) where
 
-
 import Data.Void              (Void)
 import Control.Applicative    ((<|>))
 import Data.Functor           (($>))
@@ -9,12 +8,20 @@ import Control.Exception.Base (throwIO)
 import Core.Filters           (convertString)
 
 
+import Core.PrintTypes (
+      PrintSettings (..)
+    , OutputColor   (..)
+    , PathType      (..)
+    , defaultPrintSettings      
+    )
+
 import Core.SettingsTypes    (
       SearchSetting     (..)
     , Arguments         (..)
     , Args              (..)
     , ProgramSettings   (..)
     , ConstrucedCommand
+    , defaultSearchSetting 
     )
 
 import Text.Megaparsec (
@@ -30,24 +37,21 @@ import Text.Megaparsec (
     , runParser
     )
 
+
 import Text.Megaparsec.Error (errorBundlePretty)
 import Data.List             (foldl', singleton)
-import Core.PrintTypes (PrintSettings (matchColor, pathType, PrintSettings), OutputColor (Redish, Greeny, Blueish), PathType (AbsolutPathFilePath, RelativeFilePath))
-import Data.Char (toLower)
 
 
 type Parser = Parsec Void String
 
 -- Helper funksjoner
-
 -- | Parser til whitespace-parseren. 
 sc :: Parser ()
 sc = skipMany (char ' ' <|> char '\t')
 
-
 -- | Parser for ett  ord.
 parseWord :: Parser String
-parseWord = many (satisfy (\c -> c /= ' ' && c /= '\t'))
+parseWord = many . satisfy $ (\c -> c /= ' ' && c /= '\t')
 
 
 -- Parser til et et nytt flag 
@@ -58,28 +62,6 @@ parseToFlagsWithParser p =
 
 
 -- |  standardverdier for filterflagg.
-defaultArguments :: Arguments
-defaultArguments = Arguments {
-      regxPattern    = Nothing
-    , exclude        = Nothing
-    , extention      = []
-    , hideHidden     = False
-    , applyedCommand = Nothing
-    }
-
-defaultPrintSettings :: PrintSettings
-defaultPrintSettings = PrintSettings{
-      pathType    = RelativeFilePath
-    , matchColor  = Greeny
-    }
-
-defaultSearchSetting :: SearchSetting
-defaultSearchSetting = SearchSetting{
-      searchPaths    = Nothing
-    , arguments      = defaultArguments 
-    }
-
-
 defaultProgramSetting :: ProgramSettings
 defaultProgramSetting = ProgramSettings {
       searchSetting  = defaultSearchSetting 
@@ -88,13 +70,10 @@ defaultProgramSetting = ProgramSettings {
 
 
 
-
-
 -- |  Representasjon av om søkestier er oppgitt.
 data Paths =
       NoPath
     | ManyPaths [String]
-
 
 -- | Datatype for å beskrive hvilken type informasjon vi kan parse
 data DataFlags =
@@ -106,29 +85,30 @@ data DataFlags =
 
 
 data PrintFlags = 
-      Color String
-    | FullPath
-
-
-
-
-
+      Color OutputColor
+    | FullPath  
 
 
 data Flags = DataFlags DataFlags | PrintFlags PrintFlags
 
-
 -- |  Parser for enkeltflagg og fmapper vår datatype på
 pFlags :: Parser Flags
 pFlags = choice
-    [
-       DataFlags  . SearchPatternFlag <$> ((string' "-p" <|> string  "--pattern"   ) *> sc *> parseWord)
+    [ DataFlags  . SearchPatternFlag <$> ((string' "-p" <|> string  "--pattern"   ) *> sc *> parseWord)
      , DataFlags    HiddenFilesFlag   <$  ( string' "-a" <|> string  "--show--dots")
      , DataFlags  . ExtentionFlag     <$> ((string' "-e" <|> string  "--extention" ) *> sc *> (parseManyExteions <|> (singleton <$> parseWord) ))
      , DataFlags  . IgnoreFlag        <$> ((string' "-i" <|> string  "--ignore"    ) *> sc *> pathsUntilFlag )
      , DataFlags  . ExecuteFlag       <$> ((string' "-x" <|> string  "--execute"   ) *> sc *> parseConstrucedCommand) 
-     , PrintFlags . Color             <$> ((string' "-c" <|> string  "--color"     ) *> sc *> parseWord) 
-     , PrintFlags   FullPath          <$  (string' "-f" <|> string  "--full-path"  ) 
+     , PrintFlags . Color             <$> ((string' "-c" <|> string  "--color"     ) *> sc *> parseColor) 
+     , PrintFlags   FullPath          <$  ( string' "-f" <|> string  "--full-path")   ]
+
+
+
+parseColor :: Parser OutputColor
+parseColor = choice [
+      Redish  <$ string' "red"
+    , Blueish <$ string' "blue"
+    , Greeny  <$ string' "green"
     ]
 
 
@@ -183,11 +163,8 @@ applyDataFlags st  HiddenFilesFlag      = st {hideHidden     = not . hideHidden 
 
 
 applyPrintSettings ::  PrintSettings -> PrintFlags -> PrintSettings
-applyPrintSettings  ps (Color (map toLower  -> "red"))   = ps {matchColor = Redish}
-applyPrintSettings  ps (Color (map toLower  -> "green")) = ps {matchColor = Greeny}
-applyPrintSettings  ps (Color (map toLower  -> "blue"))  = ps {matchColor = Blueish}
-applyPrintSettings  ps (Color _)                         = ps
-applyPrintSettings  ps FullPath                          = ps {pathType   = AbsolutPathFilePath}
+applyPrintSettings  ps (Color a) = ps {matchColor = a}
+applyPrintSettings  ps FullPath  = ps {pathType   = AbsolutPathFilePath}
 
 
 
@@ -256,7 +233,6 @@ parseLamdaSearch = do
               searchPaths = Just s
             , arguments  =  (arguments . searchSetting) ps 
             }}
-
 
 
 

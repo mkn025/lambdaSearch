@@ -25,8 +25,8 @@ runCLi :: [String] -> IO ()
 runCLi args = do
      prgs  <- runParserIO $ unwords args 
      let ss =  searchSetting  prgs
-     let ps =  printSettings  prgs
-     output <- treverseDirWithSettings  ss
+     let ps =  printSettings prgs
+     output <- treverseDirWithSettings ss
      printResults ps output
 
 

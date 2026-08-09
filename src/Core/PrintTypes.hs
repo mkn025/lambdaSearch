@@ -2,6 +2,7 @@ module Core.PrintTypes (
       PathType      (..)
     , OutputColor   (..)
     , PrintSettings (..)
+    , defaultPrintSettings 
     ) where
 
 
@@ -16,3 +17,10 @@ data PrintSettings = PrintSettings{
     , matchColor :: OutputColor
     } deriving (Eq,Show)
 
+
+
+defaultPrintSettings :: PrintSettings
+defaultPrintSettings = PrintSettings{
+      pathType    = RelativeFilePath
+    , matchColor  = Greeny
+    }
