@@ -3,6 +3,7 @@
 
 
 # LambdaSearch
+- Orginalt program:  [link](https://git.app.uib.no/martin.e.knutsen/inf221-Semesteroppgave) 
 - Program som lar deg søke igjennom datamskinen din etter filer
 - `lambdaSearch  [input-file]... [options]`
 
