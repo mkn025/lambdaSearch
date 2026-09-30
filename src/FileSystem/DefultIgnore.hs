@@ -1,17 +1,44 @@
-module DefultIgnore where
-import System.Posix.Directory.Internals (DirStream(..))
-import System.Posix (getWorkingDirectory, openDirStream, readDirStream, fileExist, getFileStatus, isDirectory)
+module FileSystem.DefultIgnore where
 
-allFileInGitIgnore :: IO (Maybe [FilePath])
+import System.Posix.Directory.Internals (
+    DirStream(..)
+    )
+
+import System.Posix (
+      getWorkingDirectory
+    , openDirStream
+    , readDirStream
+    , fileExist
+    , getFileStatus
+    , isDirectory
+    )
+
+
+getUnwatedFiles :: IO [FilePath]
+getUnwatedFiles =  filterUnwantedGitignoreFiles unwantedFiles <$> allFileInGitIgnore  
+
+unwantedFiles :: [FilePath] 
+unwantedFiles = [",",""," "]
+
+filterUnwantedGitignoreFiles :: [FilePath] -> [FilePath] -> [FilePath]
+filterUnwantedGitignoreFiles unwf = filter pre
+    where
+    pre :: FilePath -> Bool
+    pre =  flip notElem unwf 
+
+allFileInGitIgnore :: IO [FilePath]
 allFileInGitIgnore = do
     path   <- fullGitPath       <$> getWorkingDirectory
     notDir <- not . isDirectory <$> getFileStatus path
-    exist  <- fileExist path 
-    if exist &&  notDir   
-    then pure . lines <$> readFile path
-    else pure Nothing
+    exist  <- fileExist path
+    readIfTrue (exist && notDir) path
     where
+        fullGitPath :: FilePath -> FilePath
         fullGitPath cwd = cwd  <> "/" <> ".gitignore"
+
+        readIfTrue :: Bool -> FilePath -> IO [FilePath]
+        readIfTrue  False _   = pure  []
+        readIfTrue  True path = lines <$> readFile path
 
 
 allFilesInDir :: IO [FilePath]
@@ -21,32 +48,8 @@ getFilesInDir :: FilePath -> IO [FilePath]
 getFilesInDir fp  = openDirStream fp >>= readEnitreDirStream []
 
 readEnitreDirStream :: [FilePath] -> DirStream -> IO [FilePath]
-readEnitreDirStream lst ds = do
-    file <- readDirStream ds
-    if null file
-    then pure lst
-    else readEnitreDirStream (file : lst ) ds
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+readEnitreDirStream lst ds = readDirStream ds >>= actOnDir 
+    where
+        actOnDir :: FilePath -> IO [FilePath]
+        actOnDir (null -> True) = pure lst
+        actOnDir file           = readEnitreDirStream (file:lst) ds
