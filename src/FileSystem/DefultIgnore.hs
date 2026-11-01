@@ -10,7 +10,7 @@ import System.Posix (
     , fileExist
     , getFileStatus
     , isDirectory
-    , readDirStreamMaybe
+    , readDirStreamMaybe, closeDirStream
     )
 
 import Control.Monad.Except (
@@ -20,16 +20,17 @@ import Control.Monad.Except (
 import Control.Monad.Trans        (lift)
 import Control.Monad.Trans.Except (throwE)
 import Control.Monad              (unless, (<=<))
+import Control.Exception (bracket)
 
 getUnwatedFiles :: IO [FilePath]
-getUnwatedFiles = actOnFiles =<< runExceptT getPathsInGitIgnore 
+getUnwatedFiles = actOnFiles =<< runExceptT getPathsInGitIgnore
     where
         actOnFiles (Left feilMsg) = print ("Hadde en feil " ++ show feilMsg ) >> pure []
         actOnFiles (Right filer)  = pure filer
 
 
-data FilFeil = 
-      FantIkkeFilen 
+data FilFeil =
+      FantIkkeFilen
     | IkkeEnDir
     | DirStreamFeil
     deriving  Show
@@ -44,8 +45,8 @@ filterUnwanted = filter (`notElem` unwantedFiles )
 
 
 getPathsInGitIgnore :: ExceptTDirecetory [FilePath]
-getPathsInGitIgnore = do    
-    cwd  <- fullGitPath <$> lift getWorkingDirectory 
+getPathsInGitIgnore = do
+    cwd  <- fullGitPath <$> lift getWorkingDirectory
     file <- validateDirectory cwd
     lift $ lines <$> readFile file
     where
@@ -56,7 +57,7 @@ allFilesInDir :: ExceptTDirecetory [FilePath]
 allFilesInDir = (getFilesInDir <=< validateDirectory) =<< lift getWorkingDirectory
 
 getFilesInDir :: FilePath -> ExceptTDirecetory [FilePath]
-getFilesInDir  = readEnitreDirStream [ ] <=<  lift . openDirStream <=<  validateDirectory  
+getFilesInDir = readEnitreDirStream [ ] <=<  lift . openDirStream <=<  validateDirectory
 
 
 readEnitreDirStream :: [FilePath] -> DirStream -> ExceptTDirecetory [FilePath]
@@ -64,11 +65,12 @@ readEnitreDirStream lst ds = do
     dirStream <- lift . readDirStreamMaybe $ ds
     case dirStream of
         Nothing  -> throwE DirStreamFeil
-        (Just d) ->  actOnFilePath d
+        (Just d) -> actOnFilePath d
     where
         actOnFilePath :: FilePath -> ExceptTDirecetory [FilePath]
-        actOnFilePath (null -> True) = pure lst
+        actOnFilePath (null -> True) = lift (closeDirStream  ds) >> pure lst
         actOnFilePath file           = readEnitreDirStream (file:lst) ds
+
 
 
 validateDirectory :: FilePath -> ExceptTDirecetory FilePath
