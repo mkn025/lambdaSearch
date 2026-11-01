@@ -1,86 +1,84 @@
 module FileSystem.DefultIgnore where
 
 import System.Posix.Directory.Internals (
-    DirStream(..)
+      DirStream(..)
     )
-
-
-import Control.Monad.Trans.Maybe (MaybeT (runMaybeT), hoistMaybe)
 
 import System.Posix (
       getWorkingDirectory
     , openDirStream
-    , readDirStream
     , fileExist
     , getFileStatus
     , isDirectory
+    , readDirStreamMaybe
     )
 
-import Control.Monad.IO.Class( liftIO)
-import Control.Monad.Trans.Class (MonadTrans(lift))
-import Data.Text.Internal.Fusion.Size (isEmpty)
-import Control.Monad (guard)
-
-
+import Control.Monad.Except (
+      runExceptT
+    , ExceptT(..)
+    )
+import Control.Monad.Trans        (lift)
+import Control.Monad.Trans.Except (throwE)
+import Control.Monad              (unless, (<=<))
 
 getUnwatedFiles :: IO [FilePath]
-getUnwatedFiles = filterUnwantedGitignoreFiles unwantedFiles <$> allFileInGitIgnore
-
-unwantedFiles :: [FilePath]
-unwantedFiles = [",",""," "]
-
-filterUnwantedGitignoreFiles :: [FilePath] -> [FilePath] -> [FilePath]
-filterUnwantedGitignoreFiles unwf = filter (`notElem` unwf)
+getUnwatedFiles = actOnFiles =<< runExceptT getPathsInGitIgnore 
+    where
+        actOnFiles (Left feilMsg) = print ("Hadde en feil " ++ show feilMsg ) >> pure []
+        actOnFiles (Right filer)  = pure filer
 
 
-allFileInGitIgnore :: IO [FilePath]
-allFileInGitIgnore = do
-    path   <- fullGitPath       <$> getWorkingDirectory
-    notDir <- not . isDirectory <$> getFileStatus path
-    exist  <- fileExist path
-    readIfTrue (exist && notDir) path
+data FilFeil = 
+      FantIkkeFilen 
+    | IkkeEnDir
+    | DirStreamFeil
+    deriving  Show
+
+type ExceptTDirecetory a = ExceptT FilFeil IO a
+
+filterUnwanted :: [FilePath] -> [FilePath]
+filterUnwanted = filter (`notElem` unwantedFiles )
+    where
+        unwantedFiles :: [FilePath]
+        unwantedFiles = [",",""," "]
+
+
+getPathsInGitIgnore :: ExceptTDirecetory [FilePath]
+getPathsInGitIgnore = do    
+    cwd  <- fullGitPath <$> lift getWorkingDirectory 
+    file <- validateDirectory cwd
+    lift $ lines <$> readFile file
     where
         fullGitPath :: FilePath -> FilePath
         fullGitPath cwd = cwd  <> "/" <> ".gitignore"
 
-        readIfTrue :: Bool -> FilePath -> IO [FilePath]
-        readIfTrue  False _   = pure  []
-        readIfTrue  True path = lines <$> readFile path
+allFilesInDir :: ExceptTDirecetory [FilePath]
+allFilesInDir = (getFilesInDir <=< validateDirectory) =<< lift getWorkingDirectory
+
+getFilesInDir :: FilePath -> ExceptTDirecetory [FilePath]
+getFilesInDir  = readEnitreDirStream [ ] <=<  lift . openDirStream <=<  validateDirectory  
 
 
-allFilesInDir :: IO [FilePath]
-allFilesInDir =  getWorkingDirectory >>= getFilesInDir
-
-getFilesInDir :: FilePath -> IO [FilePath]
-getFilesInDir fp  = openDirStream fp >>= readEnitreDirStream []
-
-readEnitreDirStream :: [FilePath] -> DirStream -> IO [FilePath]
-readEnitreDirStream lst ds = readDirStream ds >>= actOnDir
+readEnitreDirStream :: [FilePath] -> DirStream -> ExceptTDirecetory [FilePath]
+readEnitreDirStream lst ds = do
+    dirStream <- lift . readDirStreamMaybe $ ds
+    case dirStream of
+        Nothing  -> throwE DirStreamFeil
+        (Just d) ->  actOnFilePath d
     where
-        actOnDir :: FilePath -> IO [FilePath]
-        actOnDir (null -> True) = pure lst
-        actOnDir file           = readEnitreDirStream (file:lst) ds
+        actOnFilePath :: FilePath -> ExceptTDirecetory [FilePath]
+        actOnFilePath (null -> True) = pure lst
+        actOnFilePath file           = readEnitreDirStream (file:lst) ds
 
 
+validateDirectory :: FilePath -> ExceptTDirecetory FilePath
+validateDirectory fp = do
+    exists <- lift $ fileExist fp
+    unless exists (throwE FantIkkeFilen)
 
-type MaybeIO a = MaybeT IO a
-
-allFilesInDir_ :: MaybeIO [FilePath]
-allFilesInDir_ = do
-    files      <- lift getWorkingDirectory
-    allFiles   <- lift . getFilesInDir $ files 
-    valiedateFilePath allFiles 
-
-
-
-valiedateFilePath ::  Applicative m => [FilePath] -> MaybeT m [FilePath]
-valiedateFilePath [] = hoistMaybe Nothing
-valiedateFilePath xs = hoistMaybe . Just $  filter (`notElem` un ) xs
-    where 
-    un = [".",".."]
-
-bar :: IO (Maybe [FilePath])
-bar = runMaybeT allFilesInDir_
+    isDir  <- lift $ isDirectory <$> getFileStatus fp
+    unless isDir  (throwE IkkeEnDir)
+    pure fp
 
 
 
@@ -96,7 +94,7 @@ bar = runMaybeT allFilesInDir_
 
 
 
- 
+
 
 
 

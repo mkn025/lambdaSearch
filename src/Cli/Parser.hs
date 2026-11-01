@@ -53,7 +53,6 @@ sc = skipMany (char ' ' <|> char '\t')
 parseWord :: Parser String
 parseWord = many . satisfy $ (\c -> c /= ' ' && c /= '\t')
 
-
 -- Parser til et et nytt flag 
 parseToFlagsWithParser :: Parser a -> Parser [a]
 parseToFlagsWithParser p =
@@ -67,8 +66,6 @@ defaultProgramSetting = ProgramSettings {
       searchSetting  = defaultSearchSetting 
     , printSettings  = defaultPrintSettings 
     }
-
-
 
 -- |  Representasjon av om søkestier er oppgitt.
 data Paths =
@@ -151,9 +148,6 @@ parseArgumentAndWord = do
 
 
 --- FLAG PARSER --- 
-
-
-
 applyDataFlags :: Arguments -> DataFlags -> Arguments
 applyDataFlags st (SearchPatternFlag s) = st {regxPattern    = Just (convertString s)}
 applyDataFlags st (ExtentionFlag     e) = st {extention      = (convertString <$> e) <> extention st}
@@ -172,8 +166,6 @@ updateSearchSetting :: SearchSetting -> Arguments -> DataFlags -> SearchSetting
 updateSearchSetting ss args df = ss {arguments  = applyDataFlags args df }
 
 
-
-
 applyFlag :: ProgramSettings -> Flags -> ProgramSettings
 applyFlag pgs@ProgramSettings{..} (DataFlags a)  = pgs { searchSetting  = updateSearchSetting searchSetting (arguments  searchSetting) a } 
 applyFlag pgs@ProgramSettings{..} (PrintFlags a) = pgs { printSettings  = applyPrintSettings printSettings a  }  
@@ -188,7 +180,6 @@ parseAllFlags = many (sc *> pFlags <* sc) --
 --  Burker listen som av flagg som er parset og applyfalg og foldr over alle og lager Arguments datastukruen
 parseFlags :: Parser ProgramSettings
 parseFlags = foldl' applyFlag defaultProgramSetting <$> parseAllFlags
-
 
 --- STI PARSER ---
 

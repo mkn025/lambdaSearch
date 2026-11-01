@@ -35,7 +35,6 @@ import Text.Regex.TDFA(
   , matchTest
   )
 
-
 getRexPattern :: Maybe Regex -> RawFilePath -> Bool
 getRexPattern Nothing      _  = True
 getRexPattern (Just regex) fp = matchTest regex fp
@@ -45,7 +44,6 @@ getRexPattern (Just regex) fp = matchTest regex fp
 getDisallowFilter :: Arguments -> RawFilePath -> Bool
 getDisallowFilter (exclude -> Nothing)  _ = True
 getDisallowFilter (exclude -> Just sf) fp = not $ any (`BC.isPrefixOf` fp) sf
-
 
 
 -- | Filterlogikk for skjulte filer.
@@ -58,15 +56,12 @@ getHiddenFilter (hideHidden  -> True) (safeHead -> Just h)  = h /= '.'
 
 
 
-
-
 -- | Filter som filterer for de rikgte extentionene 
 --  Tar med alle dersom ikke noe spesifiser
 getExtentionFilter :: Arguments -> RawFilePath -> Bool
 getExtentionFilter (extention -> [] ) _                               = True
 getExtentionFilter (extention ->  _ ) (getFileExtention -> Nothing)   = False
 getExtentionFilter (extention -> ext) (getFileExtention -> Just curr) = curr `elem` ext
-
 
 
 
@@ -116,7 +111,7 @@ safeHead xs                = Just . BC.head $ xs
 convertString :: String -> RawFilePath
 convertString = BC.pack
 
-convertToString :: RawFilePath  -> String
+convertToString :: RawFilePath -> String
 convertToString = BC.unpack
 
 

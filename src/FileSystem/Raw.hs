@@ -77,10 +77,10 @@ readDirEnt dir =  readContent
       let dirp = unpackDirStream dir
     -- fra docs : set errno to zero before calling readdir()
       lift resetErrno
-      dEnt <- lift .  c_readdir $ dirp
+      dEnt <- lift . c_readdir $ dirp
       if dEnt == PTR.nullPtr
         then do
-          err <- lift  getErrno
+          err <- lift getErrno
           case err of
             e | e == eINTR  -> readContent              -- Retry on interrupt
               | e == eOK    -> pure Nothing             -- End of directory
@@ -135,19 +135,20 @@ traverseDirectoryContents f s0 (AbsolutPath p) = do
     innerLoop run acc dirp = do
         dir <- readDirEnt dirp
         case dir of
-            Nothing                -> pure acc
-            Just dc@DirContent{..} -> if name == "." || name == ".."
-                                      then innerLoop run acc dirp
-                                      else do
+            Nothing                       -> pure acc
+            Just DirContent{name = "." }  -> innerLoop run acc dirp
+            Just DirContent{name = ".." } -> innerLoop run acc dirp
+            Just dc                       -> do
                                             acc' <- lift . run $ f acc dc
                                             innerLoop run acc' dirp
+
 foldDirectoryTree
     :: forall a . (a -> FilePaths -> DirContent -> IO a)  --  forall scoopes a in hele func function
     -> a -- 
     -> FilePaths
     -> IO a
 foldDirectoryTree foldFunc acc paths = do
-    isDir <- checkIfDir (absoluteFilePath paths)
+    isDir <- checkIfDir . absoluteFilePath $ paths
     if not isDir
         then pure acc
         else traverseDirectoryContents innerloop acc (absoluteFilePath paths )

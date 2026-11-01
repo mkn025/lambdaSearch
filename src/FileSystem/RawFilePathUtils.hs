@@ -33,13 +33,16 @@ concatAbsolutePath :: AbsolutPath RawFilePath -> AbsolutPath RawFilePath -> Abso
 concatAbsolutePath = liftA2 (</>)
 
 
+
+-- We need dirconetetn to check if   
 concatRelativeFilePath :: RelativPath RawFilePath -> RelativPath RawFilePath -> Maybe DirContent -> RelativPath RawFilePath
-concatRelativeFilePath old new Nothing = liftA2 (</>) old new
-concatRelativeFilePath old new (Just DirContent {..}) = if pure name == new
-                                                        then old
-                                                        else concatRelativeFilePath old new Nothing
+concatRelativeFilePath old new Nothing                = liftA2 (</>) old new
+concatRelativeFilePath old new (Just DirContent {..}) |  pure name == new = old
+                                                      |  otherwise        = concatRelativeFilePath old new Nothing
 
 
+
+-- some helpers
 checkIfDir :: AbsolutPath RawFilePath -> IO Bool
 checkIfDir (AbsolutPath path)  = isDirectory <$> getFileStatus path
 

@@ -25,10 +25,11 @@ import System.Console.ANSI.Codes (
 
 -- | Printer all filene som er funnet 
 --  mapper og kaster output for hele listen
+
 printResults :: PrintSettings ->  [FileInfomation] -> IO ()
 printResults ps contents = do
     color <- coloriseFileIfTTY  
-    mapM_ (printFileInformation ps color) contents  -- mapM_ siden den bare skal >> ikke >>= basicly
+    mapM_ (printFileInformation ps color) contents  -- mapM_ siden den bare skal >> ikke >>= 
 
 
 -- | Printer et Enkelt FileInfomation element. Og bruker fargefunksjoen på bare filen
@@ -49,13 +50,14 @@ getFilePath  RelativeFilePath    =  unpackRelativPath . fmap convertToString . r
 getFilePath  AbsolutPathFilePath =  unpackAbsolutPath . fmap convertToString . absoluteFilePath . filePaths
 
 
+
 -- | Legger på ansi codes på dersom du skal sende den til terminal. Ellers er det bare id
 coloriseFileIfTTY :: IO (OutputColor -> String -> String)
 coloriseFileIfTTY = do
     tty <- queryTerminal stdOutput -- burkes til å finne ut om vi skal til terminal eller til en pipe
     pure $ if tty
            then coloriseFile
-           else (\_ a -> a)
+           else const id
 
 
 -- | wrapper ani scape codes på en streng
