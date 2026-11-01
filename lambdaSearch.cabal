@@ -42,6 +42,7 @@ library
                     , filepath-bytestring
                     , process
                     , megaparsec
+                    , transformers
 
 
     hs-source-dirs:   src

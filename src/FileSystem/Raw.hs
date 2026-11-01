@@ -6,7 +6,7 @@ import Core.TraversalTypes (
     , AbsolutPath    (..)
     , FilePaths      (..)
     , DirContent     (..)
-    
+
     )
 
 
@@ -16,27 +16,25 @@ import Core.TraversalTypes (
 import System.Posix.Directory.ByteString as PosixBS (DirStream,closeDirStream, openDirStream)
 
 import System.Posix.ByteString.FilePath  (RawFilePath, peekFilePath)
-import Foreign.C.Error                   (Errno               (..), eINTR,  getErrno, resetErrno,eOK, eACCES, ePERM )
+import Foreign.C.Error                   (Errno(..), eINTR,  getErrno, resetErrno,eOK, eACCES, ePERM )
 import Foreign.C.String                  (CString)
-import UnliftIO                          (MonadUnliftIO, finally,askRunInIO, throwIO, Exception )
-import Control.Monad.IO.Class            (MonadIO             (liftIO) )
+import UnliftIO                          (MonadUnliftIO, finally, askRunInIO, Exception )
+import Control.Monad.IO.Class            (MonadIO             (liftIO))
 
 import Foreign.Ptr as PTR                (Ptr, nullPtr)
 
 import System.Posix.Directory.Internals  (DirStream           (DirStream), CDir, CDirent)
 
 import UnliftIO.Exception                (bracketOnError)
-import Control.Exception.Base            (catch)
+import Control.Exception.Base            (catch, throwIO)
 import System.IO.Error                   (isPermissionError)
 
 import Control.Monad.Except              (runExceptT , ExceptT(..))
 
 import FileSystem.RawFilePathUtils       (checkIfDir, concatRelativeFilePath, dtDir,concatAbsolutePath )
-
-
-
-
-
+import Control.Monad.Trans (lift)
+import Control.Monad.Trans.Except (throwE)
+import Data.Bool (bool)
 
 -- hehe viktig at vi burker safe call for alt som gjør IO
 --  https://github.com/haskell/unix/issues/34
@@ -59,14 +57,13 @@ unpackDirStream (DirStream a) = a
 
 
 data DirError = UnexpectedErrnoZero | ReadDirErr Errno
-
 instance Show DirError where
+
+    show :: DirError -> String
     show (ReadDirErr (Errno n)) = "ReadDirErr: Ernno code: " <> show n
     show UnexpectedErrnoZero    = "UnexpectedErrnoZero"
 
-
 instance Exception DirError
-
 
 -- the FFI boundary: c_readdir, c_name, c_type,
 -- readDirEnt, DirError, traverseDirectoryContents,
@@ -75,53 +72,50 @@ instance Exception DirError
 
 type DirContentT = ExceptT DirError IO (Maybe DirContent)
 
+
 readDirEnt :: DirStream ->  DirContentT
-readDirEnt dir = ExceptT readContent
+readDirEnt dir =  readContent
     where
-    readContent :: IO (Either DirError (Maybe DirContent))
+    readContent :: DirContentT
     readContent = do
       let dirp = unpackDirStream dir
     -- fra docs : set errno to zero before calling readdir()
-      resetErrno
-
-      dEnt <- c_readdir dirp
+      lift resetErrno
+      dEnt <- lift .  c_readdir $ dirp
       if dEnt == PTR.nullPtr
         then do
-          err <- getErrno
+          err <- lift  getErrno
           case err of
-            e | e == eINTR  -> readContent                        -- Retry on interrupt
-              | e == eOK    -> pure . Right $ Nothing             -- End of directory
-              | e == eACCES -> pure . Right $ Nothing             -- Om du ikke har til tilgang til filen
-              | e == ePERM  -> pure . Right $ Nothing             -- Om du ikke har lov å gjøre oppprasjonen. 
-              | otherwise   -> pure . Left  $ ReadDirErr err      -- Real error
+            e | e == eINTR  -> readContent              -- Retry on interrupt
+              | e == eOK    -> pure Nothing             -- End of directory
+              | e == eACCES -> pure Nothing             -- Om du ikke har til tilgang til filen
+              | e == ePERM  -> pure Nothing             -- Om du ikke har lov å gjøre oppprasjonen. 
+              | otherwise   -> throwE $ ReadDirErr err  -- Real error
 
               -- har mulihet å legge til flere type feil 
         else do
-          dName <- c_name dEnt >>= peekFilePath
-          dType <- c_type dEnt
+          dName <- lift $ c_name dEnt >>= peekFilePath
+          --dType <- lift $ c_type dEnt
+          dType <- lift $ c_type dEnt
 
         -- fra wiki. Vi trenger ikke å free den
         -- IMPORTANT: do NOT free dEnt for readdir()
-
         -- On success, readdir() returns a pointer to a dirent structure.
         -- (This structure may be statically allocated; do not attempt to
         -- free(3) it.)
-          pure . Right . Just  $ DirContent{fileType = dType, name = dName}
+
+          pure $ Just DirContent{fileType = dType, name = dName}
          -- pure . Right . Just  $ (dType, dName)
-
-
 
 
 -- | Traverserer innholdet i en katalog med en fold-funksjon.
 -- | bruker funksjonen
---
 -- Åpner en dirSteam til @p@, bruker @f@ på hvert element altås hver feil
 -- (unntatt @.@ og @..@), og returnerer den akkumulerte verdien.
 --
 -- * Tillatelseskfeil  håndteres ved at den skipper den
 -- * Andre IO-feil kastes videre.
 -- * Katalogstrømmen lukkes alltid, også ved expetions ('bracketOnError' + 'finally').
-
 traverseDirectoryContents :: (MonadUnliftIO m)
                           => (a -> DirContent -> m a)
                           -> a
@@ -131,29 +125,27 @@ traverseDirectoryContents f s0 (AbsolutPath p) = do
     run <- askRunInIO
     liftIO $ bracketOnError
         (openDirStreamPermissive p)
-        (mapM_ PosixBS.closeDirStream)   -- kjøre bare dersom den kaster feil. 
+        (mapM_ closeDirStream)           -- kjøre bare dersom den kaster feil. 
         (\case
-            Nothing   -> pure s0         -- access denied, skipper
-            Just dirp -> loop run s0 dirp `finally` PosixBS.closeDirStream dirp)
+            Nothing   -> pure s0         -- access denied, skipper..
+            Just dirp -> loop run s0 dirp `finally` closeDirStream dirp)
   where
     openDirStreamPermissive :: RawFilePath -> IO (Maybe DirStream)
     openDirStreamPermissive path =
-        (Just <$> PosixBS.openDirStream path)
+        (Just <$> openDirStream path)
         `catch`
-        \errMsg -> if isPermissionError errMsg
-                   then pure Nothing
-                   else throwIO errMsg
-    loop run acc dirp = do
-        dirAnd <- runExceptT $ readDirEnt dirp
-        case dirAnd of
-            Left  errMsg                     -> throwIO errMsg
-            Right Nothing                    -> pure acc          -- Om den er kommeet til enden av dir
-            Right (Just  dc@DirContent{..}) -> if name == "." || name == ".."
-                                                then loop run acc dirp
-                                                else do
-                                                  acc' <- run $ f acc dc
-                                                  loop run acc' dirp
+        \errMsg -> bool (pure Nothing) (throwIO errMsg) $ isPermissionError errMsg 
 
+    loop run acc dirp = runExceptT (innerLoop run acc dirp) >>= either throwIO pure  
+    innerLoop run acc dirp = do
+        dir <- readDirEnt dirp
+        case dir of
+            Nothing                -> pure acc
+            Just dc@DirContent{..} -> if name == "." || name == ".."
+                                      then innerLoop run acc dirp
+                                      else do
+                                            acc' <- lift . run $ f acc dc
+                                            innerLoop run acc' dirp
 
 foldDirectoryTree
     :: forall a . (a -> FilePaths -> DirContent -> IO a)  --  forall scoopes a in hele func function
@@ -172,10 +164,11 @@ foldDirectoryTree foldFunc acc paths = do
             let newRelPath = concatRelativeFilePath (relativeFilePath paths) (pure name) Nothing
             let isDir = fileType == dtDir
             nextAcc <- foldFunc currentAcc paths dc
-
             if not isDir
                 then pure nextAcc
-                else foldDirectoryTree foldFunc nextAcc (FilePaths{absoluteFilePath = newAbsPath, relativeFilePath = newRelPath})
+                else foldDirectoryTree foldFunc nextAcc ( FilePaths{ 
+                                                          absoluteFilePath = newAbsPath
+                                                        , relativeFilePath = newRelPath})
 
 
 

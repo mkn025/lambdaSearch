@@ -57,12 +57,17 @@ getHiddenFilter (hideHidden  -> True) (safeHead -> Nothing) = True
 getHiddenFilter (hideHidden  -> True) (safeHead -> Just h)  = h /= '.'
 
 
+
+
+
 -- | Filter som filterer for de rikgte extentionene 
 --  Tar med alle dersom ikke noe spesifiser
 getExtentionFilter :: Arguments -> RawFilePath -> Bool
 getExtentionFilter (extention -> [] ) _                               = True
 getExtentionFilter (extention ->  _ ) (getFileExtention -> Nothing)   = False
 getExtentionFilter (extention -> ext) (getFileExtention -> Just curr) = curr `elem` ext
+
+
 
 
 -- | Kompilerer regex-mønsteret. 
