@@ -10,8 +10,6 @@ import Core.TraversalTypes (
     )
 
 
--- Filter And helpers --
-
 
 import System.Posix.Directory.ByteString as PosixBS (DirStream,closeDirStream, openDirStream)
 
@@ -38,8 +36,6 @@ import Data.Bool (bool)
 
 -- hehe viktig at vi burker safe call for alt som gjør IO
 --  https://github.com/haskell/unix/issues/34
-
-
 foreign import ccall safe "readdir"
   c_readdir :: Ptr CDir -> IO (Ptr CDirent)
 
@@ -105,7 +101,6 @@ readDirEnt dir =  readContent
         -- free(3) it.)
 
           pure $ Just DirContent{fileType = dType, name = dName}
-         -- pure . Right . Just  $ (dType, dName)
 
 
 -- | Traverserer innholdet i en katalog med en fold-funksjon.
@@ -146,7 +141,6 @@ traverseDirectoryContents f s0 (AbsolutPath p) = do
                                       else do
                                             acc' <- lift . run $ f acc dc
                                             innerLoop run acc' dirp
-
 foldDirectoryTree
     :: forall a . (a -> FilePaths -> DirContent -> IO a)  --  forall scoopes a in hele func function
     -> a -- 
@@ -162,13 +156,15 @@ foldDirectoryTree foldFunc acc paths = do
         innerloop currentAcc dc@DirContent{..} = do
             let newAbsPath = concatAbsolutePath     (absoluteFilePath paths) (pure name)
             let newRelPath = concatRelativeFilePath (relativeFilePath paths) (pure name) Nothing
+
+            let filepaths  = FilePaths {absoluteFilePath = newAbsPath, relativeFilePath  = newRelPath}
             let isDir = fileType == dtDir
+
             nextAcc <- foldFunc currentAcc paths dc
             if not isDir
                 then pure nextAcc
-                else foldDirectoryTree foldFunc nextAcc ( FilePaths{ 
-                                                          absoluteFilePath = newAbsPath
-                                                        , relativeFilePath = newRelPath})
+                else foldDirectoryTree foldFunc nextAcc filepaths 
+
 
 
 
