@@ -29,11 +29,8 @@ import Core.Filters                     (convertToString )
 dtDir :: DirType
 dtDir = DirType 4
 
-
-
 concatAbsolutePath :: AbsolutPath RawFilePath -> AbsolutPath RawFilePath -> AbsolutPath RawFilePath
 concatAbsolutePath = liftA2 (</>)
-
 
 
 concatRelativeFilePath :: RelativPath RawFilePath -> RelativPath RawFilePath -> Maybe DirContent -> RelativPath RawFilePath
@@ -49,19 +46,19 @@ checkIfDir (AbsolutPath path)  = isDirectory <$> getFileStatus path
 unpackAbsolutPath :: AbsolutPath a -> a
 unpackAbsolutPath (AbsolutPath a) = a
 
-
 unpackRelativPath :: RelativPath a -> a
 unpackRelativPath (RelativPath a) = a
 
 createFileInformation :: FilePaths -> Maybe DirContent -> FileInfomation
 createFileInformation fp dc = FileInfomation{
       filePaths    = fp
-    , fileNameInfo = dc
-    }
-
+    , fileNameInfo = dc}
 
 
 -- Hjelpemeothde som lager helefilstien dersom, dersom det er en sti
 constructFilePath :: FileInfomation -> Maybe String
 constructFilePath FileInfomation{fileNameInfo = Nothing}                                          = Nothing
 constructFilePath FileInfomation{fileNameInfo = (Just DirContent{..}), filePaths = FilePaths{..}} = Just . convertToString $ unpackAbsolutPath  absoluteFilePath </> name
+
+
+
