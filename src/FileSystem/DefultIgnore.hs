@@ -20,7 +20,6 @@ import Control.Monad.Except (
 import Control.Monad.Trans        (lift)
 import Control.Monad.Trans.Except (throwE)
 import Control.Monad              (unless, (<=<))
-import Control.Exception (bracket)
 
 getUnwatedFiles :: IO [FilePath]
 getUnwatedFiles = actOnFiles =<< runExceptT getPathsInGitIgnore
@@ -46,8 +45,7 @@ filterUnwanted = filter (`notElem` unwantedFiles )
 
 getPathsInGitIgnore :: ExceptTDirecetory [FilePath]
 getPathsInGitIgnore = do
-    cwd  <- fullGitPath <$> lift getWorkingDirectory
-    file <- validateDirectory cwd
+    file  <- validateDirectory . fullGitPath =<< lift getWorkingDirectory
     lift $ lines <$> readFile file
     where
         fullGitPath :: FilePath -> FilePath
@@ -63,9 +61,8 @@ getFilesInDir = readEnitreDirStream [ ] <=<  lift . openDirStream <=<  validateD
 readEnitreDirStream :: [FilePath] -> DirStream -> ExceptTDirecetory [FilePath]
 readEnitreDirStream lst ds = do
     dirStream <- lift . readDirStreamMaybe $ ds
-    case dirStream of
-        Nothing  -> throwE DirStreamFeil
-        (Just d) -> actOnFilePath d
+    maybe (throwE DirStreamFeil) actOnFilePath dirStream 
+
     where
         actOnFilePath :: FilePath -> ExceptTDirecetory [FilePath]
         actOnFilePath (null -> True) = lift (closeDirStream  ds) >> pure lst
