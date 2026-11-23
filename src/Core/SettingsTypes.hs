@@ -8,10 +8,11 @@ module Core.SettingsTypes (
     , Arguments        (..)
     , ProgramSettings  (..)
     , defaultArguments 
+    , defaultSearchSetting 
     )
     where
 
-import Core.PrintTypes (PrintSettings (..),PathType (..),OutputColor (..))
+import Core.PrintTypes (PrintSettings (..))
 
 
 import System.Posix.ByteString.FilePath (RawFilePath)
@@ -58,10 +59,7 @@ data ProgramSettings = ProgramSettings {
     } deriving (Eq, Show)
     
 
-
-
-
-
+-- |  standardverdier for filterflagg.
 defaultArguments :: Arguments
 defaultArguments = Arguments {
       regxPattern    = Nothing
@@ -72,18 +70,8 @@ defaultArguments = Arguments {
     }
 
 
-
-
-    -- 
-    -- OutputColor,
-    -- PathType,
-    -- PrintSettings,
-    -- 
-    -- DirType,
-    -- DirContent,
-    -- FilePaths,
-    -- FileInfomation,
-    -- 
-    -- defaultArguments
-    -- NOTHING but data/newtype decls + trivial instances
-
+defaultSearchSetting :: SearchSetting
+defaultSearchSetting = SearchSetting{
+      searchPaths    = Nothing
+    , arguments      = defaultArguments 
+    }

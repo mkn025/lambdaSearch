@@ -59,7 +59,7 @@ treversRecursively args = foldDirectoryTree foldFunc
     foldFunc acc filePaths dc@DirContent{..}  = do
 
         let relFilePath = concatRelativeFilePath  (relativeFilePath filePaths) (pure name) (Just dc)
-        let fullPath    = concatAbsolutePath (absoluteFilePath filePaths) (pure name)
+        let fullPath    = concatAbsolutePath      (absoluteFilePath filePaths) (pure name)
 
         let paths       = FilePaths{ absoluteFilePath = fullPath, relativeFilePath = relFilePath }
         let isDir       = fileType == dtDir
