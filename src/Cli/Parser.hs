@@ -1,9 +1,11 @@
-module Cli.Parser (runParserIO, runMyParser, parseLamdaSearch) where
+module Cli.Parser (
+      runParserIO
+    , runMyParser
+    , parseLamdaSearch) where
 
 import Data.Void              (Void)
 import Control.Applicative    ((<|>))
 import Data.Functor           (($>))
-import Text.Megaparsec.Char   (char, string, string')
 import Control.Exception.Base (throwIO)
 import Core.Filters           (convertString)
 
@@ -15,6 +17,13 @@ import Core.PrintTypes (
     , defaultPrintSettings      
     )
 
+
+import Text.Megaparsec.Char  (
+      char
+    , string
+    , string'
+    )
+
 import Core.SettingsTypes    (
       SearchSetting     (..)
     , Arguments         (..)
@@ -24,7 +33,7 @@ import Core.SettingsTypes    (
     , defaultSearchSetting 
     )
 
-import Text.Megaparsec (
+import Text.Megaparsec      (
       Parsec
     , satisfy
     , between
@@ -40,6 +49,7 @@ import Text.Megaparsec (
 
 import Text.Megaparsec.Error (errorBundlePretty)
 import Data.List             (foldl', singleton)
+
 
 
 type Parser = Parsec Void String
@@ -100,16 +110,12 @@ pFlags = choice
      , PrintFlags   FullPath          <$  ( string' "-f" <|> string  "--full-path")   ]
 
 
-
 parseColor :: Parser OutputColor
 parseColor = choice [
       Redish  <$ string' "red"
     , Blueish <$ string' "blue"
     , Greeny  <$ string' "green"
     ]
-
-
-
 
 parseManyExteions :: Parser [String]
 parseManyExteions =  parseToFlagsWithParser $ parseWord <* sc

@@ -10,9 +10,7 @@ import Core.TraversalTypes (
     )
 
 
-
 import System.Posix.Directory.ByteString as PosixBS (DirStream,closeDirStream, openDirStream)
-
 import System.Posix.ByteString.FilePath  (RawFilePath, peekFilePath)
 import Foreign.C.Error                   (Errno(..), eINTR,  getErrno, resetErrno,eOK, eACCES, ePERM )
 import Foreign.C.String                  (CString)
@@ -30,9 +28,9 @@ import System.IO.Error                   (isPermissionError)
 import Control.Monad.Except              (runExceptT , ExceptT(..))
 
 import FileSystem.RawFilePathUtils       (checkIfDir, concatRelativeFilePath, dtDir,concatAbsolutePath )
-import Control.Monad.Trans (lift)
-import Control.Monad.Trans.Except (throwE)
-import Data.Bool (bool)
+import Control.Monad.Trans               (lift)
+import Control.Monad.Trans.Except        (throwE)
+import Data.Bool                         (bool)
 
 -- hehe viktig at vi burker safe call for alt som gjør IO
 --  https://github.com/haskell/unix/issues/34
@@ -51,10 +49,9 @@ foreign import ccall unsafe "__posixdir_d_type"
 unpackDirStream :: DirStream -> Ptr CDir
 unpackDirStream (DirStream a) = a
 
-
 data DirError = UnexpectedErrnoZero | ReadDirErr Errno
-instance Show DirError where
 
+instance Show DirError where
     show :: DirError -> String
     show (ReadDirErr (Errno n)) = "ReadDirErr: Ernno code: " <> show n
     show UnexpectedErrnoZero    = "UnexpectedErrnoZero"
@@ -79,7 +76,7 @@ readDirEnt dir =  readContent
       lift resetErrno
       dEnt <- lift . c_readdir $ dirp
       if dEnt == PTR.nullPtr
-        then do
+      then do
           err <- lift getErrno
           case err of
             e | e == eINTR  -> readContent              -- Retry on interrupt
@@ -87,10 +84,12 @@ readDirEnt dir =  readContent
               | e == eACCES -> pure Nothing             -- Om du ikke har til tilgang til filen
               | e == ePERM  -> pure Nothing             -- Om du ikke har lov å gjøre oppprasjonen. 
               | otherwise   -> throwE $ ReadDirErr err  -- Real error
-
               -- har mulihet å legge til flere type feil 
-        else do
-          dName <- lift $ c_name dEnt >>= peekFilePath
+      else do
+
+          dName <- lift $ peekFilePath =<< c_name dEnt
+
+          -- dName <- lift $ c_name dEnt >>= peekFilePath
           --dType <- lift $ c_type dEnt
           dType <- lift $ c_type dEnt
 

@@ -24,9 +24,10 @@ import Control.Monad        (
     , (<=<)
     )
 
-
 import Control.Monad.Trans        (lift)
 import Control.Monad.Trans.Except (throwE)
+
+fooBar = flip (.)
 
 getUnwatedFiles :: IO [FilePath]
 getUnwatedFiles = actOnFiles =<< runExceptT getPathsInGitIgnore
@@ -34,11 +35,10 @@ getUnwatedFiles = actOnFiles =<< runExceptT getPathsInGitIgnore
         actOnFiles (Left  feilMsg) = print ("Hadde en feil " ++ show feilMsg ) >> pure []
         actOnFiles (Right filer)   = pure filer
 
-
 data FilFeil =
       FantIkkeFilen
     | IkkeEnDir
-    | DirStreamFeil
+    | MappeStrømFeil
     deriving  Show
 
 type IODirExeption a = ExceptT FilFeil IO a
@@ -46,7 +46,6 @@ type IODirExeption a = ExceptT FilFeil IO a
 filterUnwanted :: [FilePath] -> [FilePath]
 filterUnwanted = filter (`notElem` unwantedFiles )
     where
-        unwantedFiles :: [FilePath]
         unwantedFiles = [",",""," "]
 
 
@@ -68,12 +67,13 @@ getFilesInDir = readEnitreDirStream [ ] <=<  lift . openDirStream <=<  validateD
 readEnitreDirStream :: [FilePath] -> DirStream -> IODirExeption [FilePath]
 readEnitreDirStream lst ds = do
     dirStream <- lift . readDirStreamMaybe $ ds
-    maybe (throwE DirStreamFeil) actOnFilePath dirStream 
-
+    maybe (throwE MappeStrømFeil) actOnFilePath dirStream 
     where
         actOnFilePath :: FilePath -> IODirExeption [FilePath]
         actOnFilePath (null -> True) = lift (closeDirStream  ds) >> pure lst
         actOnFilePath file           = readEnitreDirStream (file:lst) ds
+
+
 
 
 validateDirectory :: FilePath -> IODirExeption FilePath
@@ -82,25 +82,8 @@ validateDirectory fp = do
     unless exists (throwE FantIkkeFilen)
 
     isDir  <- lift $ isDirectory <$> getFileStatus fp
-    unless isDir  (throwE IkkeEnDir)
+    unless isDir (throwE IkkeEnDir)
+
     pure fp
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
